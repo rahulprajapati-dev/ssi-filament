@@ -9,7 +9,7 @@
     "columns": [
         {
             "type": "text",
-            "name": "name",
+            "name": "module_name",
             "label": "Name",
             "searchable": {
                 "global": true,
@@ -19,8 +19,8 @@
         },
         {
             "type": "text",
-            "name": "location",
-            "label": "Location",
+            "name": "meta_data",
+            "label": "Meta Data",
             "searchable": {
                 "global": true,
                 "individual": true

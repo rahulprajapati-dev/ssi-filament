@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Filament\Resources\Studios\Schemas;
-use App\Helpers\JsonFormBuilder;
+use App\Helpers\JsonStudioFormBuilder;
 use Filament\Schemas\Schema;
 
 class StudioForm
@@ -24,6 +24,6 @@ class StudioForm
             ),
             true
         );
-        return JsonFormBuilder::buildSchema($schema, $config);
+        return JsonStudioFormBuilder::buildSchema($schema, $config);
     }
 }

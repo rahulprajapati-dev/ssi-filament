@@ -22,3 +22,22 @@ Install tips (Windows):
 - Composer: https://getcomposer.org/Composer-Setup.exe
 - Node: https://nodejs.org
 - MySQL: https://dev.mysql.com/downloads/installer/
+
+
+
+Module Information
+├── Module Name
+├── Singular Label
+├── Plural Label
+├── Table Name
+└── Navigation Icon
+
+Module Fields
+├── Add Field
+├── Reorder Fields
+└── Configure Type
+
+Views
+├── Edit View
+├── Detail View
+└── List View

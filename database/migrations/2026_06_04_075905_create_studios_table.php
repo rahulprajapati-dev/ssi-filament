@@ -13,9 +13,11 @@ return new class extends Migration
     {
         Schema::create('studios', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('location')->nullable();
+            $table->string('module' , 50);
+            $table->json('meta_data');
             $table->text('description')->nullable();
+            $table->string('created_by', 10)->nullable();
+            $table->string('updated_by', 10)->nullable();
             $table->timestamps();
         });
     }
