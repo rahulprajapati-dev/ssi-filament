@@ -13,7 +13,7 @@ class StudiosTable
 {
     public static function configure(Table $table): Table
     {
-          $path = base_path('app/Filament/Resources/Studios/Tables/Studio_table.json'); // update if file location differs
+          $path = base_path('app/Filament/Resources/Studios/Tables/listView.json');
 
         $config = [];
         if (File::exists($path)) {

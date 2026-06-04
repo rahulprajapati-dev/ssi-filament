@@ -12,9 +12,10 @@ class StudioForm
         $operation = $schema->getOperation(); // 'create' | 'edit' | 'view'
         
         $configPath = match ($operation) {
-            'create' => 'Studio_form_tabs.json',
-            'edit'   => 'Studio_form_tabs.json',
-            default  => 'studio_form_tabs_view.json',
+            'create' => 'createView.json',
+            'edit'   => 'editView.json',
+            'view'   => 'detailView.json',
+            default  => 'default.json',
         };
 
         $config = json_decode(

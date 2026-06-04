@@ -1,0 +1,44 @@
+{
+    "table": "users",
+    "fields": {
+        "name": {
+            "type": "string",
+            "label": "Full Name",
+            "required": true,
+            "max": 255
+        },
+        "username": {
+            "type": "string",
+            "label": "Username",
+            "required": true,
+            "max": 255
+        },
+        "email": {
+            "type": "string",
+            "label": "Email",
+            "required": true,
+            "max": 255
+        },
+        "mobile": {
+            "type": "string",
+            "label": "Mobile",
+            "required": true,
+            "max": 15
+        },
+        "status": {
+            "type": "badge",
+            "label": "Status",
+            "required": true,
+            "enum": {
+                "1": "Active",
+                "0": "Inactive"
+            }
+        },
+        "created_at": {
+            "type": "datetime",
+            "label": "Created At",
+            "required": false,
+            "default": "CURRENT_TIMESTAMP"
+        }
+    }
+}

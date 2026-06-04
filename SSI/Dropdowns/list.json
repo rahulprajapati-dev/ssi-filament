@@ -1,0 +1,11 @@
+{
+    "status_dom": {
+        "active": "Active",
+        "inactive": "Inactive"
+    },
+    "gender_dom": {
+        "male": "Male",
+        "female": "Female",
+        "other": "Other"
+    }
+}
