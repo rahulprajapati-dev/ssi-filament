@@ -68,6 +68,13 @@ function getValidMobile(?string $mobile): ?string
 
     return $mobile;
 }
+if (!function_exists('devfatal')) {
+    function devfatal($val, $str = '')
+    {
+        $message = "devfatal -> \n" . $str . "\n" . print_r($val, true);
+        Log::emergency($message);
+    }
+}
 
 function getAppConfig($config_key, $is_cached = true)
 {
