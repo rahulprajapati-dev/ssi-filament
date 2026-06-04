@@ -23,6 +23,14 @@ php artisan schema:export stock --connection=audi
 php artisan schema:diff stock audi --connection=audi
 php artisan schema:merge stock audi
 ```
+schema genrate 
+for table (listview)
+php artisan schema:genrate studios Studios
+for action create,detail,edit
+php artisan schema:genrate studios Studios --action=create
+php artisan schema:genrate studios Studios --action=detail
+php artisan schema:genrate studios Studios --action=edit
+
 
 Maintenance:
 ```powershell
