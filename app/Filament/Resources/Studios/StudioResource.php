@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Studios;
 use App\Filament\Resources\Studios\Pages\CreateStudio;
 use App\Filament\Resources\Studios\Pages\EditStudio;
 use App\Filament\Resources\Studios\Pages\ListStudios;
+use App\Filament\Resources\Studios\Pages\ViewStudio;
 use App\Filament\Resources\Studios\Schemas\StudioForm;
 use App\Filament\Resources\Studios\Tables\StudiosTable;
 use App\Models\Studio;
@@ -45,6 +46,7 @@ class StudioResource extends Resource
             'index' => ListStudios::route('/'),
             'create' => CreateStudio::route('/create'),
             'edit' => EditStudio::route('/{record}/edit'),
+            'view' => ViewStudio::route('/{record}/view')
         ];
     }
 }

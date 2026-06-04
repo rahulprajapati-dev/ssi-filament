@@ -1,0 +1,37 @@
+{
+    "form_name": "opportunity_form_view",
+    "model": "App\\Models\\Opportunity",
+    "components": [
+        {
+            "component": "section",
+            "label": "Basic Info",
+            "columnSpan": "full",
+            "columns": 4,
+            "collapsible": true,
+            "compact": true,
+            "schema": [
+                {
+                    "component": "textEntry",
+                    "weight": "black",
+                    "name": "name",
+                    "label": "Name",
+                    "columnSpan": 1
+                },
+                {
+                    "component": "textEntry",
+                    "weight": "black",
+                    "name": "location",
+                    "label": "Location",
+                    "columnSpan": 1
+                },
+                {
+                    "component": "textEntry",
+                    "weight": "black",
+                    "name": "description",
+                    "label": "Description",
+                    "columnSpan": 1
+                }
+            ]
+        }
+    ]
+}
