@@ -7,15 +7,14 @@ use App\Filament\Resources\Modules\Pages\EditModule;
 use App\Filament\Resources\Modules\Pages\ListModules;
 use App\Filament\Resources\Modules\Pages\ViewModule;
 use App\Filament\Resources\Modules\Schemas\ModuleForm;
-use App\Filament\Resources\Modules\Schemas\ModuleInfolist;
 use App\Filament\Resources\Modules\Tables\ModulesTable;
 use App\Models\Module;
 use BackedEnum;
-use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class ModuleResource extends Resource
 {
@@ -24,17 +23,14 @@ class ModuleResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     protected static ?string $recordTitleAttribute = 'Module Builder';
+
     protected static ?string $navigationLabel = 'Module Builder';
+
     protected static string|UnitEnum|null $navigationGroup = 'Studio';
 
     public static function form(Schema $schema): Schema
     {
         return ModuleForm::configure($schema);
-    }
-
-    public static function infolist(Schema $schema): Schema
-    {
-        return ModuleInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table

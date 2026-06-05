@@ -1,0 +1,153 @@
+{
+    "form_name": "module_field_default_form",
+    "model": "App\\Models\\ModuleField",
+    "components": [
+        {
+            "component": "section",
+            "label": "Field Configuration",
+            "columnSpan": "full",
+            "collapsible": true,
+            "compact": true,
+            "columns": 3,
+            "schema": [
+                {
+                    "component": "select",
+                    "name": "module_id",
+                    "label": "Module",
+                    "columnSpan": 1,
+                    "options_source": "relationship",
+                    "relationship": "module",
+                    "title_column": "name",
+                    "required": true,
+                    "searchable": true,
+                    "preload": true
+                },
+                {
+                    "component": "textInput",
+                    "name": "field_name",
+                    "label": "Field Name",
+                    "columnSpan": 1,
+                    "required": true
+                },
+                {
+                    "component": "textInput",
+                    "name": "label",
+                    "label": "Display Label",
+                    "columnSpan": 1,
+                    "required": true
+                },
+                {
+                    "component": "select",
+                    "name": "type",
+                    "label": "Field Type",
+                    "columnSpan": 1,
+                    "options_source": "static",
+                    "options": {
+                        "textInput": "Text Input",
+                        "textarea": "Textarea",
+                        "select": "Select Dropdown",
+                        "toggle": "Toggle",
+                        "checkbox": "Checkbox",
+                        "datePicker": "Date Picker",
+                        "dateTimePicker": "Date Time Picker",
+                        "fileUpload": "File Upload",
+                        "radio": "Radio Button",
+                        "checkboxList": "Checkbox List",
+                        "placeholder": "Placeholder"
+                    },
+                    "required": true
+                },
+                {
+                    "component": "textInput",
+                    "name": "length",
+                    "label": "Length (Max Characters)",
+                    "type": "numeric",
+                    "columnSpan": 1,
+                    "required": false
+                },
+                {
+                    "component": "textInput",
+                    "name": "sort_order",
+                    "label": "Sort Order",
+                    "type": "numeric",
+                    "columnSpan": 1,
+                    "required": false
+                },
+                {
+                    "component": "textInput",
+                    "name": "default_value",
+                    "label": "Default Value",
+                    "columnSpan": 3,
+                    "required": false
+                }
+            ]
+        },
+        {
+            "component": "section",
+            "label": "Field Behaviors",
+            "columnSpan": "full",
+            "collapsible": true,
+            "compact": true,
+            "columns": 4,
+            "schema": [
+                {
+                    "component": "toggle",
+                    "name": "required",
+                    "label": "Required Field",
+                    "columnSpan": 1
+                },
+                {
+                    "component": "toggle",
+                    "name": "searchable",
+                    "label": "Searchable Field",
+                    "columnSpan": 1
+                },
+                {
+                    "component": "toggle",
+                    "name": "sortable",
+                    "label": "Sortable Field",
+                    "columnSpan": 1
+                },
+                {
+                    "component": "toggle",
+                    "name": "unique_field",
+                    "label": "Unique Field",
+                    "columnSpan": 1
+                }
+            ]
+        },
+        {
+            "component": "section",
+            "label": "Options (for Select/Radio Components)",
+            "columnSpan": "full",
+            "collapsible": true,
+            "compact": true,
+            "columns": 1,
+            "schema": [
+                {
+                    "component": "repeater",
+                    "name": "options",
+                    "label": "Options List",
+                    "columnSpan": 1,
+                    "columns": 2,
+                    "schema": [
+                        {
+                            "component": "textInput",
+                            "name": "key",
+                            "label": "Option Value / Key",
+                            "columnSpan": 1,
+                            "required": true
+                        },
+                        {
+                            "component": "textInput",
+                            "name": "value",
+                            "label": "Option Display Label",
+                            "columnSpan": 1,
+                            "required": true
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

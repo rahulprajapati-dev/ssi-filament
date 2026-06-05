@@ -1,0 +1,69 @@
+{
+    "title": "Module Layouts",
+    "model": "App\\Models\\ModuleLayout",
+    "perPage": 10,
+    "defaultSort": {
+        "column": "created_at",
+        "direction": "desc"
+    },
+    "columns": [
+        {
+            "type": "text",
+            "name": "module.name",
+            "label": "Module",
+            "searchable": {
+                "global": true,
+                "individual": true
+            },
+            "sortable": true
+        },
+        {
+            "type": "text",
+            "name": "layout_type",
+            "label": "Layout Type",
+            "searchable": {
+                "global": true,
+                "individual": true
+            },
+            "sortable": true
+        },
+        {
+            "type": "text",
+            "name": "created_at",
+            "label": "Created At",
+            "date": true,
+            "sortable": true
+        }
+    ],
+    "filters": [],
+    "filters_layout": "modal",
+    "record_action": null,
+    "record_url": null,
+    "actions": [
+        {
+            "type": "edit",
+            "label": "Edit",
+            "ui": {
+                "icon": "heroicon-m-pencil-square",
+                "slideOver": true,
+                "hiddenLabel": true,
+                "iconButton": true,
+                "tooltip": "Edit",
+                "modalHeading": "Update the layout",
+                "modalWidth": "SevenExtraLarge"
+            }
+        },
+        {
+            "type": "view",
+            "label": "Details",
+            "ui": {
+                "hiddenLabel": true,
+                "iconButton": true,
+                "tooltip": "Details",
+                "icon": "heroicon-o-eye"
+            }
+        }
+    ],
+    "record_actions_position": "BeforeColumns",
+    "bulkActions": []
+}

@@ -2,31 +2,21 @@
 
 namespace App\Filament\Resources\ModuleLayouts\Tables;
 
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
+use App\Helpers\JsonTableBuilder;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\File;
 
 class ModuleLayoutsTable
 {
     public static function configure(Table $table): Table
     {
-        return $table
-            ->columns([
-                //
-            ])
-            ->filters([
-                //
-            ])
-            ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+        $path = base_path('app/Filament/Resources/ModuleLayouts/Tables/listView.json');
+
+        $config = [];
+        if (File::exists($path)) {
+            $config = json_decode(File::get($path), true) ?: [];
+        }
+
+        return JsonTableBuilder::build($table, $config);
     }
 }

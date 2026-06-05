@@ -13,8 +13,18 @@ return new class extends Migration
     {
         Schema::create('module_fields', function (Blueprint $table) {
             $table->id();
-            $table->string('created_by', 10)->nullable();
-            $table->string('updated_by', 10)->nullable();
+            $table->foreignId('module_id')->constrained()->cascadeOnDelete();
+            $table->string('field_name', 100);
+            $table->string('label', 100);
+            $table->string('type', 50);
+            $table->integer('length')->nullable();
+            $table->boolean('required')->default(false);
+            $table->boolean('searchable')->default(false);
+            $table->boolean('sortable')->default(false);
+            $table->boolean('unique_field')->default(false);
+            $table->text('default_value')->nullable();
+            $table->json('options')->nullable();
+            $table->integer('sort_order')->default(0);
             $table->timestamps();
         });
     }

@@ -1,0 +1,50 @@
+{
+    "form_name": "module_layout_create_form",
+    "model": "App\\Models\\ModuleLayout",
+    "components": [
+        {
+            "component": "section",
+            "label": "Layout Settings",
+            "columnSpan": "full",
+            "collapsible": true,
+            "compact": true,
+            "columns": 2,
+            "schema": [
+                {
+                    "component": "select",
+                    "name": "module_id",
+                    "label": "Module",
+                    "columnSpan": 1,
+                    "options_source": "relationship",
+                    "relationship": "module",
+                    "title_column": "name",
+                    "required": true,
+                    "searchable": true,
+                    "preload": true
+                },
+                {
+                    "component": "select",
+                    "name": "layout_type",
+                    "label": "Layout Type",
+                    "columnSpan": 1,
+                    "options_source": "static",
+                    "options": {
+                        "create": "Create View",
+                        "edit": "Edit View",
+                        "detail": "Detail View",
+                        "list": "List View"
+                    },
+                    "required": true
+                },
+                {
+                    "component": "textarea",
+                    "name": "layout_json",
+                    "label": "Layout JSON Configuration",
+                    "columnSpan": 2,
+                    "rows": 15,
+                    "required": true
+                }
+            ]
+        }
+    ]
+}

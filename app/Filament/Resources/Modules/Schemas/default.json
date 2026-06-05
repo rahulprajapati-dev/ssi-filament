@@ -1,0 +1,53 @@
+{
+    "form_name": "module_default_form",
+    "model": "App\\Models\\Module",
+    "components": [
+        {
+            "component": "section",
+            "label": "Module Information",
+            "columnSpan": "full",
+            "collapsible": true,
+            "compact": true,
+            "columns": 2,
+            "schema": [
+                {
+                    "component": "textInput",
+                    "name": "name",
+                    "label": "Name",
+                    "columnSpan": 1,
+                    "required": true,
+                    "unique": true
+                },
+                {
+                    "component": "textInput",
+                    "name": "icon",
+                    "label": "Icon (Heroicon)",
+                    "columnSpan": 1,
+                    "required": false
+                },
+                {
+                    "component": "textInput",
+                    "name": "singular_label",
+                    "label": "Singular Label",
+                    "columnSpan": 1,
+                    "required": true
+                },
+                {
+                    "component": "textInput",
+                    "name": "plural_label",
+                    "label": "Plural Label",
+                    "columnSpan": 1,
+                    "required": true
+                },
+                {
+                    "component": "textarea",
+                    "name": "description",
+                    "label": "Description",
+                    "columnSpan": 2,
+                    "rows": 3,
+                    "required": false
+                }
+            ]
+        }
+    ]
+}

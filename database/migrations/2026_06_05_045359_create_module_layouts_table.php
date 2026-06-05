@@ -13,8 +13,9 @@ return new class extends Migration
     {
         Schema::create('module_layouts', function (Blueprint $table) {
             $table->id();
-            $table->string('created_by', 10)->nullable();
-            $table->string('updated_by', 10)->nullable();
+            $table->foreignId('module_id')->constrained()->cascadeOnDelete();
+            $table->enum('layout_type', ['create', 'edit', 'detail', 'list']);
+            $table->json('layout_json');
             $table->timestamps();
         });
     }
