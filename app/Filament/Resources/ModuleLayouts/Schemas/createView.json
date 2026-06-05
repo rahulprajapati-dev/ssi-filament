@@ -19,6 +19,7 @@
                     "relationship": "module",
                     "title_column": "name",
                     "required": true,
+                    "dehydrated": true,
                     "searchable": true,
                     "preload": true
                 },

@@ -20,7 +20,7 @@ class ModuleLayoutResource extends Resource
 {
     protected static ?string $model = ModuleLayout::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedViewColumns;
 
     protected static ?string $recordTitleAttribute = 'Layout Builder';
 

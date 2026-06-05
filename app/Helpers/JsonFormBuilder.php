@@ -408,6 +408,13 @@ class JsonFormBuilder
         if (!empty($item['item_label'])) {
             $repeater->itemLabel($item['item_label']);
         }
+         if (! empty($item['reorderable'])) {
+            $repeater->reorderable();
+        }
+ 
+        if (! empty($item['reorderable_with_buttons'])) {
+            $repeater->reorderableWithButtons();
+        }
 
         return self::applyCommonFieldOptions($repeater, $item);
     }

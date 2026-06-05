@@ -3,7 +3,7 @@
     "model": "App\\Models\\ModuleField",
     "perPage": 10,
     "defaultSort": {
-        "column": "sort_order",
+        "column": "created_at",
         "direction": "asc"
     },
     "columns": [
@@ -66,9 +66,16 @@
             "boolean": true
         },
         {
-            "type": "text",
+            "type": "icon",
             "name": "sort_order",
             "label": "Sort Order",
+            "boolean": true
+        },
+        {
+            "type": "text",
+            "name": "created_at",
+            "label": "Created At",
+            "date": true,
             "sortable": true
         }
     ],

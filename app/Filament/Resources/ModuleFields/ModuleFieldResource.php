@@ -20,7 +20,7 @@ class ModuleFieldResource extends Resource
 {
     protected static ?string $model = ModuleField::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedQueueList;
 
     protected static ?string $recordTitleAttribute = 'Field Builder';
 

@@ -8,7 +8,7 @@
             "columnSpan": "full",
             "collapsible": true,
             "compact": true,
-            "columns": 3,
+            "columns": 6,
             "schema": [
                 {
                     "component": "select",
@@ -67,29 +67,18 @@
                 },
                 {
                     "component": "textInput",
-                    "name": "sort_order",
-                    "label": "Sort Order",
-                    "type": "numeric",
+                    "name": "default_value",
+                    "label": "Default Value",
                     "columnSpan": 1,
                     "required": false
                 },
                 {
-                    "component": "textInput",
-                    "name": "default_value",
-                    "label": "Default Value",
-                    "columnSpan": 3,
-                    "required": false
-                }
-            ]
-        },
-        {
-            "component": "section",
-            "label": "Field Behaviors",
-            "columnSpan": "full",
-            "collapsible": true,
-            "compact": true,
-            "columns": 4,
-            "schema": [
+                    "component": "toggle",
+                    "name": "sort_order",
+                    "label": "Sort Order",
+                    "type": "numeric",
+                    "columnSpan": 1
+                },
                 {
                     "component": "toggle",
                     "name": "required",

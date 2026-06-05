@@ -29,8 +29,21 @@
         },
         {
             "type": "text",
+            "name": "layout_json",
+            "label": "Layout Fields",
+            "sortable": true
+        },
+        {
+            "type": "text",
             "name": "created_at",
             "label": "Created At",
+            "date": true,
+            "sortable": true
+        },
+        {
+            "type": "text",
+            "name": "updated_at",
+            "label": "Updated At",
             "date": true,
             "sortable": true
         }
