@@ -20,10 +20,6 @@ class Studio extends Model
     protected $casts = [
         'meta_data' => 'array',
     ];
-    
-    protected $casts = [
-        'module_name' => 'array',
-    ];
     //
 }
  

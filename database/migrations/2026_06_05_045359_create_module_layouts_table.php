@@ -11,11 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('studios', function (Blueprint $table) {
+        Schema::create('module_layouts', function (Blueprint $table) {
             $table->id();
-            $table->string('module_name' , 50);
-            $table->json('meta_data');
-            $table->text('description')->nullable();
             $table->string('created_by', 10)->nullable();
             $table->string('updated_by', 10)->nullable();
             $table->timestamps();
@@ -27,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('studios');
+        Schema::dropIfExists('module_layouts');
     }
 };
