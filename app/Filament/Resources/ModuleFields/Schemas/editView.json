@@ -1,5 +1,5 @@
 {
-    "form_name": "module_field_edit_form",
+    "form_name": "module_field_create_form",
     "model": "App\\Models\\ModuleField",
     "components": [
         {
@@ -8,7 +8,7 @@
             "columnSpan": "full",
             "collapsible": true,
             "compact": true,
-            "columns": 3,
+            "columns": 6,
             "schema": [
                 {
                     "component": "select",
@@ -20,6 +20,7 @@
                     "title_column": "name",
                     "required": true,
                     "searchable": true,
+                    "dehydrated": true,
                     "preload": true
                 },
                 {
@@ -48,6 +49,7 @@
                         "select": "Select Dropdown",
                         "toggle": "Toggle",
                         "checkbox": "Checkbox",
+                        "timePicker": "Time Picker",
                         "datePicker": "Date Picker",
                         "dateTimePicker": "Date Time Picker",
                         "fileUpload": "File Upload",
@@ -67,29 +69,17 @@
                 },
                 {
                     "component": "textInput",
-                    "name": "sort_order",
-                    "label": "Sort Order",
-                    "type": "numeric",
+                    "name": "default_value",
+                    "label": "Default Value",
                     "columnSpan": 1,
                     "required": false
                 },
                 {
-                    "component": "textInput",
-                    "name": "default_value",
-                    "label": "Default Value",
-                    "columnSpan": 3,
-                    "required": false
-                }
-            ]
-        },
-        {
-            "component": "section",
-            "label": "Field Behaviors",
-            "columnSpan": "full",
-            "collapsible": true,
-            "compact": true,
-            "columns": 4,
-            "schema": [
+                    "component": "toggle",
+                    "name": "sort_order",
+                    "label": "Sort Order",
+                    "columnSpan": 1
+                },
                 {
                     "component": "toggle",
                     "name": "required",
