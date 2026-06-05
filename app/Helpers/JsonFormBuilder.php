@@ -2,23 +2,34 @@
 
 namespace App\Helpers;
 
+use App\Models\User;
 use Carbon\Carbon;
+use Filament\Actions\Action;
 use Filament\Forms;
-use Filament\Schemas\Components;
 use Filament\Forms\Components\Repeater;
-use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Components\Utilities\Set;
-use Filament\Resources\Pages\CreateRecord;
-use Filament\Resources\Pages\EditRecord;
-use Filament\Schemas\Schema;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Config;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Resources\Pages\CreateRecord;
+use Filament\Resources\Pages\EditRecord;
+use Filament\Resources\Resource;
+use Filament\Schemas\Components;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\TextSize;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\HtmlString;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Livewire\Component;
 use Livewire\Form;
-use App\Models\User;
-use App\Helpers\CommonHelper;
 
 class JsonFormBuilder
 {
@@ -27,8 +38,10 @@ class JsonFormBuilder
         $components = $config['components'] ?? [];
 
         $schema = $schema->schema(self::buildComponents($components));
+
         return $schema;
     }
+
     public static function buildActionSchema(array $config): array
     {
         $components = $config['components'] ?? [];
@@ -39,7 +52,7 @@ class JsonFormBuilder
     public static function buildComponents(array $items): array
     {
         return collect($items)
-            ->map(fn(array $item) => self::buildComponent($item))
+            ->map(fn (array $item) => self::buildComponent($item))
             ->filter()
             ->values()
             ->all();
@@ -55,9 +68,10 @@ class JsonFormBuilder
 
         $prefixed = collect($rawChildren)
             ->map(function (array $child) use ($relation) {
-                if (!empty($child['name']) && !str_contains($child['name'], '.')) {
-                    $child['name'] = $relation . '.' . $child['name'];
+                if (! empty($child['name']) && ! str_contains($child['name'], '.')) {
+                    $child['name'] = $relation.'.'.$child['name'];
                 }
+
                 return $child;
             })
             ->values()
@@ -66,7 +80,7 @@ class JsonFormBuilder
         $schema = self::buildComponents($prefixed);
 
         // Use Section if label/columns present (Section supports label & columns)
-        if (!empty($label) || $columns) {
+        if (! empty($label) || $columns) {
             $section = Components\Section::make($label ?? null)
                 ->schema($schema);
 
@@ -83,6 +97,7 @@ class JsonFormBuilder
 
         return self::applyCommonComponentOptions($group, $item);
     }
+
     protected static function buildRelationship(array $item): Components\Section|Components\Group
     {
         $relation = $item['name'] ?? null;
@@ -108,9 +123,10 @@ class JsonFormBuilder
                     $conds = isset($original['field']) ? [$original] : $original;
 
                     $conds = array_map(function ($c) use ($relation) {
-                        if (!empty($c['field']) && str_starts_with($c['field'], $relation . '.')) {
+                        if (! empty($c['field']) && str_starts_with($c['field'], $relation.'.')) {
                             $c['field'] = substr($c['field'], strlen($relation) + 1);
                         }
+
                         return $c;
                     }, $conds);
 
@@ -127,7 +143,7 @@ class JsonFormBuilder
         $schema = self::buildComponents($normalizedChildren);
 
         // If label/columns present, use Section (Section supports relationship())
-        if (!empty($label) || $columns) {
+        if (! empty($label) || $columns) {
             $section = Components\Section::make($label ?? null)
                 ->schema($schema)
                 ->contained(false); // Not visually contained
@@ -151,17 +167,16 @@ class JsonFormBuilder
         return self::applyCommonComponentOptions($group, $item);
     }
 
-
     protected static function buildGroup(array $item): Components\Section|Components\Group
     {
         $schema = self::buildComponents($item['schema'] ?? []);
 
         // If a label or columns are provided, prefer Section (it supports label & columns)
-        if (!empty($item['label']) || !empty($item['columns'])) {
+        if (! empty($item['label']) || ! empty($item['columns'])) {
             $section = Components\Section::make($item['label'] ?? null)
                 ->schema($schema);
 
-            if (!empty($item['columns'])) {
+            if (! empty($item['columns'])) {
                 $section->columns($item['columns']);
             }
 
@@ -175,9 +190,18 @@ class JsonFormBuilder
         return self::applyCommonComponentOptions($group, $item);
     }
 
-
     public static function buildComponent(array $item): ?Components\Component
     {
+        if (
+            ($item['sortable'] ?? false) &&
+            isset($item['schema']) &&
+            is_array($item['schema'])
+        ) {
+            usort(
+                $item['schema'],
+                fn ($a, $b) => ($a['sort'] ?? 0) <=> ($b['sort'] ?? 0)
+            );
+        }
         $type = $item['component'] ?? null;
 
         return match ($type) {
@@ -202,6 +226,7 @@ class JsonFormBuilder
             'checkboxList' => self::buildCheckboxList($item),
             'placeholder' => self::buildPlaceholder($item),
             'view' => self::buildView($item),
+            'dragDrop' => self::buildDragDrop($item),
 
             default => null,
         };
@@ -210,12 +235,13 @@ class JsonFormBuilder
     /* =============== Hooks ================== */
     protected static function resolveHook($methodHook): ?callable
     {
-        if (!$methodHook || !str_contains($methodHook, '@')) {
+        if (! $methodHook || ! str_contains($methodHook, '@')) {
             return null;
         }
+
         // We use a closure that requests dependencies via Injection.
         // This ensures Filament passes us the Livewire component, Action, and Record/Data if available.
-        return function (\Livewire\Component $livewire, \Filament\Actions\Action $action, $record = null, $data = null, $form = null // mountUsing provides form
+        return function (Component $livewire, Action $action, $record = null, $data = null, $form = null // mountUsing provides form
         ) use ($methodHook) {
 
             // Resolve Resource class from Livewire component
@@ -224,7 +250,7 @@ class JsonFormBuilder
                 $resourceClass = $livewire->getResource(); // Using instance or static call depending on component
             }
             // Fallback for static getResource on page classes
-            if (!$resourceClass && method_exists($livewire, 'getResource')) { // try static
+            if (! $resourceClass && method_exists($livewire, 'getResource')) { // try static
                 try {
                     $resourceClass = $livewire::getResource();
                 } catch (\Throwable $t) {
@@ -249,7 +275,7 @@ class JsonFormBuilder
                         $targetClass = $class;
                     } else {
                         // Fallback or error
-                        if (!$resourceClass) {
+                        if (! $resourceClass) {
                             // Try to execute on the livewire component itself if acceptable?
                             // But error message should be clear.
                             throw new \RuntimeException("Cannot execute trait hook [{$methodHook}]. Resource context not found.");
@@ -260,7 +286,7 @@ class JsonFormBuilder
             }
 
             // Check if calling static
-            if (!$useStatic) {
+            if (! $useStatic) {
                 // If it's a regular class or resource, check if method is static
                 if (method_exists($targetClass, $method)) {
                     $useStatic = (new \ReflectionMethod($targetClass, $method))->isStatic();
@@ -296,7 +322,7 @@ class JsonFormBuilder
 
                 // If a relationship is specified at the step level, wrap the schema in a Group
                 // to ensure Filament scopes the fields to that relationship.
-                if (!empty($stepItem['relationship'])) {
+                if (! empty($stepItem['relationship'])) {
                     $relationshipGroup = Components\Group::make()
                         ->schema($schema)
                         ->relationship($stepItem['relationship']);
@@ -307,11 +333,11 @@ class JsonFormBuilder
                 $step = Components\Wizard\Step::make($stepItem['label'] ?? null)
                     ->schema($schema);
 
-                if (!empty($stepItem['description'])) {
+                if (! empty($stepItem['description'])) {
                     $step->description($stepItem['description']);
                 }
 
-                if (!empty($stepItem['icon'])) {
+                if (! empty($stepItem['icon'])) {
                     $step->icon($stepItem['icon']);
                     $step->completedIcon($stepItem['icon']);
                 }
@@ -321,7 +347,7 @@ class JsonFormBuilder
                 //     // Note: Steps technically support visibility, but typically handled via schema logic
                 //     // We apply standard visibility if the Step component supports it, otherwise handled in schema
                 // }
-    
+
                 return self::applyCommonComponentOptions($step, $stepItem);
             })
             ->values()
@@ -329,11 +355,11 @@ class JsonFormBuilder
 
         $wizard = Components\Wizard::make($steps);
 
-        if (!empty($item['start_on_step'])) {
+        if (! empty($item['start_on_step'])) {
             $wizard->startOnStep($item['start_on_step']);
         }
 
-        if (!empty($item['skippable'])) {
+        if (! empty($item['skippable'])) {
             $wizard->skippable();
         }
 
@@ -357,15 +383,15 @@ class JsonFormBuilder
             ->schema(self::buildComponents($item['schema'] ?? []))
             ->columns($item['columns'] ?? 1);
 
-        if (!empty($item['collapsible'])) {
+        if (! empty($item['collapsible'])) {
             $section->collapsible();
         }
 
-        if (!empty($item['collapsed'])) {
+        if (! empty($item['collapsed'])) {
             $section->collapsed();
         }
 
-        if (!empty($item['compact'])) {
+        if (! empty($item['compact'])) {
             $section->compact();
         }
 
@@ -397,7 +423,6 @@ class JsonFormBuilder
         return self::applyCommonComponentOptions($tabsComponent, $item);
     }
 
-
     protected static function buildRepeater(array $item): Repeater
     {
         $repeater = Repeater::make($item['name'])
@@ -405,8 +430,15 @@ class JsonFormBuilder
             ->schema(self::buildComponents($item['schema'] ?? []))
             ->columns($item['columns'] ?? 1);
 
-        if (!empty($item['item_label'])) {
+        if (! empty($item['item_label'])) {
             $repeater->itemLabel($item['item_label']);
+        }
+        if (! empty($item['reorderable'])) {
+            $repeater->reorderable();
+        }
+
+        if (! empty($item['reorderable_with_buttons'])) {
+            $repeater->reorderableWithButtons();
         }
 
         return self::applyCommonFieldOptions($repeater, $item);
@@ -417,17 +449,19 @@ class JsonFormBuilder
         $field = Forms\Components\Placeholder::make($item['name'])
             ->label($item['label'] ?? null);
 
-        if (!empty($item['content'])) {
+        if (! empty($item['content'])) {
             $field->content($item['content']);
         }
 
-        if (!empty($item['content_hook'])) {
+        if (! empty($item['content_hook'])) {
             $hookString = $item['content_hook'];
             $field->content(function ($record, $get) use ($hookString) {
                 if (str_contains($hookString, '@')) {
                     [$class, $method] = explode('@', $hookString);
+
                     return $class::$method($record, $get);
                 }
+
                 return 'Hook error';
             });
         }
@@ -437,16 +471,16 @@ class JsonFormBuilder
 
     protected static function buildView(array $item)
     {
-        if (!empty($item['name'])) {
+        if (! empty($item['name'])) {
             $field = Forms\Components\ViewField::make($item['name'])
                 ->view($item['view'])
                 ->label($item['label'] ?? null);
 
-            if (!empty($item['view_data']) && is_array($item['view_data'])) {
+            if (! empty($item['view_data']) && is_array($item['view_data'])) {
                 $field->viewData($item['view_data']);
             }
 
-            if (!empty($item['relationship'])) {
+            if (! empty($item['relationship'])) {
                 $relationName = $item['relationship'];
 
                 // Hydrate the field state from the relationship
@@ -464,8 +498,9 @@ class JsonFormBuilder
                         $userId = auth()->id();
                         $syncData = [];
                         foreach ($state ?? [] as $id) {
-                            if (empty($id))
+                            if (empty($id)) {
                                 continue;
+                            }
                             $syncData[$id] = ['updated_by' => $userId];
                         }
 
@@ -485,6 +520,7 @@ class JsonFormBuilder
         if (class_exists(Forms\Components\View::class)) {
             $field = Forms\Components\View::make($item['view'])
                 ->label($item['label'] ?? null);
+
             return self::applyCommonComponentOptions($field, $item);
         }
 
@@ -495,43 +531,60 @@ class JsonFormBuilder
             ->content('Error: View component not found and no name provided for ViewField.');
     }
 
+    protected static function buildDragDrop(array $item): Forms\Components\ViewField
+    {
+        $field = Forms\Components\ViewField::make($item['name'])
+            ->view('filament.components.drag-drop-transfer')
+            ->label($item['label'] ?? null);
+
+        $viewData = [
+            'repeaterName' => $item['repeater_name'] ?? null,
+            'source' => $item['source'] ?? 'repeater',   // 'repeater' | 'module_fields'
+            'dependsOn' => $item['depends_on'] ?? null,      // e.g. 'module_id'
+        ];
+
+        $field->viewData($viewData);
+
+        return self::applyCommonFieldOptions($field, $item);
+    }
+
     /* ========== Field components ========== */
 
     protected static function buildTextEntry(array $item): TextEntry
     {
         $field = TextEntry::make($item['name'])
             ->label($item['label'] ?? null);
-        //color
-        if (!empty($item['color'])) {
+        // color
+        if (! empty($item['color'])) {
             $field->color($item['color']);
         }
-        //badge
+        // badge
         if (isset($item['badge']) && $item['badge']) {
             $field->badge();
         }
-        //formatStateUsing -> callback
-        if (!empty($item['formatStateUsing'])) {
+        // formatStateUsing -> callback
+        if (! empty($item['formatStateUsing'])) {
             $callbackString = $item['formatStateUsing'];
             $field->formatStateUsing(function (string $state) use ($callbackString) {
                 return app()->call($callbackString, ['state' => $state]);
             });
         }
-        //inline
+        // inline
         if (isset($item['inlineLabel']) && $item['inlineLabel']) {
             $field->inlineLabel();
         }
-        //size
-        if (!empty($item['size'])) {
+        // size
+        if (! empty($item['size'])) {
             $sizeEnum = match ($item['size']) {
-                'xs' => \Filament\Support\Enums\TextSize::ExtraSmall,
-                'sm' => \Filament\Support\Enums\TextSize::Small,
-                'md' => \Filament\Support\Enums\TextSize::Medium,
-                'lg' => \Filament\Support\Enums\TextSize::Large,
-                default => \Filament\Support\Enums\TextSize::Medium
+                'xs' => TextSize::ExtraSmall,
+                'sm' => TextSize::Small,
+                'md' => TextSize::Medium,
+                'lg' => TextSize::Large,
+                default => TextSize::Medium
             };
             $field->size($sizeEnum);
         }
-        //date
+        // date
         if (isset($item['date']) && $item['date']) {
             if (is_bool($item['date'])) {
                 $field->date();
@@ -539,7 +592,7 @@ class JsonFormBuilder
                 $field->date($item['date']);
             }
         }
-        //dateTime
+        // dateTime
         if (isset($item['dateTime']) && $item['dateTime']) {
             if (is_bool($item['dateTime'])) {
                 $field->dateTime();
@@ -547,7 +600,7 @@ class JsonFormBuilder
                 $field->dateTime($item['dateTime']);
             }
         }
-        //time
+        // time
         if (isset($item['time']) && $item['time']) {
             if (is_bool($item['time'])) {
                 $field->time();
@@ -555,46 +608,48 @@ class JsonFormBuilder
                 $field->time($item['time']);
             }
         }
-        //numeric
+        // numeric
         if (isset($item['numeric']) && $item['numeric']) {
             $field->numeric();
         }
-        //money
+        // money
         if (isset($item['money']) && $item['money']) {
             $field->money('inr');
         }
-        //weight
-        if (!empty($item['weight'])) {
+        // weight
+        if (! empty($item['weight'])) {
             $weightEnum = match ($item['weight']) {
-                'thin' => \Filament\Support\Enums\FontWeight::Thin,
-                'extralight' => \Filament\Support\Enums\FontWeight::ExtraLight,
-                'light' => \Filament\Support\Enums\FontWeight::Light,
-                'normal' => \Filament\Support\Enums\FontWeight::Normal,
-                'medium' => \Filament\Support\Enums\FontWeight::Medium,
-                'semibold' => \Filament\Support\Enums\FontWeight::SemiBold,
-                'bold' => \Filament\Support\Enums\FontWeight::Bold,
-                'extrabold' => \Filament\Support\Enums\FontWeight::ExtraBold,
-                'black' => \Filament\Support\Enums\FontWeight::Black,
-                default => \Filament\Support\Enums\FontWeight::Normal
+                'thin' => FontWeight::Thin,
+                'extralight' => FontWeight::ExtraLight,
+                'light' => FontWeight::Light,
+                'normal' => FontWeight::Normal,
+                'medium' => FontWeight::Medium,
+                'semibold' => FontWeight::SemiBold,
+                'bold' => FontWeight::Bold,
+                'extrabold' => FontWeight::ExtraBold,
+                'black' => FontWeight::Black,
+                default => FontWeight::Normal
             };
 
             $field->weight($weightEnum);
         }
 
         // Handle dropdown value mapping
-        if (!empty($item['dropdown'])) {
+        if (! empty($item['dropdown'])) {
             $dropdownType = $item['dropdown'];
             $field->formatStateUsing(function ($state) use ($dropdownType) {
                 $options = getDropdownValue($dropdownType);
+
                 return $options[$state] ?? $state;
             });
         }
 
         return self::applyCommonFieldOptions($field, $item);
     }
-    protected static function buildTextInput(array $item): Forms\Components\TextInput
+
+    protected static function buildTextInput(array $item): TextInput
     {
-        $field = Forms\Components\TextInput::make($item['name'])
+        $field = TextInput::make($item['name'])
             ->label($item['label'] ?? null);
 
         if (($item['type'] ?? null) === 'numeric') {
@@ -603,18 +658,18 @@ class JsonFormBuilder
         if (($item['type'] ?? null) === 'password') {
             $field->password()
                 ->revealable()
-                ->dehydrated(fn($state) => filled($state))
+                ->dehydrated(fn ($state) => filled($state))
                 ->afterStateUpdated(function ($livewire, $component) {
                     $statePath = $component->getStatePath();
                     $livewire->validateOnly($statePath);
 
-                    if (!str_ends_with($statePath, '_confirmation')) {
-                        $livewire->validateOnly($statePath . '_confirmation');
+                    if (! str_ends_with($statePath, '_confirmation')) {
+                        $livewire->validateOnly($statePath.'_confirmation');
                     }
                 });
         }
 
-        if (!empty($item['unique'])) {
+        if (! empty($item['unique'])) {
             $field->unique()
                 ->live(onBlur: true)
                 ->afterStateUpdated(function ($livewire, TextInput $component) {
@@ -622,11 +677,11 @@ class JsonFormBuilder
                 });
         }
 
-        if (!empty($item['unique_where_role'])) {
+        if (! empty($item['unique_where_role'])) {
             $roleName = $item['unique_where_role'];
             $fieldName = $item['name'];
             $field->rules([
-                fn($get) => \Illuminate\Validation\Rule::unique('users', $fieldName)
+                fn ($get) => Rule::unique('users', $fieldName)
                     ->where(function ($query) use ($roleName) {
                         $query->whereIn('id', function ($sub) use ($roleName) {
                             $sub->select('model_id')
@@ -644,11 +699,11 @@ class JsonFormBuilder
                 });
         }
 
-        if (!empty($item['same'])) {
+        if (! empty($item['same'])) {
             $field->same($item['same']);
         }
 
-        if (!empty($item['rules'])) {
+        if (! empty($item['rules'])) {
             $field->rules([
                 Password::min($item['rules'])
                     ->mixedCase()
@@ -661,11 +716,11 @@ class JsonFormBuilder
             $field->email();
         }
 
-        if (!empty($item['messages'])) {
+        if (! empty($item['messages'])) {
             $field->validationMessages($item['messages']);
         }
 
-        if (!empty($item['validation'])) {
+        if (! empty($item['validation'])) {
             $field->rules($item['validation']);
         }
 
@@ -674,13 +729,13 @@ class JsonFormBuilder
             "duplicate": ["leads","mobile"],
         */
 
-        if (!empty($item['duplicate']) && is_array($item['duplicate'])) {
+        if (! empty($item['duplicate']) && is_array($item['duplicate'])) {
             $field->rules([
-                fn($get) => \Illuminate\Validation\Rule::unique($item['duplicate'][0], $item['duplicate'][1])->ignore($get('id')), // ignore current record on edit
+                fn ($get) => Rule::unique($item['duplicate'][0], $item['duplicate'][1])->ignore($get('id')), // ignore current record on edit
             ])->reactive();
         }
 
-        if (!empty($item['live'])) {
+        if (! empty($item['live'])) {
             $field->live(debounce: 500)->afterStateUpdated(function ($livewire, $component) {
                 $statePath = $component->getStatePath();
                 $livewire->validateOnly($statePath);
@@ -703,7 +758,6 @@ class JsonFormBuilder
         // Conditional disabling logic
         // ------------------------------
 
-
         self::applyPopulationOptions($field, $item);
 
         return self::applyCommonFieldOptions($field, $item);
@@ -714,18 +768,20 @@ class JsonFormBuilder
         $field = Forms\Components\CheckboxList::make($item['name'])
             ->label($item['label'] ?? null);
 
-        if (!empty($item['relationship'])) {
+        if (! empty($item['relationship'])) {
             $relationship = $item['relationship'];
             $titleColumn = $item['title_column'] ?? 'name';
 
             $modifyQuery = null;
-            if (!empty($item['modify_query_hook'])) {
+            if (! empty($item['modify_query_hook'])) {
                 $hookString = $item['modify_query_hook'];
                 $modifyQuery = function ($query, $get) use ($hookString) {
                     if (str_contains($hookString, '@')) {
                         [$class, $method] = explode('@', $hookString);
+
                         return $class::$method($query, $get);
                     }
+
                     return $query;
                 };
             }
@@ -733,34 +789,36 @@ class JsonFormBuilder
             $field->relationship($relationship, $titleColumn, $modifyQuery);
         }
 
-        if (!empty($item['searchable'])) {
+        if (! empty($item['searchable'])) {
             $field->searchable();
         }
 
-        if (!empty($item['bulk_toggleable'])) {
+        if (! empty($item['bulk_toggleable'])) {
             $field->bulkToggleable();
         }
 
-        if (!empty($item['columns'])) {
+        if (! empty($item['columns'])) {
             $field->columns((int) $item['columns']);
         }
 
-        if (!empty($item['grid_direction'])) {
+        if (! empty($item['grid_direction'])) {
             $field->gridDirection($item['grid_direction']);
         }
 
-        if (!empty($item['label_hook'])) {
+        if (! empty($item['label_hook'])) {
             $hookString = $item['label_hook'];
             $field->getOptionLabelFromRecordUsing(function ($record) use ($hookString) {
                 if (str_contains($hookString, '@')) {
                     [$class, $method] = explode('@', $hookString);
+
                     return $class::$method($record);
                 }
+
                 return $record->name;
             });
         }
 
-        if (!empty($item['options'])) {
+        if (! empty($item['options'])) {
             $field->options($item['options']);
         }
 
@@ -784,13 +842,13 @@ class JsonFormBuilder
         $field = Forms\Components\Select::make($item['name'])
             ->label($item['label'] ?? null);
 
-        if (!empty($item['multiple'])) {
+        if (! empty($item['multiple'])) {
             $field->multiple();
         }
-        if (!empty($item['searchable'])) {
+        if (! empty($item['searchable'])) {
             $field->searchable();
         }
-        if (!empty($item['preload'])) {
+        if (! empty($item['preload'])) {
             $field->preload();
         }
         if (isset($item['selectable_placeholder'])) {
@@ -810,7 +868,7 @@ class JsonFormBuilder
         };
 
         // Clear dependent fields on update
-        if (!empty($item['clear_on_update']) && is_array($item['clear_on_update'])) {
+        if (! empty($item['clear_on_update']) && is_array($item['clear_on_update'])) {
             $targets = $item['clear_on_update'];
 
             $field->afterStateUpdated(function ($state, Set $set) use ($targets) {
@@ -830,22 +888,23 @@ class JsonFormBuilder
         $field = Forms\Components\Radio::make($item['name'])
             ->label($item['label'] ?? null);
         // inline
-        if (!empty($item['inline'])) {
+        if (! empty($item['inline'])) {
             $field->inline();
         }
 
-        if (!empty($item['messages'])) {
+        if (! empty($item['messages'])) {
             $field->validationMessages($item['messages']);
         }
 
         // options
         if (empty($item['options'])) {
             $field->options([]);
+
             return self::applyCommonFieldOptions($field, $item);
         } else {
             $field->options($item['options']);
         }
-        if (!empty($item['clear_on_update']) && is_array($item['clear_on_update'])) {
+        if (! empty($item['clear_on_update']) && is_array($item['clear_on_update'])) {
             $targets = $item['clear_on_update'];
 
             $field->afterStateUpdated(function ($state, Set $set) use ($targets) {
@@ -854,6 +913,7 @@ class JsonFormBuilder
                 }
             });
         }
+
         return self::applyCommonFieldOptions($field, $item);
     }
 
@@ -874,22 +934,26 @@ class JsonFormBuilder
                 // 1. Manually fetch options
                 $field->options(function (Forms\Components\Select $component) use ($relationship, $titleColumn, $storeStringValue) {
                     $modelClass = $component->getContainer()->getModel();
-                    if (!class_exists($modelClass))
+                    if (! class_exists($modelClass)) {
                         return [];
+                    }
 
                     // Instantiate model to get the relationship definition
-                    $model = new $modelClass();
-                    if (!method_exists($model, $relationship))
+                    $model = new $modelClass;
+                    if (! method_exists($model, $relationship)) {
                         return [];
+                    }
 
                     // Key by Name if storeStringValue is true, otherwise ID
                     $keyColumn = $storeStringValue ? $titleColumn : 'id';
                     // Checks if title_column contains curly braces like {first_name}
                     if (preg_match('/\{(.+?)\}/', $titleColumn)) {
                         $query = $model->{$relationship}()->getRelated();
+
                         return $query->get()->mapWithKeys(function ($record) use ($titleColumn, $keyColumn) {
                             $label = preg_replace_callback('/\{(.+?)\}/', function ($matches) use ($record) {
                                 $column = $matches[1];
+
                                 return $record->{$column} ?? '';
                             }, $titleColumn);
 
@@ -901,13 +965,16 @@ class JsonFormBuilder
                         $relatedQuery = $model->{$relationship}()->getRelated()::query();
                         $user = auth()->user();
                         $allowedRoles = allowedRoleNames($user);
-                        if (empty($allowedRoles))
+                        if (empty($allowedRoles)) {
                             return;
-                        if (!empty($allowedRoles) && !empty($relatedQuery)) {
+                        }
+                        if (! empty($allowedRoles) && ! empty($relatedQuery)) {
                             $relatedQuery->whereIn('name', $allowedRoles);
+
                             return $relatedQuery->pluck($titleColumn, $keyColumn);
                         }
                     }
+
                     return $model->{$relationship}()->getRelated()->pluck($titleColumn, $keyColumn);
                 });
 
@@ -922,12 +989,14 @@ class JsonFormBuilder
                 // 2. Manually load state
                 $field->afterStateHydrated(function (Forms\Components\Select $component) use ($relationship, $titleColumn, $storeStringValue) {
                     $record = $component->getContainer()->getRecord();
-                    if (!$record)
+                    if (! $record) {
                         return;
+                    }
 
                     $relatedRecord = $record->{$relationship}()->first();
-                    if (!$relatedRecord)
+                    if (! $relatedRecord) {
                         return;
+                    }
 
                     // Set state to Name if storeStringValue is true, otherwise Key (ID)
                     $state = $storeStringValue ? $relatedRecord->{$titleColumn} : $relatedRecord->getKey();
@@ -938,7 +1007,7 @@ class JsonFormBuilder
                 $field->saveRelationshipsUsing(static function (Forms\Components\Select $component, $state) use ($relationship, $titleColumn, $storeStringValue) {
 
                     $record = $component->getContainer()->getRecord();
-                    if (!$record) {
+                    if (! $record) {
                         return;
                     }
 
@@ -957,9 +1026,10 @@ class JsonFormBuilder
                     // -----------------------------
                     // 1) BelongsTo → associate
                     // -----------------------------
-                    if ($relation instanceof \Illuminate\Database\Eloquent\Relations\BelongsTo) {
+                    if ($relation instanceof BelongsTo) {
                         $record->{$relation->getForeignKeyName()} = $idToSync;
                         $record->save();
+
                         return;
                     }
 
@@ -967,10 +1037,11 @@ class JsonFormBuilder
                     // 2) BelongsToMany / MorphToMany → sync
                     // -----------------------------
                     if (
-                        $relation instanceof \Illuminate\Database\Eloquent\Relations\BelongsToMany ||
-                        $relation instanceof \Illuminate\Database\Eloquent\Relations\MorphToMany
+                        $relation instanceof BelongsToMany ||
+                        $relation instanceof MorphToMany
                     ) {
                         $relation->sync($idToSync ? [$idToSync] : []);
+
                         return;
                     }
 
@@ -1010,7 +1081,7 @@ class JsonFormBuilder
         $whereConfig = $item['where'] ?? [];
 
         $field->options(function (Get $get) use ($modelClass, $valueColumn, $labelColumn, $whereConfig) {
-            if (!$modelClass || !class_exists($modelClass)) {
+            if (! $modelClass || ! class_exists($modelClass)) {
                 return [];
             }
 
@@ -1020,7 +1091,7 @@ class JsonFormBuilder
                 $column = $where['column'] ?? null;
                 $dependsOn = $where['depends_on'] ?? null;
 
-                if (!$column || !$dependsOn) {
+                if (! $column || ! $dependsOn) {
                     continue;
                 }
 
@@ -1058,7 +1129,7 @@ class JsonFormBuilder
                     if (is_array($options)) {
                         $field->options($options);
                     } else {
-                        $field->options(["" => "No Options Found"]);
+                        $field->options(['' => 'No Options Found']);
                     }
                 }
 
@@ -1068,7 +1139,7 @@ class JsonFormBuilder
             // Dynamic helper: depends on other fields (via $get)
             // $field->options(function (Get $get) use ($helperClass, $helperMethod, $helperParams) {
             $field->options(function (Get $get) use ($helperClass, $helperMethod, $helperParams, $helperType) {
-                if (!class_exists($helperClass) || !method_exists($helperClass, $helperMethod)) {
+                if (! class_exists($helperClass) || ! method_exists($helperClass, $helperMethod)) {
                     return [];
                 }
 
@@ -1101,20 +1172,21 @@ class JsonFormBuilder
                     ->toArray();
             });
 
-            if (!empty($item['auto_select_single'])) {
+            if (! empty($item['auto_select_single'])) {
                 $resolveSingleOption = function () use ($helperClass, $helperMethod, $helperParams, $helperType): mixed {
-                    if (!class_exists($helperClass) || !method_exists($helperClass, $helperMethod)) {
+                    if (! class_exists($helperClass) || ! method_exists($helperClass, $helperMethod)) {
                         return null;
                     }
                     $args = array_map(
-                        fn($param) => ($helperType === 'hybrid' && is_string($param) && str_starts_with($param, '@')) ? null : $param,
+                        fn ($param) => ($helperType === 'hybrid' && is_string($param) && str_starts_with($param, '@')) ? null : $param,
                         $helperParams
                     );
                     $result = $helperClass::$helperMethod(...$args);
                     // Cast keys to string to match how options() closure normalises them
                     $options = collect(is_array($result) ? $result : [])
-                        ->mapWithKeys(fn($v, $k) => [(string) $k => (string) ($v ?? $k)])
+                        ->mapWithKeys(fn ($v, $k) => [(string) $k => (string) ($v ?? $k)])
                         ->toArray();
+
                     return count($options) === 1 ? array_key_first($options) : null;
                 };
 
@@ -1122,7 +1194,7 @@ class JsonFormBuilder
                 $field->default($resolveSingleOption);
 
                 $field->afterStateHydrated(function ($component, $state, $livewire) use ($resolveSingleOption) {
-                    if (!empty($state)) {
+                    if (! empty($state)) {
                         return;
                     }
                     $single = $resolveSingleOption();
@@ -1138,7 +1210,7 @@ class JsonFormBuilder
         // Old style (with helper_key + DynamicFormOptions) still supported as fallback
         $helperKey = $item['helper_key'] ?? null;
 
-        if (!$helperKey) {
+        if (! $helperKey) {
             return;
         }
 
@@ -1147,17 +1219,16 @@ class JsonFormBuilder
         });
     }
 
-
     protected static function applyEnumOptions(Forms\Components\Select $field, array $item): void
     {
         $enumClass = $item['enum_class'] ?? null;
 
-        if (!$enumClass || !enum_exists($enumClass)) {
+        if (! $enumClass || ! enum_exists($enumClass)) {
             return;
         }
 
         $options = collect($enumClass::cases())
-            ->mapWithKeys(fn($case) => [
+            ->mapWithKeys(fn ($case) => [
                 $case->value => $case->name,
             ])
             ->toArray();
@@ -1169,7 +1240,7 @@ class JsonFormBuilder
     {
         $key = $item['config_key'] ?? null;
 
-        if (!$key) {
+        if (! $key) {
             return;
         }
 
@@ -1185,7 +1256,7 @@ class JsonFormBuilder
         if (isset($item['inline'])) {
             $field->inline($item['inline']);
         }
-        if (!empty($item['clear_on_update']) && is_array($item['clear_on_update'])) {
+        if (! empty($item['clear_on_update']) && is_array($item['clear_on_update'])) {
             $targets = $item['clear_on_update'];
 
             $field->afterStateUpdated(function ($state, Set $set) use ($targets) {
@@ -1194,6 +1265,7 @@ class JsonFormBuilder
                 }
             });
         }
+
         return self::applyCommonFieldOptions($field, $item);
     }
 
@@ -1201,7 +1273,7 @@ class JsonFormBuilder
     {
         $field = Forms\Components\Checkbox::make($item['name'])
             ->label($item['label'] ?? null);
-        if (!empty($item['clear_on_update']) && is_array($item['clear_on_update'])) {
+        if (! empty($item['clear_on_update']) && is_array($item['clear_on_update'])) {
             $targets = $item['clear_on_update'];
 
             $field->afterStateUpdated(function ($state, Set $set) use ($targets) {
@@ -1210,6 +1282,7 @@ class JsonFormBuilder
                 }
             });
         }
+
         return self::applyCommonFieldOptions($field, $item);
     }
 
@@ -1220,52 +1293,54 @@ class JsonFormBuilder
             ->displayFormat($item['display_format'] ?? 'd-m-Y')
             ->format('Y-m-d')
             ->label($item['label'] ?? null);
-        //close_on_date_selection
+        // close_on_date_selection
         $closeOnDateSelection = $item['close_on_date_selection'] ?? true;
         if ($closeOnDateSelection) {
             $field->closeOnDateSelection();
         }
 
-        if (!empty($item['messages'])) {
+        if (! empty($item['messages'])) {
             $field->validationMessages($item['messages']);
         }
-        
-        if (!empty($item['min_date'])) {
+
+        if (! empty($item['min_date'])) {
             $field->minDate(self::resolveDateValue($item['min_date']));
         }
 
-        if (!empty($item['min_date_create_only'])) {
+        if (! empty($item['min_date_create_only'])) {
             $minDateValue = self::resolveDateValue($item['min_date_create_only']);
-            $field->minDate(fn($record) => $record === null ? $minDateValue : null);
+            $field->minDate(fn ($record) => $record === null ? $minDateValue : null);
         }
 
-        if (!empty($item['min_date_field'])) {
-            $field->minDate(fn($get) => $get($item['min_date_field']));
+        if (! empty($item['min_date_field'])) {
+            $field->minDate(fn ($get) => $get($item['min_date_field']));
         }
 
-        if (!empty($item['max_date'])) {
+        if (! empty($item['max_date'])) {
             $field->maxDate(self::resolveDateValue($item['max_date']));
         }
 
-        if (!empty($item['max_date_field'])) {
-            $field->maxDate(fn($get) => $get($item['max_date_field']));
+        if (! empty($item['max_date_field'])) {
+            $field->maxDate(fn ($get) => $get($item['max_date_field']));
         }
-        if (!empty($item['default'])) {
+        if (! empty($item['default'])) {
             $field->default(self::resolveDateValue($item['default']));
         }
 
-        //before_or_equal
+        // before_or_equal
         if (isset($item['before_or_equal'])) {
             $callbackString = $item['before_or_equal'];
-            $field->beforeOrEqual(fn($record, $get) => function () use ($callbackString, $record, $get) {
+            $field->beforeOrEqual(fn ($record, $get) => function () use ($callbackString, $record, $get) {
                 return app()->call($callbackString, [
-                    "get" => $get,
-                    "record" => $record
+                    'get' => $get,
+                    'record' => $record,
                 ]);
             });
         }
+
         return self::applyCommonFieldOptions($field, $item);
     }
+
     protected static function resolveDateValue(string $value): Carbon|string
     {
         return match (true) {
@@ -1280,14 +1355,14 @@ class JsonFormBuilder
     protected static function matchCondition(mixed $actual, string $operator, mixed $expected): bool
     {
         return match ($operator) {
-            '!='     => $actual != $expected,
-            '>'      => $actual > $expected,
-            '>='     => $actual >= $expected,
-            '<'      => $actual < $expected,
-            '<='     => $actual <= $expected,
-            'in'     => in_array($actual, (array) $expected),
-            'not_in' => !in_array($actual, (array) $expected),
-            default  => $actual == $expected,  // '='
+            '!=' => $actual != $expected,
+            '>' => $actual > $expected,
+            '>=' => $actual >= $expected,
+            '<' => $actual < $expected,
+            '<=' => $actual <= $expected,
+            'in' => in_array($actual, (array) $expected),
+            'not_in' => ! in_array($actual, (array) $expected),
+            default => $actual == $expected,  // '='
         };
     }
 
@@ -1301,29 +1376,30 @@ class JsonFormBuilder
         if ($closeOnDateSelection) {
             $field->closeOnDateSelection();
         }
-        if (!empty($item['min_date'])) {
+        if (! empty($item['min_date'])) {
             $field->minDate(self::resolveDateValue($item['min_date']));
         }
 
-        if (!empty($item['min_date_create_only'])) {
+        if (! empty($item['min_date_create_only'])) {
             $minDateValue = self::resolveDateValue($item['min_date_create_only']);
-            $field->minDate(fn($record) => $record === null ? $minDateValue : null);
+            $field->minDate(fn ($record) => $record === null ? $minDateValue : null);
         }
 
-        if (!empty($item['min_date_field'])) {
-            $field->minDate(fn($get) => $get($item['min_date_field']));
+        if (! empty($item['min_date_field'])) {
+            $field->minDate(fn ($get) => $get($item['min_date_field']));
         }
 
-        if (!empty($item['max_date'])) {
+        if (! empty($item['max_date'])) {
             $field->maxDate(self::resolveDateValue($item['max_date']));
         }
 
-        if (!empty($item['max_date_field'])) {
-            $field->maxDate(fn($get) => $get($item['max_date_field']));
+        if (! empty($item['max_date_field'])) {
+            $field->maxDate(fn ($get) => $get($item['max_date_field']));
         }
-        if (!empty($item['default'])) {
+        if (! empty($item['default'])) {
             $field->default(self::resolveDateValue($item['default']));
         }
+
         return self::applyCommonFieldOptions($field, $item);
     }
 
@@ -1332,14 +1408,14 @@ class JsonFormBuilder
         $field = Forms\Components\FileUpload::make($item['name'])
             ->label($item['label'] ?? null);
 
-        if (!empty($item['avatar'])) {
+        if (! empty($item['avatar'])) {
             $field->avatar();
         }
-        if (!empty($item['multiple'])) {
+        if (! empty($item['multiple'])) {
             $field->multiple();
         }
-        if(!empty($item['accepted_file_types'])){
-            if(!is_array($item['accepted_file_types'] )){
+        if (! empty($item['accepted_file_types'])) {
+            if (! is_array($item['accepted_file_types'])) {
                 $item['accepted_file_types'] = explode(',', $item['accepted_file_types']);
             }
             $field->acceptedFileTypes($item['accepted_file_types']);
@@ -1356,7 +1432,7 @@ class JsonFormBuilder
         }  */
 
         $field->disk($disk);
-        if (!empty($item['directory'])) {
+        if (! empty($item['directory'])) {
             $directoryBase = $item['directory'];
 
             $field->directory(function ($record) use ($directoryBase) {
@@ -1366,24 +1442,29 @@ class JsonFormBuilder
         if (isset($item['save_full_url']) && $item['save_full_url'] === true) {
 
             $field->dehydrateStateUsing(function ($state) use ($disk) {
-                if (blank($state))
+                if (blank($state)) {
                     return null;
-                if (filter_var($state, FILTER_VALIDATE_URL))
+                }
+                if (filter_var($state, FILTER_VALIDATE_URL)) {
                     return $state;
-                $localPath = storage_path('app/livewire-tmp/' . basename($state));
+                }
+                $localPath = storage_path('app/livewire-tmp/'.basename($state));
                 if (file_exists($localPath)) {
-                    \Illuminate\Support\Facades\Storage::disk($disk)->put($state, file_get_contents($localPath));
+                    Storage::disk($disk)->put($state, file_get_contents($localPath));
                     unlink($localPath); // Cleanup local temp after move
                 }
-                return \Illuminate\Support\Facades\Storage::disk($disk)->url($state);
+
+                return Storage::disk($disk)->url($state);
             });
 
             // 3. UI Path Formatting
             $field->formatStateUsing(function ($state) use ($disk) {
-                if (blank($state))
+                if (blank($state)) {
                     return $state;
-                if (!filter_var($state, FILTER_VALIDATE_URL))
+                }
+                if (! filter_var($state, FILTER_VALIDATE_URL)) {
                     return $state;
+                }
 
                 $baseUrl = rtrim(config("filesystems.disks.{$disk}.url", ''), '/');
                 $key = str_starts_with($state, $baseUrl)
@@ -1391,16 +1472,17 @@ class JsonFormBuilder
                     : ltrim(parse_url($state, PHP_URL_PATH), '/');
 
                 $root = trim(config("filesystems.disks.{$disk}.root", ''), '/');
-                if ($root && str_starts_with($key, $root . '/')) {
+                if ($root && str_starts_with($key, $root.'/')) {
                     $key = substr($key, strlen($root) + 1);
                 }
 
                 return $key; // stock_images/01KH.png
             });
             $field->getUploadedFileUsing(function ($file, $state) use ($disk) {
-                $url = \Illuminate\Support\Facades\Storage::disk($disk)->url($state);
-                if (blank($state))
+                $url = Storage::disk($disk)->url($state);
+                if (blank($state)) {
                     return null;
+                }
 
                 // Strip full URL to relative key
                 if (filter_var($state, FILTER_VALIDATE_URL)) {
@@ -1410,7 +1492,7 @@ class JsonFormBuilder
                         : ltrim(parse_url($state, PHP_URL_PATH), '/');
 
                     $root = trim(config("filesystems.disks.{$disk}.root", ''), '/');
-                    if ($root && str_starts_with($key, $root . '/')) {
+                    if ($root && str_starts_with($key, $root.'/')) {
                         $key = substr($key, strlen($root) + 1);
                     }
                 } else {
@@ -1420,17 +1502,17 @@ class JsonFormBuilder
                 // Return array with explicit keys FilePond expects
                 return [
                     'name' => basename($key),
-                    'url' => \Illuminate\Support\Facades\Storage::disk($disk)->url($key),
+                    'url' => Storage::disk($disk)->url($key),
                 ];
             });
         }
-        if (!empty($item['legacy_url_passthrough'])) {
+        if (! empty($item['legacy_url_passthrough'])) {
             $visibility = $item['visibility'] ?? 'public';
 
             // Bypass the default exists() check in afterStateHydrated so
             // legacy absolute URLs (pointing at the old bucket) aren't
             // stripped from state before getUploadedFileUsing runs.
-            //a martandedit image change
+            // a martandedit image change
             $field->fetchFileInformation(false);
 
             $field->getUploadedFileUsing(function ($file, $state) use ($disk, $visibility) {
@@ -1440,14 +1522,15 @@ class JsonFormBuilder
 
                 $guessType = static function (string $path): ?string {
                     $ext = strtolower(pathinfo(parse_url($path, PHP_URL_PATH) ?: $path, PATHINFO_EXTENSION));
+
                     return match ($ext) {
                         'jpg', 'jpeg' => 'image/jpeg',
-                        'png'         => 'image/png',
-                        'gif'         => 'image/gif',
-                        'webp'        => 'image/webp',
-                        'svg'         => 'image/svg+xml',
-                        'pdf'         => 'application/pdf',
-                        default       => null,
+                        'png' => 'image/png',
+                        'gif' => 'image/gif',
+                        'webp' => 'image/webp',
+                        'svg' => 'image/svg+xml',
+                        'pdf' => 'application/pdf',
+                        default => null,
                     };
                 };
 
@@ -1464,7 +1547,7 @@ class JsonFormBuilder
                     $filename = pathinfo($filename, PATHINFO_FILENAME);
                     $filename = preg_replace('/[^A-Za-z0-9._-]/', '_', $filename) ?: 'image';
 
-                    $proxied = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                    $proxied = URL::temporarySignedRoute(
                         'admin.legacy-image-proxy',
                         now()->addHours(2),
                         ['url' => $state, 'filename' => $filename],
@@ -1474,48 +1557,48 @@ class JsonFormBuilder
                         'name' => $filename,
                         'size' => 0,
                         'type' => $guessType($state),
-                        'url'  => $proxied,
+                        'url' => $proxied,
                     ];
                 }
 
-                $storage = \Illuminate\Support\Facades\Storage::disk($disk);
-               // try {
+                $storage = Storage::disk($disk);
+                // try {
                 $url = $visibility === 'private'
-                        ? $storage->temporaryUrl($state, now()->addMinutes(5))
-                        : $storage->url($state);
-               /* } catch (\Throwable $e) {
-                    // Local-style disks don't implement temporaryUrl().
-                    $url = $storage->url($state);
-                } */
+                    ? $storage->temporaryUrl($state, now()->addMinutes(5))
+                    : $storage->url($state);
+                /* } catch (\Throwable $e) {
+                     // Local-style disks don't implement temporaryUrl().
+                     $url = $storage->url($state);
+                 } */
 
                 return [
                     'name' => basename($state),
                     'size' => 0,
                     'type' => $guessType($state),
-                    'url'  => $url,
+                    'url' => $url,
                 ];
             });
         }
-        if (!empty($item['visibility'])) {
+        if (! empty($item['visibility'])) {
             $field->visibility($item['visibility']);
         }
 
         if (isset($item['image_editor']) && $item['image_editor'] === true) {
             $field->imageEditor(boolval($item['image_editor']));
         }
-        if (!empty($item['image_editor_mode'])) {
+        if (! empty($item['image_editor_mode'])) {
             $mode = (int) $item['image_editor_mode'];
             // mode should be 1, 2 or 3
-            if (!in_array($mode, [1, 2, 3])) {
+            if (! in_array($mode, [1, 2, 3])) {
                 $mode = 3;
             }
             $field->imageEditorMode($mode);
         }
-        if (!empty($item['image_preview_height'])) {
+        if (! empty($item['image_preview_height'])) {
             $field->imagePreviewHeight((int) $item['image_preview_height']);
         }
 
-        if (!empty($item['image']) && $item['image'] === true) {
+        if (! empty($item['image']) && $item['image'] === true) {
             $field->image();
         }
         if (! empty($item['image_resize_mode'])) {
@@ -1533,7 +1616,6 @@ class JsonFormBuilder
 
         return self::applyCommonFieldOptions($field, $item);
     }
-
 
     protected static function normalizeConditions(array $config): array
     {
@@ -1553,7 +1635,7 @@ class JsonFormBuilder
             $operator = $condition['operator'] ?? '=';
             $expected = $condition['value'] ?? null;
 
-            if (!$field) {
+            if (! $field) {
                 continue;
             }
 
@@ -1570,13 +1652,13 @@ class JsonFormBuilder
                 '<' => $actual < $expected,
                 '<=' => $actual <= $expected,
                 'in' => is_array($expected) ? in_array($actual, $expected, true) : false,
-                'not_in' => is_array($expected) ? !in_array($actual, $expected, true) : false,
+                'not_in' => is_array($expected) ? ! in_array($actual, $expected, true) : false,
                 'is_null' => $actual === null || $actual === '',
-                'not_null' => !($actual === null || $actual === ''),
+                'not_null' => ! ($actual === null || $actual === ''),
                 default => true,
             };
 
-            if (!$result) {
+            if (! $result) {
                 return false; // AND logic: one false breaks
             }
         }
@@ -1588,65 +1670,74 @@ class JsonFormBuilder
 
     protected static function applyCommonComponentOptions(Components\Component $component, array $item): Components\Component
     {
-        if (!empty($item['columnSpan'])) {
+        if (! empty($item['columnSpan'])) {
             $component->columnSpan($item['columnSpan']);
         }
 
         // Consolidated visibility logic
         $component->visible(function (Get $get, $record, ?string $context = null, $component = null) use ($item) {
             $operation = $context ?? ($component ? $component->getContainer()->getOperation() : null);
-            if (!empty($item['hidden']))
+            if (! empty($item['hidden'])) {
                 return false;
+            }
 
             if (isset($item['visible_on'])) {
                 $visibleOn = (array) $item['visible_on'];
-                if (!in_array($operation, $visibleOn))
+                if (! in_array($operation, $visibleOn)) {
                     return false;
+                }
             }
             if (isset($item['hidden_on'])) {
                 $hiddenOn = (array) $item['hidden_on'];
-                if (in_array($operation, $hiddenOn))
+                if (in_array($operation, $hiddenOn)) {
                     return false;
+                }
             }
 
             if (isset($item['visible_when'])) {
                 $conditions = self::normalizeConditions($item['visible_when']);
-                if (!self::evaluateConditions($get, $conditions))
+                if (! self::evaluateConditions($get, $conditions)) {
                     return false;
+                }
             }
 
             if (isset($item['hidden_when'])) {
                 $conditions = self::normalizeConditions($item['hidden_when']);
-                if (self::evaluateConditions($get, $conditions))
+                if (self::evaluateConditions($get, $conditions)) {
                     return false;
+                }
             }
 
             if (isset($item['visible_if_record'])) {
                 $criteria = $item['visible_if_record'];
-                if (!$record || ($record->{$criteria['field']} ?? null) !== $criteria['value'])
+                if (! $record || ($record->{$criteria['field']} ?? null) !== $criteria['value']) {
                     return false;
+                }
             }
 
             if (isset($item['hidden_if_record'])) {
                 $criteria = $item['hidden_if_record'];
-                if ($record && ($record->{$criteria['field']} ?? null) === $criteria['value'])
+                if ($record && ($record->{$criteria['field']} ?? null) === $criteria['value']) {
                     return false;
+                }
             }
 
-            if (!empty($item['visible_roles'])) {
+            if (! empty($item['visible_roles'])) {
                 $roles = (array) $item['visible_roles'];
-                $user = \Illuminate\Support\Facades\Auth::user();
-                /** @var \App\Models\User $user */
-                if (!$user || !$user->hasAnyRole($roles))
+                $user = Auth::user();
+                /** @var User $user */
+                if (! $user || ! $user->hasAnyRole($roles)) {
                     return false;
+                }
             }
 
-            if (!empty($item['hidden_roles'])) {
+            if (! empty($item['hidden_roles'])) {
                 $roles = (array) $item['hidden_roles'];
-                $user = \Illuminate\Support\Facades\Auth::user();
-                /** @var \App\Models\User $user */
-                if ($user && $user->hasAnyRole($roles))
+                $user = Auth::user();
+                /** @var User $user */
+                if ($user && $user->hasAnyRole($roles)) {
                     return false;
+                }
             }
 
             return true;
@@ -1664,9 +1755,9 @@ class JsonFormBuilder
 
             // Make field optional when disabled
             if (method_exists($component, 'required')) {
-                if (!empty($item['required'])) {
+                if (! empty($item['required'])) {
                     $component->required(function (Get $get) use ($conditions) {
-                        return !self::evaluateConditions($get, $conditions);
+                        return ! self::evaluateConditions($get, $conditions);
                     });
                 }
             }
@@ -1692,17 +1783,17 @@ class JsonFormBuilder
 
     protected static function applyCommonFieldOptions(Components\Component $field, array $item): Components\Component
     {
-        if (!empty($item['required'])) {
+        if (! empty($item['required'])) {
             if ($item['required'] === 'create' || $item['required'] === 'edit') {
-                $field->required(fn(string $context): bool => $context === $item['required']);
+                $field->required(fn (string $context): bool => $context === $item['required']);
             } else {
                 $field->required();
             }
         }
-        if (!empty($item['disabled'])) {
+        if (! empty($item['disabled'])) {
             $field->disabled();
         }
-        if (!empty($item['hidden'])) {
+        if (! empty($item['hidden'])) {
             $field->hidden();
         }
 
@@ -1714,7 +1805,7 @@ class JsonFormBuilder
         //     $field->placeholder($item['placeholder']);
         // }
 
-        if (!empty($item['placeholder']) && method_exists($field, 'placeholder')) {
+        if (! empty($item['placeholder']) && method_exists($field, 'placeholder')) {
             $placeholder = $item['placeholder'];
 
             // If the placeholder string ends with an image extension, wrap it in HTML.
@@ -1722,7 +1813,7 @@ class JsonFormBuilder
             // return the stencil — that way it reappears after the user removes a file.
             if (preg_match('/\.(jpg|jpeg|png|gif|svg)$/i', $placeholder)) {
                 $imageUrl = asset(str_replace('public/', '', $placeholder));
-                $field->placeholder(new \Illuminate\Support\HtmlString(
+                $field->placeholder(new HtmlString(
                     "<div><img src='{$imageUrl}' class='stencil-img' alt='Upload stencil' /></div>"
                 ));
             } else {
@@ -1732,26 +1823,26 @@ class JsonFormBuilder
         if (array_key_exists('extra_attributes', $item)) {
             $field->extraAttributes($item['extra_attributes']);
         }
-        if (!empty($item['helperText'])) {
+        if (! empty($item['helperText'])) {
             $field->helperText($item['helperText']);
         }
 
-        if (!empty($item['hint']) && method_exists($field, 'hint')) {
+        if (! empty($item['hint']) && method_exists($field, 'hint')) {
             $field->hint($item['hint']);
         }
 
-        if (!empty($item['columnSpan'])) {
+        if (! empty($item['columnSpan'])) {
             $field->columnSpan($item['columnSpan']);
         }
 
-        if (!empty($item['reactive']) && method_exists($field, 'reactive')) {
+        if (! empty($item['reactive']) && method_exists($field, 'reactive')) {
             $field->reactive();
         }
-        if (!empty($item['live']) && method_exists($field, 'live')) {
+        if (! empty($item['live']) && method_exists($field, 'live')) {
             $field->live();
         }
 
-        if (!empty($item['debounce']) && method_exists($field, 'debounce')) {
+        if (! empty($item['debounce']) && method_exists($field, 'debounce')) {
             $field->debounce($item['debounce']);
         }
 
@@ -1759,63 +1850,71 @@ class JsonFormBuilder
             $field->dehydrated($item['dehydrated']);
         }
 
-        if (!empty($item['extra_attributes'])) {
+        if (! empty($item['extra_attributes'])) {
             $field->extraAttributes($item['extra_attributes']);
         }
 
-        if (!empty($item['uppercase'])) {
-            $field->dehydrateStateUsing(fn($state) => strtoupper((string) $state));
+        if (! empty($item['uppercase'])) {
+            $field->dehydrateStateUsing(fn ($state) => strtoupper((string) $state));
         }
 
         // Handle Visibility (Roles)
-        if (!empty($item['visible_roles'])) {
+        if (! empty($item['visible_roles'])) {
             $roles = is_array($item['visible_roles']) ? $item['visible_roles'] : [$item['visible_roles']];
             $field->hidden(function () use ($roles) {
                 $user = auth()->user();
-                return !$user || !$user->hasAnyRole($roles);
+
+                return ! $user || ! $user->hasAnyRole($roles);
             });
         }
 
-        if (!empty($item['hidden_roles'])) {
+        if (! empty($item['hidden_roles'])) {
             $roles = is_array($item['hidden_roles']) ? $item['hidden_roles'] : [$item['hidden_roles']];
             $field->hidden(function () use ($roles) {
                 $user = auth()->user();
+
                 return $user && $user->hasAnyRole($roles);
             });
         }
         // Consolidated visibility logic for fields
         $field->visible(function (Get $get, $record, ?string $context = null, $component = null) use ($item) {
             $operation = $context ?? ($component ? $component->getContainer()->getOperation() : null);
-            if (!empty($item['hidden']))
+            if (! empty($item['hidden'])) {
                 return false;
+            }
 
             if (isset($item['visible_on'])) {
                 $visibleOn = (array) $item['visible_on'];
-                if (!in_array($operation, $visibleOn))
+                if (! in_array($operation, $visibleOn)) {
                     return false;
+                }
             }
             if (isset($item['hidden_on'])) {
                 $hiddenOn = (array) $item['hidden_on'];
-                if (in_array($operation, $hiddenOn))
+                if (in_array($operation, $hiddenOn)) {
                     return false;
+                }
             }
 
             if (isset($item['visible_when'])) {
                 $conditions = self::normalizeConditions($item['visible_when']);
-                if (!self::evaluateConditions($get, $conditions))
+                if (! self::evaluateConditions($get, $conditions)) {
                     return false;
+                }
             }
 
             if (isset($item['hidden_when'])) {
                 $conditions = self::normalizeConditions($item['hidden_when']);
-                if (self::evaluateConditions($get, $conditions))
+                if (self::evaluateConditions($get, $conditions)) {
                     return false;
+                }
             }
 
             if (isset($item['visible_if_record'])) {
                 $criteria = $item['visible_if_record'];
-                if (!$record || ($record->{$criteria['field']} ?? null) !== $criteria['value'])
+                if (! $record || ($record->{$criteria['field']} ?? null) !== $criteria['value']) {
                     return false;
+                }
             }
 
             if (isset($item['hidden_if_record'])) {
@@ -1823,30 +1922,33 @@ class JsonFormBuilder
                 if ($criteria['value'] === 'auth_id') {
                     $criteria['value'] = auth()->id();
                 }
-                if ($record && ($record->{$criteria['field']} ?? null) === $criteria['value'])
+                if ($record && ($record->{$criteria['field']} ?? null) === $criteria['value']) {
                     return false;
+                }
             }
 
-            if (!empty($item['visible_roles'])) {
+            if (! empty($item['visible_roles'])) {
                 $roles = (array) $item['visible_roles'];
-                $user = \Illuminate\Support\Facades\Auth::user();
-                /** @var \App\Models\User $user */
-                if (!$user || !$user->hasAnyRole($roles))
+                $user = Auth::user();
+                /** @var User $user */
+                if (! $user || ! $user->hasAnyRole($roles)) {
                     return false;
+                }
             }
 
-            if (!empty($item['hidden_roles'])) {
+            if (! empty($item['hidden_roles'])) {
                 $roles = (array) $item['hidden_roles'];
-                $user = \Illuminate\Support\Facades\Auth::user();
-                /** @var \App\Models\User $user */
-                if ($user && $user->hasAnyRole($roles))
+                $user = Auth::user();
+                /** @var User $user */
+                if ($user && $user->hasAnyRole($roles)) {
                     return false;
+                }
             }
 
             return true;
         });
 
-        if (!empty($item['disabled_mode'])) {
+        if (! empty($item['disabled_mode'])) {
             $disabledMode = $item['disabled_mode'];
 
             $field->disabled(function ($livewire, $component) use ($disabledMode) {
@@ -1854,11 +1956,12 @@ class JsonFormBuilder
                 $operation = $component->getContainer()->getOperation();
 
                 // Fallback to Livewire instance check
-                if (!$operation) {
-                    if ($livewire instanceof CreateRecord)
+                if (! $operation) {
+                    if ($livewire instanceof CreateRecord) {
                         $operation = 'create';
-                    elseif ($livewire instanceof EditRecord)
+                    } elseif ($livewire instanceof EditRecord) {
                         $operation = 'edit';
+                    }
                 }
 
                 $isCreate = $operation === 'create';
@@ -1876,10 +1979,10 @@ class JsonFormBuilder
                 return self::evaluateConditions($get, $conditions);
             });
 
-            if (!empty($item['required'])) {
+            if (! empty($item['required'])) {
                 // Make field optional when disabled
                 $field->required(function (Get $get) use ($conditions) {
-                    return !self::evaluateConditions($get, $conditions);
+                    return ! self::evaluateConditions($get, $conditions);
                 });
             }
         }
@@ -1890,19 +1993,23 @@ class JsonFormBuilder
                 : $item['disabled_if_record'];
 
             $evaluateDisabledIfRecord = function ($record) use ($criteriaList): bool {
-                if (!$record) return false;
+                if (! $record) {
+                    return false;
+                }
 
                 foreach ($criteriaList as $criteria) {
-                    $conditionField    = $criteria['field']    ?? null;
-                    $conditionValue    = $criteria['value']    ?? null;
+                    $conditionField = $criteria['field'] ?? null;
+                    $conditionValue = $criteria['value'] ?? null;
                     $conditionOperator = $criteria['operator'] ?? '=';
 
-                    $related = !empty($criteria['relation']) ? $record->{$criteria['relation']} : $record;
-                    if (!$related) return false;
+                    $related = ! empty($criteria['relation']) ? $record->{$criteria['relation']} : $record;
+                    if (! $related) {
+                        return false;
+                    }
 
                     $actual = $related->{$conditionField} ?? null;
 
-                    if (!self::matchCondition($actual, $conditionOperator, $conditionValue)) {
+                    if (! self::matchCondition($actual, $conditionOperator, $conditionValue)) {
                         return false;
                     }
                 }
@@ -1910,9 +2017,9 @@ class JsonFormBuilder
                 return true;
             };
 
-            $field->disabled(fn($record) => $evaluateDisabledIfRecord($record));
-            if($item['required'] ?? false){
-                $field->required(fn($record) => !$evaluateDisabledIfRecord($record));
+            $field->disabled(fn ($record) => $evaluateDisabledIfRecord($record));
+            if ($item['required'] ?? false) {
+                $field->required(fn ($record) => ! $evaluateDisabledIfRecord($record));
             }
         }
 
@@ -1934,7 +2041,7 @@ class JsonFormBuilder
             $valueColumn = $item['required_unless']['value'];
             $field->required(fn ($get) => $get($fieldName) !== $valueColumn);
             $field->validationMessages([
-                'required' => $item['label'] . ' is Required',
+                'required' => $item['label'].' is Required',
             ]);
         }
 
@@ -1952,14 +2059,14 @@ class JsonFormBuilder
 
         // validate_on_blur: live on blur + optional uppercase + trigger field-level validation
         if ($item['validate_on_blur'] ?? false) {
-            $isUppercase = !empty($item['uppercase']);
+            $isUppercase = ! empty($item['uppercase']);
             $field->live(onBlur: true)
-                  ->afterStateUpdated(function ($state, Set $set, $livewire, $component) use ($isUppercase) {
-                      if ($isUppercase) {
-                          $set($component->getName(), strtoupper((string) $state));
-                      }
-                      $livewire->validateOnly($component->getStatePath());
-                  });
+                ->afterStateUpdated(function ($state, Set $set, $livewire, $component) use ($isUppercase) {
+                    if ($isUppercase) {
+                        $set($component->getName(), strtoupper((string) $state));
+                    }
+                    $livewire->validateOnly($component->getStatePath());
+                });
         }
 
         // Check for your custom 'after_state_updated' key
@@ -1984,16 +2091,16 @@ class JsonFormBuilder
             });
         }
 
-        // custom_rule 
+        // custom_rule
         if (isset($item['custom_rule'])) {
             $callbackString = $item['custom_rule'];
-            $field->rule(fn($get, $record) => function (string $attribute, $value, $fail) use ($callbackString, $record, $get) {
+            $field->rule(fn ($get, $record) => function (string $attribute, $value, $fail) use ($callbackString, $record, $get) {
                 app()->call($callbackString, [
-                    "attribute" => $attribute,
-                    "value" => $value,
-                    "fail" => $fail,
-                    "record" => $record,
-                    "get" => $get
+                    'attribute' => $attribute,
+                    'value' => $value,
+                    'fail' => $fail,
+                    'record' => $record,
+                    'get' => $get,
                 ]);
             });
         }
@@ -2001,16 +2108,16 @@ class JsonFormBuilder
             $callbackString = $item['custom_rule_with_dipendency'];
             $isDepend = $item['dependency_enabled'] ?? false;
             $dependField = $item['dependency_field'] ?? null;
- 
-            $field->rule(fn($get, $record) => function (string $attribute, $value, $fail, ) use ($callbackString, $record, $get, $isDepend, $dependField) {
+
+            $field->rule(fn ($get, $record) => function (string $attribute, $value, $fail) use ($callbackString, $record, $get, $isDepend, $dependField) {
                 app()->call($callbackString, [
-                    "attribute" => $attribute,
-                    "value" => $value,
-                    "fail" => $fail,
-                    "record" => $record,
-                    "get" => $get,
-                    "isdepend" => $isDepend,
-                    "depenfield" => $dependField,
+                    'attribute' => $attribute,
+                    'value' => $value,
+                    'fail' => $fail,
+                    'record' => $record,
+                    'get' => $get,
+                    'isdepend' => $isDepend,
+                    'depenfield' => $dependField,
                 ]);
             });
         }
@@ -2021,10 +2128,12 @@ class JsonFormBuilder
 
             $field->hidden(function ($record) use ($criteria) {
                 // Safety check: Create pages have no record
-                if (!$record)
+                if (! $record) {
                     return false;
+                }
 
                 $dbValue = $record->{$criteria['field']} ?? null;
+
                 return $dbValue === $criteria['value'];
             });
         }
@@ -2034,10 +2143,12 @@ class JsonFormBuilder
 
             $field->visible(function ($record) use ($criteria) {
                 // Safety check: Create pages have no record
-                if (!$record)
+                if (! $record) {
                     return false;
+                }
 
                 $dbValue = $record->{$criteria['field']} ?? null;
+
                 return $dbValue === $criteria['value'];
             });
         }
@@ -2058,13 +2169,14 @@ class JsonFormBuilder
                 if ($state) {
                     $stateId = $get($item['clean_city_id'][0]);
                     $cities = CommonHelper::citiesByStateId($stateId);
-                    if (!array_key_exists($state, $cities)) {
-                    $cityId = $item['clean_city_id'][1]; 
+                    if (! array_key_exists($state, $cities)) {
+                        $cityId = $item['clean_city_id'][1];
                         $set($cityId, null);
                     }
                 }
             });
         }
+
         return $field;
     }
 
@@ -2114,23 +2226,23 @@ class JsonFormBuilder
                 }
             });
         }
-    }*/ 
+    }*/
 
     protected static function applyPopulationOptions(Components\Component $field, array $item): void
     {
 
-        if (!isset($item['populate_fields'], $item['helper_class']) ||(!isset($item['populate_method']) && !isset($item['helper_method']))) {
+        if (! isset($item['populate_fields'], $item['helper_class']) || (! isset($item['populate_method']) && ! isset($item['helper_method']))) {
             return;
         }
 
-        $helperClass   = $item['helper_class'];
-        $helperMethod  = $item['populate_method'] ?? $item['helper_method'];
+        $helperClass = $item['helper_class'];
+        $helperMethod = $item['populate_method'] ?? $item['helper_method'];
         $populateFields = $item['populate_fields'];
-        $populateMode   = $item['populate_mode'] ?? 'both';
-        $helperParams   = $item['helper_params'] ?? [];
-        $helperType     = $item['helper_type'] ?? 'static';
+        $populateMode = $item['populate_mode'] ?? 'both';
+        $helperParams = $item['helper_params'] ?? [];
+        $helperType = $item['helper_type'] ?? 'static';
 
-        if (!class_exists($helperClass) || !method_exists($helperClass, $helperMethod)) {
+        if (! class_exists($helperClass) || ! method_exists($helperClass, $helperMethod)) {
             return;
         }
 
@@ -2143,7 +2255,7 @@ class JsonFormBuilder
             // Detect operation
             $operation = $component->getContainer()->getOperation();
 
-            if (!$operation) {
+            if (! $operation) {
                 if ($livewire instanceof CreateRecord) {
                     $operation = 'create';
                 } elseif ($livewire instanceof EditRecord) {
@@ -2152,18 +2264,18 @@ class JsonFormBuilder
             }
 
             $isCreate = $operation === 'create';
-            $isEdit   = $operation === 'edit';
+            $isEdit = $operation === 'edit';
 
             $shouldRun = ($populateMode === 'create' && $isCreate) || ($populateMode === 'edit' && $isEdit) || ($populateMode === 'both');
 
-            if (!$shouldRun) {
+            if (! $shouldRun) {
                 return;
             }
 
             // Build helper arguments
             $args = [];
 
-            if (!empty($helperParams)) {
+            if (! empty($helperParams)) {
                 foreach ($helperParams as $param) {
 
                     if ($helperType === 'hybrid') {
@@ -2180,7 +2292,7 @@ class JsonFormBuilder
 
             $data = $helperClass::$helperMethod(...$args);
 
-            if (!is_array($data)) {
+            if (! is_array($data)) {
                 return;
             }
 
