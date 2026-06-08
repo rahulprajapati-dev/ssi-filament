@@ -59,8 +59,12 @@
         },
         {
             "type": "text",
-            "name": "created_by",
+            "name": "createdBy.name",
             "label": "Created By",
+            "searchable": {
+                "global": true,
+                "individual": true
+            },
             "sortable": true
         },
         {
@@ -124,6 +128,10 @@
                     "type": "custom",
                     "name": "deploy_module",
                     "label": "Deploy Module",
+                    "hidden_when":{
+                        "field":"is_deploy",
+                        "value":true
+                    },
                     "ui": {
                         "icon": "heroicon-o-cloud-arrow-up",
                         "color": "warning",

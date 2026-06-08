@@ -26,9 +26,10 @@ class ModuleHooks
 
     public function deployModule(Module $record, array $data = [])
     {
-        // $record->update([
-        //     'status' => $record->status === 'enabled' ? 'disabled' : 'enabled',
-        // ]);
+        $record->update([
+            'is_deploy' => true,
+        ]);
+        $record->save();
 
 
         Notification::make()->success()->title('Module Deployed Successfully')->send();

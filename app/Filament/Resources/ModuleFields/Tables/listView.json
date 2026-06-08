@@ -73,6 +73,16 @@
         },
         {
             "type": "text",
+            "name": "createdBy.name",
+            "label": "Created By",
+            "searchable": {
+                "global": true,
+                "individual": true
+            },
+            "sortable": true
+        },
+        {
+            "type": "text",
             "name": "created_at",
             "label": "Created At",
             "date": true,

@@ -17,6 +17,8 @@ class Module extends Model
         'plural_label',
         'icon',
         'description',
+        'is_deploy',
+        'is_enable',
     ];
 
     public function fields()

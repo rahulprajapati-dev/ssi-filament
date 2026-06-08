@@ -48,6 +48,7 @@
                     "helper_params": [
                         "field_type_dom"
                     ],
+                    "searchable":true,
                     "reactive": true,
                     "required": true
                 },

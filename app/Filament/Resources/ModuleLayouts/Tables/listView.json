@@ -35,15 +35,18 @@
         },
         {
             "type": "text",
-            "name": "created_at",
-            "label": "Created At",
-            "date": true,
+            "name": "createdBy.name",
+            "label": "Created By",
+            "searchable": {
+                "global": true,
+                "individual": true
+            },
             "sortable": true
         },
         {
             "type": "text",
-            "name": "updated_at",
-            "label": "Updated At",
+            "name": "created_at",
+            "label": "Created At",
             "date": true,
             "sortable": true
         }
