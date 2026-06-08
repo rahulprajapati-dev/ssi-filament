@@ -29,13 +29,12 @@
                     "name": "layout_type",
                     "label": "Layout Type",
                     "columnSpan": 1,
-                    "options_source": "static",
-                    "options": {
-                        "create": "Create View",
-                        "edit": "Edit View",
-                        "detail": "Detail View",
-                        "list": "List View"
-                    },
+                    "options_source": "helper",
+                    "helper_class": "App\\Helpers\\DropDownHelper",
+                    "helper_method": "getDropdown",
+                    "helper_params": [
+                        "layout_type_dom"
+                    ],
                     "required": true
                 },
                 {

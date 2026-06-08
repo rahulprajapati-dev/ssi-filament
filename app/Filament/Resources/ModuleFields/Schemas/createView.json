@@ -42,21 +42,13 @@
                     "name": "type",
                     "label": "Field Type",
                     "columnSpan": 1,
-                    "options_source": "static",
-                    "options": {
-                        "textInput": "Text Input",
-                        "textarea": "Textarea",
-                        "select": "Select Dropdown",
-                        "toggle": "Toggle",
-                        "checkbox": "Checkbox",
-                        "timePicker": "Time Picker",
-                        "datePicker": "Date Picker",
-                        "dateTimePicker": "Date Time Picker",
-                        "fileUpload": "File Upload",
-                        "radio": "Radio Button",
-                        "checkboxList": "Checkbox List",
-                        "placeholder": "Placeholder"
-                    },
+                    "options_source": "helper",
+                    "helper_class": "App\\Helpers\\DropDownHelper",
+                    "helper_method": "getDropdown",
+                    "helper_params": [
+                        "field_type_dom"
+                    ],
+                    "reactive": true,
                     "required": true
                 },
                 {
@@ -113,6 +105,10 @@
             "collapsible": true,
             "compact": true,
             "columns": 1,
+            "visible_when":{
+                "field":"type",
+                "value":"select"
+            },
             "schema": [
                 {
                     "component": "repeater",

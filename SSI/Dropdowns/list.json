@@ -7,5 +7,34 @@
         "male": "Male",
         "female": "Female",
         "other": "Other"
+    },
+    "field_type_dom": {
+        "text": "Text Input",
+        "textarea": "Textarea",
+        "number": "Number",
+        "email": "Email",
+        "url": "URL",
+        "phone": "Phone Number",
+        "select": "Select Dropdown",
+        "toggle": "Toggle",
+        "checkbox": "Checkbox",
+        "radio": "Radio Button",
+        "checkbox_list": "Checkbox List",
+        "date": "Date Picker",
+        "time": "Time Picker",
+        "datetime": "Date Time Picker",
+        "file": "File Upload",
+        "image": "Image Upload",
+        "currency": "Currency",
+        "color": "Color Picker",
+        "tags": "Tags Input",
+        "relationship": "Relationship",
+        "json": "JSON"
+    },
+    "layout_type_dom": {
+        "create": "Create View",
+        "edit": "Edit View",
+        "detail": "Detail View",
+        "list": "List View"
     }
 }
