@@ -16,6 +16,8 @@ return new class extends Migration
             $table->foreignId('module_id')->constrained()->cascadeOnDelete();
             $table->enum('layout_type', ['create', 'edit', 'detail', 'list']);
             $table->json('layout_json');
+            $table->string('created_by', 10)->nullable();
+            $table->string('updated_by', 10)->nullable();
             $table->timestamps();
         });
     }

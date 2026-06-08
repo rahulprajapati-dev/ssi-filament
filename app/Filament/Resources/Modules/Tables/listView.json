@@ -59,6 +59,12 @@
         },
         {
             "type": "text",
+            "name": "created_by",
+            "label": "Created By",
+            "sortable": true
+        },
+        {
+            "type": "text",
             "name": "created_at",
             "label": "Created At",
             "date": true,

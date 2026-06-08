@@ -25,6 +25,8 @@ return new class extends Migration
             $table->text('default_value')->nullable();
             $table->json('options')->nullable();
             $table->integer('sort_order')->default(0);
+            $table->string('created_by', 10)->nullable();
+            $table->string('updated_by', 10)->nullable();
             $table->timestamps();
         });
     }

@@ -17,7 +17,8 @@ return new class extends Migration
             $table->string('name', 100)->unique(); // Accounts
             $table->string('singular_label', 100);
             $table->string('plural_label', 100);
-
+            $table->boolean('is_enable')->default(false);
+            $table->boolean('is_deploy')->default(false);
             $table->string('icon')->nullable();
 
             $table->text('description')->nullable();
