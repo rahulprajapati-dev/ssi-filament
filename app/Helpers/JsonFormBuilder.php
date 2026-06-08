@@ -30,7 +30,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Livewire\Component;
 use Livewire\Form;
-use App\Helpers\DropDownHelper;
+use App\Helpers\Studio\DropdownHandler;
 
 class JsonFormBuilder
 {
@@ -639,7 +639,7 @@ class JsonFormBuilder
         if (! empty($item['dropdown'])) {
             $dropdownType = $item['dropdown'];
             $field->formatStateUsing(function ($state) use ($dropdownType) {
-                $options = DropDownHelper::getDropdown($dropdownType);
+                $options = DropdownHandler::get($dropdownType);
                 return $options[$state] ?? $state;
             });
         }

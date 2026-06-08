@@ -3,21 +3,21 @@
 namespace App\Filament\Resources\Modules\Hooks;
 
 use App\Models\Module;
+use App\Helpers\Studio\StudioHelper;
 use Filament\Notifications\Notification;
 
 class ModuleHooks
 {
     public function toggleModule(Module $record, array $data = [])
     {
-        // $record->update([
-        //     'is_enabled' => ! $record->is_enabled,
-        // ]);
+        $record->update([
+            'is_enable' => ! $record->is_enable,
+        ]);
+        $record->save();
+        $record->refresh();
 
-        // $record->refresh();
-
-        Notification::make()->success()->title(
-            $record->is_enabled ? 'Module Enabled Successfully' : 'Module Disabled Successfully'
-        )->send();
+        $status = $record->is_enable ? 'Enabled' : 'Disabled';
+        Notification::make()->success()->title("Module {$status} Successfully")->send();
 
         return [
             'success' => true,
@@ -26,16 +26,14 @@ class ModuleHooks
 
     public function deployModule(Module $record, array $data = [])
     {
-        $record->update([
-            'is_deploy' => true,
-        ]);
-        $record->save();
+        $res = StudioHelper::deploy($module);
+        
+        if ($res['status']) {
+            Notification::make()->success()->title($res['msg'])->send();
+            return [ 'success' => true, ];
+        }
 
-
-        Notification::make()->success()->title('Module Deployed Successfully')->send();
-
-        return [
-            'success' => true,
-        ];
+        Notification::make()->success()->title($res['msg'])->send();
+        return [ 'success' => false, ];
     }
 }

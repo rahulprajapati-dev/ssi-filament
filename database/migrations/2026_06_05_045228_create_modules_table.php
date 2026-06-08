@@ -17,14 +17,21 @@ return new class extends Migration
             $table->string('name', 100)->unique(); // Accounts
             $table->string('singular_label', 100);
             $table->string('plural_label', 100);
-            $table->boolean('is_enable')->default(false);
-            $table->boolean('is_deploy')->default(false);
-            $table->string('icon')->nullable();
 
+            $table->string('icon')->nullable();
             $table->text('description')->nullable();
 
-            $table->string('created_by', 10)->nullable();
-            $table->string('updated_by', 10)->nullable();
+            $table->boolean('is_enable')->default(false)->index();
+            $table->boolean('is_deploy')->default(false)->index();
+
+            // Correct timestamp type
+            $table->timestamp('deployed_at')->nullable();
+
+            // Proper user relations
+            $table->string('created_by', 36)->nullable();
+            $table->string('updated_by', 36)->nullable();
+            // $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            // $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
 
             $table->timestamps();
         });

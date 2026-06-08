@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('modules', function (Blueprint $table) {
-            $table->boolean('is_enable')->default(false);
-            $table->boolean('is_deploy')->default(false);
+            // Correct timestamp type
+            $table->timestamp('deployed_at')->nullable()->after('is_deploy');
         });
     }
 };

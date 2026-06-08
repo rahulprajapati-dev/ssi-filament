@@ -30,7 +30,7 @@
                     "label": "Layout Type",
                     "columnSpan": 1,
                     "options_source": "helper",
-                    "helper_class": "App\\Helpers\\DropDownHelper",
+                    "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
                     "helper_method": "getDropdown",
                     "helper_params": [
                         "layout_type_dom"
