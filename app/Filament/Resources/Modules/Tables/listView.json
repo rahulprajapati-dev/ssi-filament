@@ -92,6 +92,45 @@
                 "tooltip": "Details",
                 "icon": "heroicon-o-eye"
             }
+        },
+        {
+            "type": "group",
+            "label": "More",
+            "icon": "heroicon-o-ellipsis-horizontal",
+            "items": [
+                {
+                    "type": "custom",
+                    "name": "toggle_module",
+                    "label": "Enable / Disable",
+                    "ui": {
+                        "icon": "heroicon-o-power",
+                        "color": "warning",
+                        "modalHeading": "Change Module Status",
+                        "modalDescription": "Are you sure you want to change the status of this module?",
+                        "modalSubmitActionLabel": "Confirm",
+                        "modalWidth": "Medium"
+                    },
+                    "hooks": {
+                        "action": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@toggleModule"
+                    }
+                },
+                {
+                    "type": "custom",
+                    "name": "deploy_module",
+                    "label": "Deploy Module",
+                    "ui": {
+                        "icon": "heroicon-o-cloud-arrow-up",
+                        "color": "warning",
+                        "modalHeading": "Deploy Module",
+                        "modalDescription": "Are you sure you want to deploy this module?",
+                        "modalSubmitActionLabel": "Yes, Deploy",
+                        "modalWidth": "Medium"
+                    },
+                    "hooks": {
+                        "action": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@deployModule"
+                    }
+                }
+            ]
         }
     ],
     "record_actions_position": "BeforeColumns",

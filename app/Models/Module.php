@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use App\Traits\HasCreatedBy;
+use App\Traits\ModuleHookTrait;
 use Illuminate\Database\Eloquent\Model;
 
 class Module extends Model
 {
     use HasCreatedBy;
+    use ModuleHookTrait;
 
     protected $fillable = [
         'name',
