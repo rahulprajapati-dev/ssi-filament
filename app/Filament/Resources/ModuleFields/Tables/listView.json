@@ -41,6 +41,7 @@
             "type": "text",
             "name": "type",
             "label": "Type",
+            "dropdown":"field_type_dom",
             "searchable": {
                 "global": true,
                 "individual": true

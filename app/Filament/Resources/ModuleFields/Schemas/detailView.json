@@ -11,72 +11,51 @@
             "columns": 6,
             "schema": [
                 {
-                    "component": "select",
-                    "name": "module_id",
+                    "component": "textEntry",
+                    "weight": "black",
+                    "name": "module.plural_label",
                     "label": "Module",
-                    "columnSpan": 1,
-                    "options_source": "relationship",
-                    "relationship": "module",
-                    "title_column": "name",
-                    "required": true,
-                    "searchable": true,
-                    "preload": true
+                    "columnSpan": 1
                 },
                 {
-                    "component": "textInput",
+                    "component": "textEntry",
+                    "weight": "black",
                     "name": "field_name",
                     "label": "Field Name",
-                    "columnSpan": 1,
-                    "required": true
+                    "columnSpan": 1
                 },
                 {
-                    "component": "textInput",
+                    "component": "textEntry",
+                    "weight": "black",
                     "name": "label",
                     "label": "Display Label",
-                    "columnSpan": 1,
-                    "required": true
+                    "columnSpan": 1
                 },
                 {
-                    "component": "select",
+                    "component": "textEntry",
+                    "weight": "black",
                     "name": "type",
+                    "dropdown":"field_type_dom",
                     "label": "Field Type",
-                    "columnSpan": 1,
-                    "options_source": "static",
-                    "options": {
-                        "textInput": "Text Input",
-                        "textarea": "Textarea",
-                        "select": "Select Dropdown",
-                        "toggle": "Toggle",
-                        "checkbox": "Checkbox",
-                        "datePicker": "Date Picker",
-                        "dateTimePicker": "Date Time Picker",
-                        "fileUpload": "File Upload",
-                        "radio": "Radio Button",
-                        "checkboxList": "Checkbox List",
-                        "placeholder": "Placeholder"
-                    },
-                    "required": true
+                    "columnSpan": 1
                 },
                 {
                     "component": "textInput",
                     "name": "length",
                     "label": "Length (Max Characters)",
                     "type": "numeric",
-                    "columnSpan": 1,
-                    "required": false
+                    "columnSpan": 1
                 },
                 {
                     "component": "textInput",
                     "name": "default_value",
                     "label": "Default Value",
-                    "columnSpan": 1,
-                    "required": false
+                    "columnSpan": 1
                 },
                 {
                     "component": "toggle",
                     "name": "sort_order",
                     "label": "Sort Order",
-                    "type": "numeric",
                     "columnSpan": 1
                 },
                 {
@@ -112,6 +91,10 @@
             "collapsible": true,
             "compact": true,
             "columns": 1,
+            "visible_when":{
+                "field":"type",
+                "value":"select"
+            },
             "schema": [
                 {
                     "component": "repeater",
@@ -124,15 +107,13 @@
                             "component": "textInput",
                             "name": "key",
                             "label": "Option Value / Key",
-                            "columnSpan": 1,
-                            "required": true
+                            "columnSpan": 1
                         },
                         {
                             "component": "textInput",
                             "name": "value",
                             "label": "Option Display Label",
-                            "columnSpan": 1,
-                            "required": true
+                            "columnSpan": 1
                         }
                     ]
                 }

@@ -11,41 +11,74 @@
             "columns": 2,
             "schema": [
                 {
-                    "component": "textInput",
+                    "component": "textEntry",
+                    "weight": "black",
                     "name": "name",
                     "label": "Name",
-                    "columnSpan": 1,
-                    "required": true,
-                    "unique": true
+                    "columnSpan": 1
                 },
                 {
-                    "component": "textInput",
+                    "component": "textEntry",
+                    "weight": "black",
                     "name": "icon",
                     "label": "Icon (Heroicon)",
-                    "columnSpan": 1,
-                    "required": false
+                    "columnSpan": 1
                 },
                 {
-                    "component": "textInput",
+                    "component": "textEntry",
+                    "weight": "black",
                     "name": "singular_label",
                     "label": "Singular Label",
-                    "columnSpan": 1,
-                    "required": true
+                    "columnSpan": 1
                 },
                 {
-                    "component": "textInput",
+                    "component": "textEntry",
+                    "weight": "black",
                     "name": "plural_label",
                     "label": "Plural Label",
-                    "columnSpan": 1,
-                    "required": true
+                    "columnSpan": 1
                 },
                 {
-                    "component": "textarea",
+                    "component": "textEntry",
+                    "weight": "black",
                     "name": "description",
                     "label": "Description",
                     "columnSpan": 2,
-                    "rows": 3,
-                    "required": false
+                    "rows": 3
+                }
+            ]
+        },
+        {
+            "component": "section",
+            "label": "System Info",
+            "columnSpan": "full",
+            "collapsed": false,
+            "compact": true,
+            "columns": 4,
+            "schema": [
+                {
+                    "component": "textEntry",
+                    "weight": "black",
+                    "name": "created_at",
+                    "label": "Created At"
+                },
+                {
+                    "component": "textEntry",
+                    "weight": "black",
+                    "name": "updated_at",
+                    "label": "Updated At"
+                },
+                {
+                    "component": "textEntry",
+                    "weight": "black",
+                    "name": "createdBy.name",
+                    "label": "Created By"
+                },
+                {
+                    "component": "textEntry",
+                    "weight": "black",
+                    "name": "updatedBy.name",
+                    "label": "Updated By"
                 }
             ]
         }

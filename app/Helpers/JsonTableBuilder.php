@@ -23,6 +23,7 @@ use Filament\Tables\Table;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
+use App\Helpers\DropDownHelper;
 
 class JsonTableBuilder
 {
@@ -216,7 +217,7 @@ class JsonTableBuilder
                 if (!empty($c['dropdown'])) {
                     $dropdownType = $c['dropdown'];
                     $col->formatStateUsing(function ($state) use ($dropdownType) {
-                        $options = getDropdownValue($dropdownType);
+                        $options = DropDownHelper::getDropdown($dropdownType);
 
                         return $options[$state] ?? $state;
                     });
@@ -228,7 +229,7 @@ class JsonTableBuilder
                         if (!empty($c['dropdown'])) {
                             $dropdownType = $c['dropdown'];
                             $col->searchable(isIndividual: (bool) $isIndividual, query: function ($query, $search) use ($name, $dropdownType) {
-                                $options = getDropdownValue($dropdownType);
+                                $options = DropDownHelper::getDropdown($dropdownType);
                                 if (!is_array($options)) {
                                     return $query->where($name, 'like', "%{$search}%");
                                 }
