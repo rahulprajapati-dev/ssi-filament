@@ -11,38 +11,61 @@
             "columns": 2,
             "schema": [
                 {
-                    "component": "select",
-                    "name": "module_id",
+                    "component": "textEntry",
+                    "weight": "black",
+                    "name": "module.plural_label",
                     "label": "Module",
-                    "columnSpan": 1,
-                    "options_source": "relationship",
-                    "relationship": "module",
-                    "title_column": "name",
-                    "required": true,
-                    "searchable": true,
-                    "preload": true
+                    "columnSpan": 1
                 },
                 {
-                    "component": "select",
+                    "component": "textEntry",
+                    "weight": "black",
                     "name": "layout_type",
                     "label": "Layout Type",
-                    "columnSpan": 1,
-                    "options_source": "static",
-                    "options": {
-                        "create": "Create View",
-                        "edit": "Edit View",
-                        "detail": "Detail View",
-                        "list": "List View"
-                    },
-                    "required": true
+                    "dropdown":"layout_type_dom",
+                    "columnSpan": 1
                 },
                 {
                     "component": "textarea",
                     "name": "layout_json",
                     "label": "Layout JSON Configuration",
                     "columnSpan": 2,
-                    "rows": 15,
+                    "rows": 10,
                     "required": true
+                }
+            ]
+        },
+        {
+            "component": "section",
+            "label": "System Info",
+            "columnSpan": "full",
+            "collapsed": false,
+            "compact": true,
+            "columns": 4,
+            "schema": [
+                {
+                    "component": "textEntry",
+                    "weight": "black",
+                    "name": "created_at",
+                    "label": "Created At"
+                },
+                {
+                    "component": "textEntry",
+                    "weight": "black",
+                    "name": "updated_at",
+                    "label": "Updated At"
+                },
+                {
+                    "component": "textEntry",
+                    "weight": "black",
+                    "name": "createdBy.name",
+                    "label": "Created By"
+                },
+                {
+                    "component": "textEntry",
+                    "weight": "black",
+                    "name": "updatedBy.name",
+                    "label": "Updated By"
                 }
             ]
         }
