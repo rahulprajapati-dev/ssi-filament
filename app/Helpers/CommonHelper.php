@@ -19,4 +19,11 @@ class CommonHelper
         ];
 
     }
+     public static function populatefieldlabel(string $label = null): array
+    {
+        return [
+            'label'=>$label
+        ];
+    }
+
 }
