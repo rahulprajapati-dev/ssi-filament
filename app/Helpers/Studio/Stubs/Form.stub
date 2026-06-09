@@ -2,12 +2,31 @@
 
 namespace App\Filament\Resources\{{RESOURCE}}\Schemas;
 
+use App\Helpers\JsonStudioFormBuilder;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\File;
 
 class {{MODEL}}Form
 {
     public static function configure(Schema $schema): Schema
     {
-        return $schema->components([]);
+        $operation = $schema->getOperation();
+
+        $configFile = match ($operation) {
+            'create' => 'createView.json',
+            'edit'   => 'editView.json',
+            'view'   => 'detailView.json',
+            default  => 'default.json',
+        };
+
+        $configPath = base_path("app/Filament/Resources/{{RESOURCE}}/Schemas/{$configFile}");
+
+        if (! File::exists($configPath)) {
+            return $schema->components([]);
+        }
+
+        $config = json_decode(File::get($configPath), true) ?? [];
+
+        return JsonStudioFormBuilder::buildSchema($schema, $config);
     }
 }

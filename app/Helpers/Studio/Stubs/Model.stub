@@ -1,0 +1,29 @@
+<?php
+
+namespace App\Models;
+
+use App\Traits\HasCreatedBy;
+use App\Traits\ModuleHookTrait;
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * {{MODEL}}
+ *
+ * Relationships inherited from HasCreatedBy:
+ *   createdBy()  → BelongsTo User
+ *   updatedBy()  → BelongsTo User
+ */
+class {{MODEL}} extends Model
+{
+    use HasCreatedBy;
+    use ModuleHookTrait;
+
+    protected $table = '{{TABLE}}';
+
+    protected $guarded = [];
+
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+}

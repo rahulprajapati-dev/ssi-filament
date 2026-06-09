@@ -2,19 +2,21 @@
 
 namespace App\Filament\Resources\{{RESOURCE}}\Tables;
 
-use Filament\Actions\DeleteAction;
-use Filament\Actions\EditAction;
+use App\Helpers\JsonTableBuilder;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\File;
 
 class {{RESOURCE}}Table
 {
     public static function configure(Table $table): Table
     {
-        return $table
-            ->columns([])
-            ->recordActions([
-                EditAction::make(),
-                DeleteAction::make(),
-            ]);
+        $configPath = base_path('app/Filament/Resources/{{RESOURCE}}/Tables/listView.json');
+
+        $config = [];
+        if (File::exists($configPath)) {
+            $config = json_decode(File::get($configPath), true) ?: [];
+        }
+
+        return JsonTableBuilder::build($table, $config);
     }
 }

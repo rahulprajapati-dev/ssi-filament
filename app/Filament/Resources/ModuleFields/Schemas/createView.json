@@ -44,7 +44,7 @@
                     "columnSpan": 1,
                     "options_source": "helper",
                     "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
-                    "helper_method": "getDropdown",
+                    "helper_method": "get",
                     "helper_params": [
                         "field_type_dom"
                     ],

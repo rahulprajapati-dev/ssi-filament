@@ -1,42 +1,44 @@
 <?php
+
+declare(strict_types=1);
+
 namespace App\Helpers\Studio;
 
+use App\Models\Module;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
-use App\Models\Module;
 
-class ModelGenerator
+/**
+ * Generates a production-ready Eloquent model from Model.stub.
+ *
+ * Returns:
+ *   true  — model file written
+ *   false — model file already exists (skipped to protect custom code)
+ */
+final class ModelGenerator
 {
-    public static function generate(Module $module): void
+    public static function generate(Module $module): bool
     {
-        $model = Str::studly($module->name);
-        $path = app_path("Models/{$model}.php");
+        $name     = (string) $module->name;
+        $model    = Str::studly($name);
+        $resource = Str::studly(Str::plural($name));
+        $table    = Str::snake(Str::plural($name));
+        $path     = app_path("Models/{$model}.php");
 
-        if (File::exists($path)) return;
+        if (File::exists($path)) {
+            return false;
+        }
 
-        File::put($path, self::stub($module));
-    }
+        $content = StubRenderer::render('Model.stub', [
+            'MODEL'           => $model,
+            'TABLE'           => $table,
+            'RESOURCE'        => $resource,
+            'PLURAL_RESOURCE' => $resource,
+        ]);
 
-    private static function stub(string $module): string
-    {
+        File::ensureDirectoryExists(app_path('Models'));
+        File::put($path, $content);
 
-        $model = Str::studly($module->name);
-
-        return <<<PHP
-<?php
-
-namespace App\Models;
-
-use Illuminate\Database\Eloquent\Model;
-use App\Traits\ModuleHookTrait;
-use App\Traits\HasCreatedBy;
-
-class {$model} extends Model
-{
-    use ModuleHookTrait;
-    use HasCreatedBy;
-    protected \$guarded = [];
-}
-PHP;
+        return true;
     }
 }
