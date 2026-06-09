@@ -28,6 +28,7 @@ return new class extends Migration
             $table->string('created_by', 10)->nullable();
             $table->string('updated_by', 10)->nullable();
             $table->timestamps();
+            $table->unique(['module_id', 'field_name'], 'uq_module_fields_module_field');
         });
     }
 
