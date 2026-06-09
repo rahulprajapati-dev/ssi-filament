@@ -12,6 +12,10 @@ use Illuminate\Validation\ValidationException;
 class EditModuleField extends EditRecord
 {
     protected static string $resource = ModuleFieldResource::class;
+    public function getTitle(): string 
+    {
+        return 'Edit Field';
+    }
 
     protected function getHeaderActions(): array
     {

@@ -9,6 +9,10 @@ use Filament\Resources\Pages\ViewRecord;
 class ViewModuleLayout extends ViewRecord
 {
     protected static string $resource = ModuleLayoutResource::class;
+     public function getTitle(): string 
+    {
+        return 'View Layout';
+    }
 
     protected function getHeaderActions(): array
     {
