@@ -19,6 +19,7 @@
                     "relationship": "module",
                     "title_column": "name",
                     "required": true,
+                    "disabled_mode": "edit",
                     "searchable": true,
                     "dehydrated": true,
                     "preload": true,
