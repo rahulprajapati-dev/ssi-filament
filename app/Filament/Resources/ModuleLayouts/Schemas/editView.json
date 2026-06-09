@@ -1,5 +1,5 @@
 {
-    "form_name": "module_layout_edit_form",
+    "form_name": "module_layout_create_form",
     "model": "App\\Models\\ModuleLayout",
     "components": [
         {
@@ -19,7 +19,9 @@
                     "relationship": "module",
                     "title_column": "name",
                     "required": true,
+                    "disabled_mode": "edit",
                     "searchable": true,
+                    "dehydrated": true,
                     "preload": true,
                     "live": true
                 },
@@ -28,13 +30,12 @@
                     "name": "layout_type",
                     "label": "Layout Type",
                     "columnSpan": 1,
-                    "options_source": "static",
-                    "options": {
-                        "create": "Create View",
-                        "edit": "Edit View",
-                        "detail": "Detail View",
-                        "list": "List View"
-                    },
+                    "options_source": "helper",
+                    "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
+                    "helper_method": "get",
+                    "helper_params": [
+                        "layout_type_dom"
+                    ],
                     "required": true
                 },
                 {

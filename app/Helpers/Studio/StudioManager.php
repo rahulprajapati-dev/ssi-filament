@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Helpers\Studio;
 
-use App\Helpers\DropdownHandler;
+use App\Helpers\Studio\DropdownHandler;
 use App\Models\Module;
 
 /**
@@ -48,7 +48,7 @@ final class StudioManager
             $this->step('migration', fn () => MigrationGenerator::generate($this->module));
             $this->step('model',     fn () => ModelGenerator::generate($this->module));
             $this->step('resource',  fn () => ResourceGenerator::generate($this->module));
-            $this->step('view',      fn () => ViewGenerator::generate($this->module));
+            // $this->step('view',      fn () => ViewGenerator::generate($this->module));
 
             DropdownHandler::createGroup($this->module->name);
 
