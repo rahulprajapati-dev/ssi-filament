@@ -10,6 +10,10 @@ use Illuminate\Validation\ValidationException;
 class CreateModuleField extends CreateRecord
 {
     protected static string $resource = ModuleFieldResource::class;
+    public function getTitle(): string 
+    {
+        return 'Create Field';
+    }
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {

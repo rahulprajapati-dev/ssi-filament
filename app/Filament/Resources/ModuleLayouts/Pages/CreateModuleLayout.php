@@ -11,6 +11,10 @@ use Illuminate\Validation\ValidationException;
 class CreateModuleLayout extends CreateRecord
 {
     protected static string $resource = ModuleLayoutResource::class;
+     public function getTitle(): string 
+    {
+        return 'Create Layout';
+    }
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
