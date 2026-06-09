@@ -143,6 +143,26 @@
                     "hooks": {
                         "action": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@deployModule"
                     }
+                },
+                {
+                    "type": "custom",
+                    "name": "repair_rebild",
+                    "label": "Repair Rebild",
+                    "hidden_when":{
+                        "field":"is_deploy",
+                        "value":false
+                    },
+                    "ui": {
+                        "icon": "heroicon-o-cloud-arrow-up",
+                        "color": "warning",
+                        "modalHeading": "Repair Rebild Module",
+                        "modalDescription": "Are you sure you want to repair rebild this module?",
+                        "modalSubmitActionLabel": "Yes, Repair Rebild",
+                        "modalWidth": "Medium"
+                    },
+                    "hooks": {
+                        "action": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@repairRebild"
+                    }
                 }
             ]
         }

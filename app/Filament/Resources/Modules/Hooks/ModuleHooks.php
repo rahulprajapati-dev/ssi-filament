@@ -35,4 +35,17 @@ class ModuleHooks
 
         return ['success' => $result->success];
     }
+
+    public function repairRebild(Module $record, array $_data = []): array
+    {
+        $result = StudioManager::rebuild($record);
+
+        if ($result->success) {
+            Notification::make()->success()->title($result->message)->send();
+        } else {
+            Notification::make()->danger()->title('Rebuild Failed')->body($result->message)->send();
+        }
+
+        return ['success' => $result->success];
+    }
 }

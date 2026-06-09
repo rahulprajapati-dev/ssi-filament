@@ -6,6 +6,7 @@ namespace App\Helpers\Studio;
 
 use App\Helpers\Studio\DropdownHandler;
 use App\Models\Module;
+use Illuminate\Support\Facades\Artisan;
 
 /**
  * StudioManager — main deployment orchestrator.
@@ -38,6 +39,16 @@ final class StudioManager
         return (new self($module))->run();
     }
 
+    /**
+     * Rebuild JSON schema files for an already-deployed module.
+     * Skips all validators and the already-deployed check.
+     * Safe to call multiple times; always overwrites JSON files from layout records.
+     */
+    public static function rebuild(Module $module): DeploymentResult
+    {
+        return (new self($module))->runRebuild();
+    }
+
     // ─── Internal pipeline ───────────────────────────────────────────────────
 
     private function run(): DeploymentResult
@@ -46,9 +57,10 @@ final class StudioManager
             ModuleValidator::validate($this->module);
 
             $this->step('migration', fn () => MigrationGenerator::generate($this->module));
+            $this->step('migrate',   fn () => $this->runMigrations());
             $this->step('model',     fn () => ModelGenerator::generate($this->module));
             $this->step('resource',  fn () => ResourceGenerator::generate($this->module));
-            // $this->step('view',      fn () => ViewGenerator::generate($this->module));
+            $this->step('layouts',   fn () => LayoutGenerator::generate($this->module));
 
             DropdownHandler::createGroup($this->module->name);
 
@@ -63,6 +75,36 @@ final class StudioManager
         } catch (\Throwable $e) {
             return DeploymentResult::fail($e->getMessage());
         }
+    }
+
+    private function runRebuild(): DeploymentResult
+    {
+        try {
+            // Re-generate the migration file if it was deleted; idempotent if it exists.
+            $this->step('migration', fn () => MigrationGenerator::generate($this->module));
+            $this->step('migrate',   fn () => $this->runMigrations());
+            $this->step('layouts',   fn () => LayoutGenerator::generate($this->module, force: true));
+
+            return DeploymentResult::ok(
+                "Module '{$this->module->name}' rebuilt successfully. Table and schemas are up to date.",
+                $this->generated,
+                $this->skipped,
+            );
+
+        } catch (\Throwable $e) {
+            return DeploymentResult::fail($e->getMessage());
+        }
+    }
+
+    /**
+     * Run all pending migrations.
+     * --force is required when APP_ENV=production to skip the console confirmation.
+     * Returns true so the step is recorded as "generated" (migrations applied).
+     */
+    private function runMigrations(): bool
+    {
+        Artisan::call('migrate', ['--force' => true]);
+        return true;
     }
 
     /**
