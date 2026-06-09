@@ -2247,8 +2247,11 @@ class JsonFormBuilder
         }
 
         $field->live()->afterStateUpdated(function ($state, Set $set, Get $get, $livewire, $component) use ($helperClass, $helperMethod, $populateFields, $populateMode, $helperParams, $helperType) {
+            if ($state === null || $state === '') {
 
-            if (blank($state)) {
+                  foreach ($populateFields as $targetField) {
+                    $set($targetField, null);
+                }
                 return;
             }
 
