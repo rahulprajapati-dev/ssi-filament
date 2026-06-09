@@ -3,28 +3,35 @@
 namespace App\Helpers\Studio;
 
 use App\Models\Module;
+use App\Helpers\DropdownHandler;
 
 class StudioHelper
 {
     public static function deploy(Module $module): array
     {
-        ModuleValidator::validate($module);
+        try {
+            ModuleValidator::validate($module);
 
-        MigrationGenerator::generate($module);
-        ModelGenerator::generate($module);
-        ResourceGenerator::generate($module);
-        ViewGenerator::generate($module);
-        DropdownHandler::createGroup($module);
+            MigrationGenerator::generate($module);
+            ModelGenerator::generate($module);
+            ResourceGenerator::generate($module);
+            ViewGenerator::generate($module);
+            DropdownHandler::createGroup($module->name);
 
-        $module->update([
-            'is_deploy' => true,
-            'deployed_at' => now(),
-        ]);
-        $module->save();
+            $module->update([
+                'is_deploy'   => true,
+                'deployed_at' => now(),
+            ]);
 
-        return [
-            'status' => true,
-            'msg' => 'Module deployed successfully',
-        ];
+            return [
+                'status' => true,
+                'msg'    => "Module '{$module->name}' deployed successfully.",
+            ];
+        } catch (\Exception $e) {
+            return [
+                'status' => false,
+                'msg'    => $e->getMessage(),
+            ];
+        }
     }
 }

@@ -19,6 +19,13 @@ class Module extends Model
         'description',
         'is_deploy',
         'is_enable',
+        'deployed_at',
+    ];
+
+    protected $casts = [
+        'is_deploy'   => 'boolean',
+        'is_enable'   => 'boolean',
+        'deployed_at' => 'datetime',
     ];
 
     public function fields()

@@ -1,0 +1,19 @@
+<?php
+
+namespace App\Filament\Resources\{{RESOURCE}}\Pages;
+
+use App\Filament\Resources\{{RESOURCE}}\{{MODEL}}Resource;
+use Filament\Actions\EditAction;
+use Filament\Resources\Pages\ViewRecord;
+
+class View{{MODEL}} extends ViewRecord
+{
+    protected static string $resource = {{MODEL}}Resource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            EditAction::make(),
+        ];
+    }
+}

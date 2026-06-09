@@ -1,0 +1,20 @@
+<?php
+
+namespace App\Filament\Resources\{{RESOURCE}}\Tables;
+
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
+use Filament\Tables\Table;
+
+class {{RESOURCE}}Table
+{
+    public static function configure(Table $table): Table
+    {
+        return $table
+            ->columns([])
+            ->recordActions([
+                EditAction::make(),
+                DeleteAction::make(),
+            ]);
+    }
+}

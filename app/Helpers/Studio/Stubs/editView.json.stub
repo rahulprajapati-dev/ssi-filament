@@ -1,0 +1,5 @@
+{
+    "title": "Edit {{MODEL}}",
+    "model": "App\\Models\\{{MODEL}}",
+    "components": []
+}

@@ -1,0 +1,7 @@
+{
+    "title": "{{RESOURCE}}",
+    "model": "App\\Models\\{{MODEL}}",
+    "columns": [],
+    "filters": [],
+    "actions": []
+}

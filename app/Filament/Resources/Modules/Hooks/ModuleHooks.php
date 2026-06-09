@@ -26,14 +26,14 @@ class ModuleHooks
 
     public function deployModule(Module $record, array $data = [])
     {
-        $res = StudioHelper::deploy($module);
-        
+        $res = StudioHelper::deploy($record);
+
         if ($res['status']) {
             Notification::make()->success()->title($res['msg'])->send();
-            return [ 'success' => true, ];
+            return ['success' => true];
         }
 
-        Notification::make()->success()->title($res['msg'])->send();
-        return [ 'success' => false, ];
+        Notification::make()->danger()->title($res['msg'])->send();
+        return ['success' => false];
     }
 }
