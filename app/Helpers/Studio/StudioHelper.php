@@ -3,7 +3,7 @@
 namespace App\Helpers\Studio;
 
 use App\Models\Module;
-use App\Helpers\DropdownHandler;
+use App\Helpers\Studio\DropdownHandler;
 
 class StudioHelper
 {
