@@ -15,8 +15,26 @@
                     "name": "name",
                     "label": "Name",
                     "columnSpan": 1,
+                    "options_source": "helper",
+                    "helper_type": "dynamic",
+                    "helper_class": "App\\Helpers\\CommonHelper",
+                    "helper_method": "populatemodulelabes",
+                    "populate_mode": "create",
+                    "unique": true,
+                    "helper_params": [
+                        "name"
+                    ],
+                    "reactive": true,
                     "required": true,
-                    "unique": true
+                    "populate_fields": [
+                       "singular_label",
+                       "plural_label"
+                    ],
+                    "validation":[
+                        "max:50",
+                        "regex:/^[a-z][a-z0-9_]*$/"
+                    ]
+                    
                 },
                 {
                     "component": "textInput",

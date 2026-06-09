@@ -14,13 +14,30 @@
                     "component": "textInput",
                     "name": "name",
                     "label": "Name",
+                    "columnSpan": 1,
+                    "options_source": "helper",
+                    "helper_type": "dynamic",
+                    "helper_class": "App\\Helpers\\CommonHelper",
+                    "helper_method": "populatemodulelabes",
+                    "unique": true,
+                    "helper_params": [
+                        "name"
+                    ],
+                    "reactive": true,
+                    "required": true,
+                    "populate_fields": [
+                       "singular_label",
+                       "plural_label"
+                    ],
                     "disabled_when":{
                         "field":"is_deploy",
                         "value":true
                     },
-                    "columnSpan": 1,
-                    "required": true,
-                    "unique": true
+                    "validation":[
+                        "max:50",
+                        "regex:/^[a-z][a-z0-9_]*$/"
+                    ]
+                    
                 },
                 {
                     "component": "textInput",
