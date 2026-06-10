@@ -1617,19 +1617,45 @@ class JsonFormBuilder
         return self::applyCommonFieldOptions($field, $item);
     }
 
-    protected static function normalizeConditions(array $config): array
-    {
-        // If it looks like a single condition (has 'field'), wrap in an array
-        if (isset($config['field'])) {
-            return [$config];
+    // protected static function normalizeConditions(array $config): array
+    // {
+    //     // If it looks like a single condition (has 'field'), wrap in an array
+    //     if (isset($config['field'])) {
+    //         return [$config];
+    //     }
+
+    //     // Already a list of conditions
+    //     return $config;
+    // }
+   protected static function normalizeConditions(array $config): array
+   {
+      // Single condition
+      if (isset($config['field'])) {
+          return [
+            'logic' => 'and',
+            'conditions' => [$config],
+          ];
         }
 
-        // Already a list of conditions
-        return $config;
+        // New structure with logic
+        if (isset($config['conditions'])) {
+            return [
+                'logic' => strtolower($config['logic'] ?? 'and'),
+                'conditions' => $config['conditions'],
+            ];
+        }
+
+        // Old array format
+        return [
+            'logic' => 'and',
+            'conditions' => $config,
+        ];
     }
 
-    protected static function evaluateConditions(Get $get, array $conditions): bool
+    protected static function evaluateConditions(Get $get, array  $config): bool
     {
+        $logic = strtolower($config['logic'] ?? 'and');
+        $conditions = $config['conditions'] ?? [];
         foreach ($conditions as $condition) {
             $field = $condition['field'] ?? null;
             $operator = $condition['operator'] ?? '=';
@@ -1657,13 +1683,16 @@ class JsonFormBuilder
                 'not_null' => ! ($actual === null || $actual === ''),
                 default => true,
             };
+            if ($logic === 'and' && ! $result) {
+                 return false;
+            }
 
-            if (! $result) {
-                return false; // AND logic: one false breaks
+            if ($logic === 'or' && $result) {
+                return true;
             }
         }
 
-        return true;
+        return $logic === 'and';
     }
 
     /* ========== Common option appliers ========== */

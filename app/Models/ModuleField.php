@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use App\Traits\ModuleHookTrait;
 use App\Traits\HasCreatedBy;
+use App\Traits\ModuleHookTrait;
+use Illuminate\Database\Eloquent\Model;
 
 class ModuleField extends Model
 {
-    use ModuleHookTrait;
     use HasCreatedBy;
+    use ModuleHookTrait;
 
     protected $fillable = [
         'module_id',
@@ -24,6 +24,10 @@ class ModuleField extends Model
         'default_value',
         'options',
         'sort_order',
+        'visibility_mode',
+        'condition_logic',
+        'always_save_value',
+        'visibility_conditions',
     ];
 
     protected $casts = [
@@ -32,6 +36,8 @@ class ModuleField extends Model
         'searchable' => 'boolean',
         'sortable' => 'boolean',
         'unique_field' => 'boolean',
+        'always_save_value' => 'boolean',
+        'visibility_conditions' => 'array',
     ];
 
     public function module()
