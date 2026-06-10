@@ -19,6 +19,11 @@ class {{MODEL}}Resource extends Resource
         return \App\Filament\Resources\{{RESOURCE}}\Schemas\{{MODEL}}Form::configure($schema);
     }
 
+    public static function canAccess(): bool
+    {
+        return \App\Support\ModuleState::active('{{MODEL}}');
+    }
+
     public static function table(Table $table): Table
     {
         return \App\Filament\Resources\{{RESOURCE}}\Tables\{{RESOURCE}}Table::configure($table);
