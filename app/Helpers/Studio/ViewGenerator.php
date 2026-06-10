@@ -18,4 +18,22 @@ class ViewGenerator
 
         File::put($folder.'/index.blade.php', "<h1>{$module->name}</h1>");
     }
+
+    public static function remove(Module $module): bool
+    {
+        $folder = resource_path('views/modules/' . Str::snake($module->name));
+        $file   = $folder . '/index.blade.php';
+
+        if (! File::exists($file)) {
+            return false;
+        }
+
+        File::delete($file);
+
+        if (File::isDirectory($folder) && empty(File::files($folder))) {
+            File::deleteDirectory($folder);
+        }
+
+        return true;
+    }
 }

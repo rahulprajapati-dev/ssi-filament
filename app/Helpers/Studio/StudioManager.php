@@ -7,6 +7,7 @@ namespace App\Helpers\Studio;
 use App\Helpers\Studio\DropdownHandler;
 use App\Models\Module;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * StudioManager — main deployment orchestrator.
@@ -30,7 +31,10 @@ final class StudioManager
     /** Steps whose output already existed on disk (idempotent skip). */
     private array $skipped = [];
 
-    private function __construct(private readonly Module $module) {}
+    private function __construct(
+        private readonly Module $module,
+        private readonly array $data = [],
+    ) {}
 
     // ─── Public API ──────────────────────────────────────────────────────────
 
@@ -47,6 +51,16 @@ final class StudioManager
     public static function rebuild(Module $module): DeploymentResult
     {
         return (new self($module))->runRebuild();
+    }
+
+    /**
+     * Uninstall a deployed module.
+     * Removes generated files, resources, migrations, views, etc.
+     * Skips deployment validation checks.
+     */
+    public static function uninstall(Module $module, array $data = []): DeploymentResult
+    {
+        return (new self($module, $data))->runUninstall();
     }
 
     // ─── Internal pipeline ───────────────────────────────────────────────────
@@ -96,6 +110,32 @@ final class StudioManager
         }
     }
 
+    private function runUninstall(): DeploymentResult
+    {
+        try {
+            $this->step('remove_layouts', fn () => LayoutGenerator::remove($this->module));
+            $this->step('remove_resource', fn () => ResourceGenerator::remove($this->module));
+            $this->step('remove_model', fn () => ModelGenerator::remove($this->module));
+            $this->step('remove_views', fn () => ViewGenerator::remove($this->module));
+            $this->step('remove_migration', fn () => MigrationGenerator::remove($this->module));
+
+            if (($this->data['is_table'] ?? false) === true) {
+                $this->step('drop_table', fn () => $this->dropTable());
+            }
+
+            $this->markUninstalled();
+
+            return DeploymentResult::ok(
+                "Module '{$this->module->name}' uninstalled successfully.",
+                $this->generated,
+                $this->skipped,
+            );
+
+        } catch (\Throwable $e) {
+            return DeploymentResult::fail($e->getMessage());
+        }
+    }
+
     /**
      * Run all pending migrations.
      * --force is required when APP_ENV=production to skip the console confirmation.
@@ -135,5 +175,27 @@ final class StudioManager
             'is_deploy'   => true,
             'deployed_at' => now(),
         ]);
+    }
+
+    /**
+     * Persist the uninstalled state.
+     * Called only after uninstall succeeds.
+     */
+    private function markUninstalled(): void
+    {
+        $this->module->update([
+            'is_deploy'   => false,
+            'deployed_at' => null,
+        ]);
+    }
+
+    private function dropTable(): bool
+    {
+        $table = $this->module->table_name;
+        if (! Schema::hasTable($table)) {
+            return false;
+        }
+        Schema::dropIfExists($table);
+        return true;
     }
 }

@@ -57,5 +57,6 @@
         "not_in"  : "Not In Array",
         "is_null" : "Is Null / Empty",
         "not_null": "Is Not Null / Empty"
-    }
+    },
+    "Account": []
 }
