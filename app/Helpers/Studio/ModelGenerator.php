@@ -41,4 +41,16 @@ final class ModelGenerator
 
         return true;
     }
+
+    public static function remove(Module $module): bool
+    {
+        $model = Str::studly((string) $module->name);
+        $path  = app_path("Models/{$model}.php");
+
+        if (! File::exists($path)) {
+            return false;
+        }
+        File::delete($path);
+        return true;
+    }
 }

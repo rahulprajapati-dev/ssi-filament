@@ -83,6 +83,41 @@ final class LayoutGenerator
 
     // ── JSON builders ─────────────────────────────────────────────────────────
 
+    public static function remove(Module $module): bool
+    {
+        $resource = Str::studly(Str::plural($module->name));
+        $basePath = app_path("Filament/Resources/{$resource}");
+
+        $files = [
+            "{$basePath}/Schemas/createView.json",
+            "{$basePath}/Schemas/editView.json",
+            "{$basePath}/Schemas/detailView.json",
+            "{$basePath}/Tables/listView.json",
+        ];
+
+        $removed = false;
+
+        foreach ($files as $file) {
+            if (File::exists($file)) {
+                File::delete($file);
+                $removed = true;
+            }
+        }
+
+        $schemasPath = "{$basePath}/Schemas";
+        $tablesPath  = "{$basePath}/Tables";
+
+        if (File::isDirectory($schemasPath) && empty(File::files($schemasPath))) {
+            File::deleteDirectory($schemasPath);
+        }
+
+        if (File::isDirectory($tablesPath) && empty(File::files($tablesPath))) {
+            File::deleteDirectory($tablesPath);
+        }
+
+        return $removed;
+    }
+
     /** @param Collection<string, ModuleField> $fieldMap */
     private static function buildFormJson(
         string $model,

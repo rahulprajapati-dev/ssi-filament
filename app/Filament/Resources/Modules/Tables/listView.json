@@ -112,6 +112,10 @@
                     "type": "custom",
                     "name": "toggle_module",
                     "label": "Enable / Disable",
+                    "hidden_when": {
+                        "field": "is_deploy",
+                        "value": false
+                    },
                     "ui": {
                         "icon": "heroicon-o-power",
                         "color": "warning",
@@ -128,15 +132,15 @@
                     "type": "custom",
                     "name": "deploy_module",
                     "label": "Deploy Module",
-                    "hidden_when":{
-                        "field":"is_deploy",
-                        "value":true
+                    "hidden_when": {
+                        "field": "is_deploy",
+                        "value": true
                     },
                     "ui": {
                         "icon": "heroicon-o-cloud-arrow-up",
-                        "color": "warning",
+                        "color": "success",
                         "modalHeading": "Deploy Module",
-                        "modalDescription": "Are you sure you want to deploy this module?",
+                        "modalDescription": "This will generate all required files, database migrations, models, resources, and layouts for this module. Do you want to continue?",
                         "modalSubmitActionLabel": "Yes, Deploy",
                         "modalWidth": "Medium"
                     },
@@ -146,22 +150,56 @@
                 },
                 {
                     "type": "custom",
-                    "name": "repair_rebild",
-                    "label": "Repair Rebild",
-                    "hidden_when":{
-                        "field":"is_deploy",
-                        "value":false
+                    "name": "uninstall",
+                    "label": "Uninstall Module",
+                    "hidden_when": {
+                        "field": "is_deploy",
+                        "value": false
                     },
                     "ui": {
-                        "icon": "heroicon-o-cloud-arrow-up",
+                        "icon": "heroicon-o-trash",
+                        "color": "danger",
+                        "modalHeading": "Uninstall Module",
+                        "modalDescription": "This action will remove all generated files, resources, and configurations for this module. You can optionally remove the database table as well. This action cannot be undone.",
+                        "modalSubmitActionLabel": "Yes, Uninstall",
+                        "modalWidth": "Medium"
+                    },
+                    "form": {
+                        "components": [
+                            {
+                                "component": "grid",
+                                "schema": [
+                                    {
+                                        "component": "toggle",
+                                        "name": "is_table",
+                                        "label": "Also drop the database table?"
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    "hooks": {
+                        "action": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@uninstall"
+                    }
+                },
+                {
+                    "type": "custom",
+                    "name": "repair_rebuild",
+                    "label": "Repair & Rebuild",
+                    "hidden_when": {
+                        "field": "is_deploy",
+                        "value": false
+                    },
+                    "ui": {
+                        "icon": "heroicon-o-arrow-path",
                         "color": "warning",
-                        "modalHeading": "Repair Rebild Module",
-                        "modalDescription": "Are you sure you want to repair rebild this module?",
-                        "modalSubmitActionLabel": "Yes, Repair Rebild",
+                        "modalHeading": "Repair & Rebuild Module",
+                        "modalDescription": "This will repair and rebuild the module by regenerating missing files and ensuring the database schema and layouts are up to date. Do you want to continue?",
+                        "modalSubmitActionLabel": "Yes, Repair & Rebuild",
                         "modalWidth": "Medium"
                     },
                     "hooks": {
-                        "action": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@repairRebild"
+                        "action": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@repairRebuild"
                     }
                 }
             ]

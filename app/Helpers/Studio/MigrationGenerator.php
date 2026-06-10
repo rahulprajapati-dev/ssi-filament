@@ -60,6 +60,25 @@ final class MigrationGenerator
     // Column block builder
     // --------------------------------------------------------------------------
 
+    public static function remove(Module $module): bool
+    {
+        $table = Str::snake(Str::plural((string) $module->name));
+
+        $files = glob(database_path("migrations/*_create_{$table}_table.php"));
+
+        if (empty($files)) {
+            return false;
+        }
+
+        foreach ($files as $file) {
+            if (File::exists($file)) {
+                File::delete($file);
+            }
+        }
+
+        return true;
+    }
+
     private static function buildColumnBlock(Module $module): string
     {
         /** @var \Illuminate\Database\Eloquent\Collection<int, ModuleField> $fields */

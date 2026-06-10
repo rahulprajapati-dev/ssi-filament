@@ -56,6 +56,61 @@ class ResourceGenerator
         }
     }
 
+    public static function remove(Module $module): bool
+    {
+        $model = Str::studly($module->name);
+        $resource = Str::pluralStudly($model);
+
+        $basePath = app_path("Filament/Resources/{$resource}");
+
+        $files = [
+            "{$basePath}/{$model}Resource.php",
+
+            "{$basePath}/Pages/List{$resource}.php",
+            "{$basePath}/Pages/Create{$model}.php",
+            "{$basePath}/Pages/Edit{$model}.php",
+            "{$basePath}/Pages/View{$model}.php",
+
+            "{$basePath}/Schemas/{$model}Form.php",
+
+            "{$basePath}/Tables/{$resource}Table.php",
+
+            "{$basePath}/Schemas/default.json",
+            "{$basePath}/Schemas/createView.json",
+            "{$basePath}/Schemas/editView.json",
+            "{$basePath}/Schemas/detailView.json",
+
+            "{$basePath}/Tables/listView.json",
+        ];
+
+        $removed = false;
+
+        foreach ($files as $file) {
+            if (File::exists($file)) {
+                File::delete($file);
+                $removed = true;
+            }
+        }
+
+        // Remove empty directories
+        foreach ([
+            "{$basePath}/Pages",
+            "{$basePath}/Schemas",
+            "{$basePath}/Tables",
+        ] as $dir) {
+            if (File::isDirectory($dir) && empty(File::files($dir))) {
+                File::deleteDirectory($dir);
+            }
+        }
+
+        // Remove resource directory if empty
+        if (File::isDirectory($basePath) && empty(File::files($basePath)) && empty(File::directories($basePath))) {
+            File::deleteDirectory($basePath);
+        }
+
+        return $removed;
+    }
+
     protected static function renderStub(string $stub, array $replace): string
     {
         $content = File::get(
