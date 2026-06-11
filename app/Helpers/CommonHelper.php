@@ -26,7 +26,7 @@ class CommonHelper
     public static function populatefieldlabel(string $label = null): array
     {
         return [
-            'label'=> Str::studly($label)
+            'label' => Str::headline($label),
         ];
     }
 
