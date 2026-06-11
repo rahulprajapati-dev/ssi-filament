@@ -1617,11 +1617,25 @@ class JsonFormBuilder
         return self::applyCommonFieldOptions($field, $item);
     }
 
+    // protected static function normalizeConditions(array $config): array
+    // {
+    //     // If it looks like a single condition (has 'field'), wrap in an array
+    //     if (isset($config['field'])) {
+    //         return [$config];
+    //     }
+
+    //     // Already a list of conditions
+    //     return $config;
+    // }
     protected static function normalizeConditions(array $config): array
     {
-        // If it looks like a single condition (has 'field'), wrap in an array
+        // Single condition
         if (isset($config['field'])) {
-            return [$config];
+            return [
+                'logic' => 'and',
+                'conditions' => [$config],
+            ];
+
         }
 
         // Already a list of conditions

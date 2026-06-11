@@ -95,6 +95,25 @@
         "heroicon-o-x-mark": "Close",
         "heroicon-o-check": "Success"
     },
-    "Account": [],
-    "account": []
+    "visibility_mode_dom": {
+        "always_visible": "Always visible",
+        "show_when": "Show when conditions are met",
+        "hide_when": "Hide when conditions are met"
+    },
+    "condition_logic_dom": {
+        "and": "All conditions must be met (AND)",
+        "or": "Any condition must be met (OR)"
+    },
+    "operator_dom": {
+        "=": "Equals",
+        "!=": "Not Equals",
+        ">": "Greater Than",
+        ">=": "Greater Than Or Equal",
+        "<": "Less Than",
+        "<=": "Less Than Or Equal",
+        "in": "In Array",
+        "not_in": "Not In Array",
+        "is_null": "Is Null \/ Empty",
+        "not_null": "Is Not Null \/ Empty"
+    }
 }
