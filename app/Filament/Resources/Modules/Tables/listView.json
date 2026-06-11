@@ -9,7 +9,7 @@
     "columns": [
         {
             "type": "text",
-            "name": "name",
+            "name": "plural_label",
             "label": "Module Name",
             "searchable": {
                 "global": true,
@@ -116,7 +116,7 @@
                 {
                     "type": "custom",
                     "name": "deploy_module",
-                    "label": "Deploy Module",
+                    "label": "Deploy",
                     "hidden_when": {
                         "field": "is_deploy",
                         "value": true
@@ -136,7 +136,7 @@
                 {
                     "type": "custom",
                     "name": "uninstall",
-                    "label": "Uninstall Module",
+                    "label": "Uninstall",
                     "hidden_when": {
                         "field": "is_deploy",
                         "value": false
