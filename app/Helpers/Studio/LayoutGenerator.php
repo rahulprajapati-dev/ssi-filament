@@ -132,21 +132,40 @@ final class LayoutGenerator
             default  => $model,
         };
 
+        $isDetail   = $layoutType === 'detail';
         $components = [];
+
         foreach ($fieldNames as $fieldName) {
             $field = $fieldMap->get($fieldName);
             if ($field === null) {
                 continue;
             }
 
+            $componentType = $isDetail
+                ? self::fieldTypeToDetailComponent($field->type)
+                : self::fieldTypeToFormComponent($field->type);
+
             $component = [
-                'type'  => self::fieldTypeToFormComponent($field->type),
-                'name'  => $field->field_name,
-                'label' => $field->label,
+                'component' => $componentType,
+                'name'      => $field->field_name,
+                'label'     => $field->label,
             ];
 
-            if ($field->required) {
+            if (! $isDetail && $field->required) {
                 $component['required'] = true;
+            }
+
+            // Select/radio: attach static options from ModuleField.options
+            if (! $isDetail && in_array($field->type, ['select', 'dropdown', 'radio', 'checkboxList', 'checkbox_list'], true)) {
+                $raw = is_array($field->options) ? $field->options : [];
+                $opts = [];
+                foreach ($raw as $opt) {
+                    if (isset($opt['key'], $opt['value'])) {
+                        $opts[$opt['key']] = $opt['value'];
+                    }
+                }
+                $component['options_source'] = 'static';
+                $component['options']        = $opts;
             }
 
             $components[] = $component;
@@ -166,6 +185,8 @@ final class LayoutGenerator
         array $fieldNames,
         Collection $fieldMap,
     ): array {
+        $boolTypes = ['boolean', 'toggle', 'checkbox'];
+
         $columns = [];
         foreach ($fieldNames as $fieldName) {
             $field = $fieldMap->get($fieldName);
@@ -173,11 +194,17 @@ final class LayoutGenerator
                 continue;
             }
 
+            $isBool = in_array(strtolower($field->type), $boolTypes, true);
+
             $column = [
-                'type'  => self::fieldTypeToColumnComponent($field->type),
+                'type'  => $isBool ? 'icon' : self::fieldTypeToColumnComponent($field->type),
                 'name'  => $field->field_name,
                 'label' => $field->label,
             ];
+
+            if ($isBool) {
+                $column['boolean'] = true;
+            }
 
             if ($field->searchable) {
                 $column['searchable'] = true;
@@ -195,38 +222,49 @@ final class LayoutGenerator
             'model'   => "App\\Models\\{$model}",
             'columns' => $columns,
             'filters' => [],
-            'actions' => [],
+            'actions' => [
+                ['type' => 'edit',   'label' => 'Edit',    'ui' => ['icon' => 'heroicon-m-pencil-square', 'hiddenLabel' => true, 'iconButton' => true, 'tooltip' => 'Edit']],
+                ['type' => 'view',   'label' => 'Details', 'ui' => ['icon' => 'heroicon-o-eye',           'hiddenLabel' => true, 'iconButton' => true, 'tooltip' => 'Details']],
+            ],
         ];
     }
 
     // ── Type maps ─────────────────────────────────────────────────────────────
 
+    /** Maps a ModuleField type to the JsonFormBuilder 'component' name for create/edit forms. */
     private static function fieldTypeToFormComponent(string $type): string
     {
         return match (strtolower($type)) {
-            'textarea', 'longtext'                  => 'textarea',
-            'richtext'                              => 'richtext',
-            'integer', 'int', 'number',
-            'biginteger', 'bigint'                  => 'number',
-            'decimal', 'float', 'money'             => 'decimal',
-            'boolean', 'toggle'                     => 'toggle',
-            'checkbox'                              => 'checkbox',
-            'date'                                  => 'date',
-            'datetime', 'timestamp'                 => 'datetime',
-            'time'                                  => 'time',
-            'select', 'dropdown'                    => 'select',
-            'json', 'array', 'repeater'             => 'textarea',
-            default                                 => 'text',
+            'textarea', 'longtext', 'richtext'          => 'textarea',
+            'boolean', 'toggle'                         => 'toggle',
+            'checkbox'                                  => 'checkbox',
+            'date'                                      => 'datePicker',
+            'datetime', 'timestamp'                     => 'dateTimePicker',
+            'select', 'dropdown'                        => 'select',
+            'radio'                                     => 'radio',
+            'checkboxList', 'checkbox_list'             => 'checkboxList',
+            'fileUpload', 'file', 'image'               => 'fileUpload',
+            'json', 'array', 'repeater'                 => 'textarea',
+            default                                     => 'textInput',
         };
     }
 
+    /** Maps a ModuleField type to the JsonFormBuilder 'component' name for detail/view forms. */
+    private static function fieldTypeToDetailComponent(string $type): string
+    {
+        return match (strtolower($type)) {
+            'boolean', 'toggle', 'checkbox'             => 'toggle',
+            default                                     => 'textEntry',
+        };
+    }
+
+    /** Maps a ModuleField type to the JsonTableBuilder 'type' name for list columns. */
     private static function fieldTypeToColumnComponent(string $type): string
     {
         return match (strtolower($type)) {
-            'boolean', 'toggle', 'checkbox'         => 'boolean',
-            'date'                                  => 'date',
-            'datetime', 'timestamp'                 => 'datetime',
-            default                                 => 'text',
+            'date'                                      => 'text',
+            'datetime', 'timestamp'                     => 'text',
+            default                                     => 'text',
         };
     }
 

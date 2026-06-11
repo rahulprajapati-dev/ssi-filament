@@ -8,4 +8,9 @@ use Filament\Resources\Pages\CreateRecord;
 class Create{{MODEL}} extends CreateRecord
 {
     protected static string $resource = {{MODEL}}Resource::class;
+
+    public function getTitle(): string 
+    {
+        return 'Create {{MODEL}}';
+    }
 }

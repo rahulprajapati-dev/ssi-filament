@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Helpers;
+use Illuminate\Support\Str;
 
 class CommonHelper
 {
@@ -14,15 +15,16 @@ class CommonHelper
     public static function getformatelabel(string $label = null): array
     {
         return [
-            'singular_label' => $label ?: null,
-            'plural_label' => $label ?: null,
+            'singular_label' => Str::studly($label) ?: null,
+            'plural_label' => Str::studly(Str::plural($label)) ?: null,
         ];
 
     }
-     public static function populatefieldlabel(string $label = null): array
+    
+    public static function populatefieldlabel(string $label = null): array
     {
         return [
-            'label'=>$label
+            'label'=> Str::studly($label),
         ];
     }
 

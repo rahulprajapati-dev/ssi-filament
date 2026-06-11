@@ -13,7 +13,8 @@ use Illuminate\Validation\ValidationException;
 class EditModuleLayout extends EditRecord
 {
     protected static string $resource = ModuleLayoutResource::class;
-     public function getTitle(): string 
+    
+    public function getTitle(): string 
     {
         return 'Edit Layout';
     }

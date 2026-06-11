@@ -37,9 +37,15 @@
                     
                 },
                 {
-                    "component": "textInput",
+                    "component": "select",
                     "name": "icon",
                     "label": "Icon (Heroicon)",
+                    "options_source": "helper",
+                    "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
+                    "helper_method": "get",
+                    "helper_params": [
+                        "moudle_icons_dom"
+                    ],
                     "columnSpan": 1,
                     "required": false
                 },

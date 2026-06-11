@@ -11,6 +11,7 @@ class ResourceGenerator
     public static function generate(Module $module): void
     {
         $model = Str::studly($module->name);
+        $icon = $module->icon;
         $resource = Str::pluralStudly($model);
 
         $basePath = app_path("Filament/Resources/{$resource}");
@@ -51,6 +52,7 @@ class ResourceGenerator
                     'MODEL' => $model,
                     'RESOURCE' => $resource,
                     'RESOURCE_SINGULAR' => Str::singular($resource),
+                    'ICON' => $icon,
                 ])
             );
         }
