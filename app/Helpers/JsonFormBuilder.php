@@ -1637,21 +1637,33 @@ class JsonFormBuilder
     // }
     protected static function normalizeConditions(array $config): array
     {
-        // Single condition
+       // Single condition
         if (isset($config['field'])) {
+          return [
+            'logic' => 'and',
+            'conditions' => [$config],
+          ];
+        }
+
+        // New structure with logic
+        if (isset($config['conditions'])) {
             return [
-                'logic' => 'and',
-                'conditions' => [$config],
+                'logic' => strtolower($config['logic'] ?? 'and'),
+                'conditions' => $config['conditions'],
             ];
 
         }
-
-        // Already a list of conditions
-        return $config;
+        // Old array format
+        return [
+            'logic' => 'and',
+            'conditions' => $config,
+        ];
     }
 
-    protected static function evaluateConditions(Get $get, array $conditions): bool
+    protected static function evaluateConditions(Get $get, array  $config): bool
     {
+        $logic = strtolower($config['logic'] ?? 'and');
+        $conditions = $config['conditions'] ?? [];
         foreach ($conditions as $condition) {
             $field = $condition['field'] ?? null;
             $operator = $condition['operator'] ?? '=';
@@ -1680,12 +1692,15 @@ class JsonFormBuilder
                 default => true,
             };
 
-            if (! $result) {
-                return false; // AND logic: one false breaks
+           if ($logic === 'and' && ! $result) {
+                 return false;
+            }
+             if ($logic === 'or' && $result) {
+                return true;
             }
         }
 
-        return true;
+         return $logic === 'and';
     }
 
     /* ========== Common option appliers ========== */
