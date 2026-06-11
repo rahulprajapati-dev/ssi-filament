@@ -201,6 +201,15 @@
                     "hooks": {
                         "action": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@repairRebuild"
                     }
+                },
+                 {
+                    "type": "delete",
+                    "name": "delete",
+                    "label": "Delete",
+                    "hidden_when":{
+                        "field": "is_deploy",
+                        "value": true
+                    }
                 }
             ]
         }
