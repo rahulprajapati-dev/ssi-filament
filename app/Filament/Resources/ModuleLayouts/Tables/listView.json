@@ -9,7 +9,7 @@
     "columns": [
         {
             "type": "text",
-            "name": "module.name",
+            "name": "module.plural_label",
             "label": "Module",
             "searchable": {
                 "global": true,

@@ -20,7 +20,7 @@
                                     "columnSpan": 1,
                                     "options_source": "relationship",
                                     "relationship": "module",
-                                    "title_column": "name",
+                                    "title_column": "plural_label",
                                     "required": true,
                                     "searchable": true,
                                     "dehydrated": true,
