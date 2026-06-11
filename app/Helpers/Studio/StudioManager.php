@@ -47,7 +47,8 @@ final class StudioManager
     private function __construct(
         private readonly Module $module,
         private readonly array $data = [],
-    ) {}
+    ) {
+    }
 
     // ─── Public API ───────────────────────────────────────────────────────────
 
@@ -86,8 +87,8 @@ final class StudioManager
 
             // ── Schema steps (mode-dependent) ──────────────────────────────────
             if ($mode === 'migration' || $mode === 'hybrid') {
-                $this->step('migration', fn () => MigrationGenerator::generate($this->module));
-                $this->step('migrate',   fn () => $this->runMigrations());
+                $this->step('migration', fn() => MigrationGenerator::generate($this->module));
+                $this->step('migrate', fn() => $this->runMigrations());
             }
 
             if ($mode === 'schema' || $mode === 'hybrid') {
@@ -98,14 +99,14 @@ final class StudioManager
             }
 
             // ── File generation steps (always run) ────────────────────────────
-            $this->step('model',    fn () => ModelGenerator::generate($this->module));
-            $this->step('resource', fn () => ResourceGenerator::generate($this->module));
-            $this->step('layouts',  fn () => LayoutGenerator::generate($this->module));
-            $module=$this->module;
-             $fields = $module->fields;
+            $this->step('model', fn() => ModelGenerator::generate($this->module));
+            $this->step('resource', fn() => ResourceGenerator::generate($this->module));
+            $this->step('layouts', fn() => LayoutGenerator::generate($this->module));
+            $module = $this->module;
+            $fields = $module->fields;
             foreach ($fields as $field) {
                 if ($field->type == 'select') {
-                    DropdownHandler::createGroup($module->name,$field->field_name,$field->options);
+                    $this->step('create_dom', fn() => DropdownHandler::createGroup($module->name, $field->field_name, $field->options));
                 }
             }
 
@@ -133,7 +134,22 @@ final class StudioManager
             });
 
             // Regenerate JSON schema files from the current ModuleLayout records.
-            $this->step('layouts', fn () => LayoutGenerator::generate($this->module, force: true));
+            $this->step('layouts', fn() => LayoutGenerator::generate($this->module, force: true));
+            $module = $this->module;
+            $fields = $module->fields;
+            foreach ($fields as $field) {
+                if ($field->type == 'select') {
+                    $group = $module->name . '_' . $field->field_name . '_dom';
+                    $options = is_array($field->options) ? $field->options : [];
+                    foreach ($options as $option) {
+                        if (isset($option['key'], $option['value'])) {
+                            $this->step('update_dom', function () use ($group, $option) {
+                                return DropdownHandler::set($group, $option['key'], $option['value']);
+                            });
+                        }
+                    }
+                }
+            }
 
             return DeploymentResult::ok(
                 "Module '{$this->module->name}' rebuilt successfully. Table and schemas are up to date.",
@@ -149,14 +165,23 @@ final class StudioManager
     private function runUninstall(): DeploymentResult
     {
         try {
-            $this->step('remove_layouts',   fn () => LayoutGenerator::remove($this->module));
-            $this->step('remove_resource',  fn () => ResourceGenerator::remove($this->module));
-            $this->step('remove_model',     fn () => ModelGenerator::remove($this->module));
-            $this->step('remove_views',     fn () => ViewGenerator::remove($this->module));
-            $this->step('remove_migration', fn () => MigrationGenerator::remove($this->module));
+            $module = $this->module;
+            $fields = $module->fields;
+            foreach ($fields as $field) {
+                if ($field->type == 'select') {
+                    $name = $module->name . '_' . $field->field_name . '_dom';
+                    $this->step('remove_dom', fn() => DropdownHandler::deleteGroup($name));
+                }
+            }
+            $this->step('remove_layouts', fn() => LayoutGenerator::remove($this->module));
+            $this->step('remove_resource', fn() => ResourceGenerator::remove($this->module));
+            $this->step('remove_model', fn() => ModelGenerator::remove($this->module));
+            $this->step('remove_views', fn() => ViewGenerator::remove($this->module));
+            $this->step('remove_migration', fn() => MigrationGenerator::remove($this->module));
+
 
             if (($this->data['is_table'] ?? false) === true) {
-                $this->step('drop_table', fn () => $this->dropTable());
+                $this->step('drop_table', fn() => $this->dropTable());
             }
 
             $this->markUninstalled();
@@ -219,7 +244,7 @@ final class StudioManager
     private function markDeployed(): void
     {
         $this->module->update([
-            'is_deploy'   => true,
+            'is_deploy' => true,
             'deployed_at' => now(),
         ]);
     }
@@ -227,7 +252,7 @@ final class StudioManager
     private function markUninstalled(): void
     {
         $this->module->update([
-            'is_deploy'   => false,
+            'is_deploy' => false,
             'deployed_at' => null,
         ]);
     }
@@ -235,7 +260,7 @@ final class StudioManager
     private function dropTable(): bool
     {
         $table = Str::snake(Str::plural($this->module->name));
-        if (! Schema::hasTable($table)) {
+        if (!Schema::hasTable($table)) {
             return false;
         }
         Schema::dropIfExists($table);
