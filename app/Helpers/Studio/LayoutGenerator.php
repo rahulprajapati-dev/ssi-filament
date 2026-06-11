@@ -155,14 +155,31 @@ final class LayoutGenerator
                     continue;
                 }
 
+                $componentType = $isDetail
+                    ? self::fieldTypeToDetailComponent($field->type)
+                    : self::fieldTypeToFormComponent($field->type);
+
                 $component = [
-                    'component' => $isDetail ? 'textEntry'  : self::fieldTypeToFormComponent($field->type),
-                    'name' => $field->field_name,
-                    'label' => $field->label,
+                    'component' => $componentType,
+                    'name'      => $field->field_name,
+                    'label'     => $field->label,
                 ];
 
-                if (!$isDetail && $field->required) {
+                if (! $isDetail && $field->required) {
                     $component['required'] = true;
+                }
+
+                // Attach static options for select/radio/checkboxList fields
+                if (! $isDetail && in_array($field->type, ['select', 'dropdown', 'enum', 'radio', 'checkboxList', 'checkbox_list'], true)) {
+                    $raw  = is_array($field->options) ? $field->options : [];
+                    $opts = [];
+                    foreach ($raw as $opt) {
+                        if (isset($opt['key'], $opt['value'])) {
+                            $opts[$opt['key']] = $opt['value'];
+                        }
+                    }
+                    $component['options_source'] = 'static';
+                    $component['options']        = $opts;
                 }
 
                 $sectionFields[] = $component;
@@ -232,18 +249,26 @@ final class LayoutGenerator
         array $fieldNames,
         Collection $fieldMap,
     ): array {
-        $columns = [];
+        $boolTypes = ['boolean', 'toggle', 'checkbox'];
+        $columns   = [];
+
         foreach ($fieldNames as $fieldName) {
             $field = $fieldMap->get($fieldName);
             if ($field === null) {
                 continue;
             }
 
+            $isBool = in_array(strtolower($field->type), $boolTypes, true);
+
             $column = [
-                'type' => self::fieldTypeToColumnComponent($field->type),
-                'name' => $field->field_name,
+                'type'  => $isBool ? 'icon' : self::fieldTypeToColumnComponent($field->type),
+                'name'  => $field->field_name,
                 'label' => $field->label,
             ];
+
+            if ($isBool) {
+                $column['boolean'] = true;
+            }
 
             if ($field->searchable) {
                 $column['searchable'] = true;
@@ -261,37 +286,55 @@ final class LayoutGenerator
             'model'   => "App\\Models\\{$model}",
             'columns' => $columns,
             'filters' => [],
-            'actions' => [],
+            'actions' => [
+                ['type' => 'edit',   'label' => 'Edit',    'ui' => ['icon' => 'heroicon-m-pencil-square', 'hiddenLabel' => true, 'iconButton' => true, 'tooltip' => 'Edit']],
+                ['type' => 'view',   'label' => 'Details', 'ui' => ['icon' => 'heroicon-o-eye',           'hiddenLabel' => true, 'iconButton' => true, 'tooltip' => 'Details']],
+                [ 
+                    "type"=> "group",
+                    "label"=> "More",
+                    "icon"=> "heroicon-o-ellipsis-horizontal",
+                    "items"=> [
+                        ['type' => 'delete',   'label' => 'Delete']
+                    ]
+                ],
+            ],
+            "record_actions_position"=> "BeforeColumns"
         ];
     }
 
     // ── Type maps ─────────────────────────────────────────────────────────────
 
+    /** Filament form component name for create/edit views. */
     private static function fieldTypeToFormComponent(string $type): string
     {
         return match (strtolower($type)) {
-            'textarea', 'longtext' => 'textarea',
-            'integer', 'int', 'number',
-            'biginteger', 'bigint',
-            'decimal', 'float', 'money' => 'textInput',
-            'boolean', 'toggle' => 'toggle',
-            'checkbox' => 'checkbox',
-            'date' => 'datePicker',
-            'datetime', 'timestamp' => 'dateTimePicker',
-            'select', 'dropdown', 'enum' => 'select',
-            'json', 'array', 'repeater' => 'textarea',
-            default => 'textInput',
+            'textarea', 'longtext', 'richtext'              => 'textarea',
+            'boolean', 'toggle'                             => 'toggle',
+            'checkbox'                                      => 'checkbox',
+            'date'                                          => 'datePicker',
+            'datetime', 'timestamp'                         => 'dateTimePicker',
+            'select', 'dropdown', 'enum'                    => 'select',
+            'radio'                                         => 'radio',
+            'checkboxList', 'checkbox_list'                 => 'checkboxList',
+            'fileUpload', 'file', 'image'                   => 'fileUpload',
+            'json', 'array', 'repeater'                     => 'textarea',
+            default                                         => 'textInput',
         };
     }
 
-    private static function fieldTypeToColumnComponent(string $type): string
+    /** Filament infolist component name for detail/view. */
+    private static function fieldTypeToDetailComponent(string $type): string
     {
         return match (strtolower($type)) {
-            'boolean', 'toggle', 'checkbox' => 'boolean',
-            'date' => 'date',
-            'datetime', 'timestamp' => 'datetime',
-            default => 'text',
+            'boolean', 'toggle', 'checkbox'                 => 'toggle',
+            default                                         => 'textEntry',
         };
+    }
+
+    /** JsonTableBuilder column type for list view (non-boolean columns). */
+    private static function fieldTypeToColumnComponent(string $type): string
+    {
+        return 'text';
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

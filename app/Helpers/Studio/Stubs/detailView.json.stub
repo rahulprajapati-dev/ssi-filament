@@ -1,5 +1,5 @@
 {
     "title": "{{MODEL}} Details",
     "model": "App\\Models\\{{MODEL}}",
-    "sections": []
+    "components": []
 }
