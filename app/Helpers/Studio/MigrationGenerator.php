@@ -78,7 +78,7 @@ final class MigrationGenerator
             $name = $field->field_name;
             $pad  = self::INDENT;
 
-            return "{$pad}if (!in_array('{$name}', \$existingColumns)) {"
+            return "{$pad}if (!in_array('{$name}', \$columns)) {"
                 . "\n{$pad}    " . self::columnLineRaw($field)
                 . "\n{$pad}}";
 

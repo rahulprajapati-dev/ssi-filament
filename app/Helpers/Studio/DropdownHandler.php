@@ -12,7 +12,7 @@ class DropdownHandler
     public static function get(string $key): array
     {
         $data = self::readFile();
-
+        
         return $data[$key] ?? [];
     }
 
@@ -49,12 +49,16 @@ class DropdownHandler
     /**
      * CREATE NEW GROUP
      */
-    public static function createGroup(string $group): bool
+    public static function createGroup(string $module, string $fieldname, $options): bool
     {
         $data = self::readFile();
-
-        if (!isset($data[$group])) {
-            $data[$group] = [];
+        $name = $module . '_' . $fieldname . '_dom';
+        if (!isset($data[$name])) {
+            $dropdown = [];
+            foreach ($options as $option) {
+                $dropdown[$option['key']] = $option['value'];
+            }
+            $data[$name] = $dropdown;
         }
 
         return self::writeFile($data);

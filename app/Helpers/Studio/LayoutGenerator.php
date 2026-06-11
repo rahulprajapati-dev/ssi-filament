@@ -171,15 +171,14 @@ final class LayoutGenerator
 
                 // Attach static options for select/radio/checkboxList fields
                 if (! $isDetail && in_array($field->type, ['select', 'dropdown', 'enum', 'radio', 'checkboxList', 'checkbox_list'], true)) {
-                    $raw  = is_array($field->options) ? $field->options : [];
-                    $opts = [];
-                    foreach ($raw as $opt) {
-                        if (isset($opt['key'], $opt['value'])) {
-                            $opts[$opt['key']] = $opt['value'];
-                        }
-                    }
-                    $component['options_source'] = 'static';
-                    $component['options']        = $opts;
+                    $modulename= Str::snake($model);
+                    $dropdownName = "{$modulename}_{$field->field_name}_dom";
+                    $component['options_source'] = 'helper';
+                    $component['helper_class']   = 'App\\Helpers\\Studio\\DropdownHandler';
+                    $component['helper_method']  = 'get';
+                    $component['helper_params']  = [
+                    $dropdownName
+                    ];
                 }
 
                 $sectionFields[] = $component;

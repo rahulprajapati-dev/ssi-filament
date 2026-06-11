@@ -101,8 +101,13 @@ final class StudioManager
             $this->step('model',    fn () => ModelGenerator::generate($this->module));
             $this->step('resource', fn () => ResourceGenerator::generate($this->module));
             $this->step('layouts',  fn () => LayoutGenerator::generate($this->module));
-
-            DropdownHandler::createGroup($this->module->name);
+            $module=$this->module;
+             $fields = $module->fields;
+            foreach ($fields as $field) {
+                if ($field->type == 'select') {
+                    DropdownHandler::createGroup($module->name,$field->field_name,$field->options);
+                }
+            }
 
             $this->markDeployed();
 
