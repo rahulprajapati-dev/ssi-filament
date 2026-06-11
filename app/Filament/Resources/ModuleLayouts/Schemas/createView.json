@@ -6,7 +6,7 @@
             "component": "section",
             "label": "Layout Settings",
             "columnSpan": "full",
-            "collapsible": true,
+            "collapsible": false,
             "compact": true,
             "columns": 2,
             "schema": [
@@ -36,14 +36,24 @@
                         "layout_type_dom"
                     ],
                     "required": true
-                },
+                }
+            ]
+        },
+        {
+            "component": "section",
+            "label": "Layout Builder",
+            "columnSpan": "full",
+            "collapsible": false,
+            "compact": false,
+            "columns": 1,
+            "schema": [
                 {
                     "component": "dragDrop",
                     "name": "layout_json",
-                    "label": "Layout Fields (drag to arrange)",
+                    "label": null,
                     "source": "module_fields",
                     "depends_on": "module_id",
-                    "columnSpan": 2
+                    "columnSpan": 1
                 }
             ]
         }

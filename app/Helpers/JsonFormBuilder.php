@@ -1627,14 +1627,14 @@ class JsonFormBuilder
     //     // Already a list of conditions
     //     return $config;
     // }
-   protected static function normalizeConditions(array $config): array
-   {
-      // Single condition
-      if (isset($config['field'])) {
-          return [
-            'logic' => 'and',
-            'conditions' => [$config],
-          ];
+    protected static function normalizeConditions(array $config): array
+    {
+        // Single condition
+        if (isset($config['field'])) {
+            return [
+                'logic' => 'and',
+                'conditions' => [$config],
+            ];
         }
 
         // New structure with logic
