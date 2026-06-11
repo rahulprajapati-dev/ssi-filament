@@ -219,7 +219,7 @@
                                             "options_source": "helper",
                                             "helper_class": "App\\Helpers\\CommonHelper",
                                             "helper_method": "getModuleFieldsOptions",
-                                            "helper_type": "hybrid",
+                                            "helper_type": "dynamic",
                                             "helper_params": [
                                                 "../../module_id"
                                             ],

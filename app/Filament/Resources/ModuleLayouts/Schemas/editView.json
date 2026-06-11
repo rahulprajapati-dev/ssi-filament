@@ -4,7 +4,9 @@
     "components": [
         {
             "component": "section",
-            "label": "Layout Settings",
+            "label": "Module & View Type",
+            "description": "The module is locked after creation. You can change the view type if needed.",
+            "icon": "heroicon-o-cog-6-tooth",
             "columnSpan": "full",
             "collapsible": false,
             "compact": true,
@@ -23,12 +25,13 @@
                     "searchable": true,
                     "dehydrated": true,
                     "preload": true,
-                    "live": true
+                    "live": true,
+                    "hint": "Module cannot be changed after creation"
                 },
                 {
                     "component": "select",
                     "name": "layout_type",
-                    "label": "Layout Type",
+                    "label": "View Type",
                     "columnSpan": 1,
                     "options_source": "helper",
                     "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
@@ -36,13 +39,16 @@
                     "helper_params": [
                         "layout_type_dom"
                     ],
-                    "required": true
+                    "required": true,
+                    "hint": "Create / Edit / Detail / List"
                 }
             ]
         },
         {
             "component": "section",
-            "label": "Layout Builder",
+            "label": "Design Your Layout",
+            "description": "Drag fields from the available pool on the left into sections to build your form layout. Double-click a field to move it quickly.",
+            "icon": "heroicon-o-view-columns",
             "columnSpan": "full",
             "collapsible": false,
             "compact": false,
