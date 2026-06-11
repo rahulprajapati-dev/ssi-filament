@@ -82,4 +82,24 @@ class LayoutPreviewHelper
 
         return new HtmlString($html);
     }
+
+    public static function formatLayoutSummary($state, $record): string
+    {
+        $layout = $record?->layout_json;
+
+        if (empty($layout)) {
+            return '—';
+        }
+
+        // Normalize flat legacy array → sections format
+        $sections = $layout;
+        if (! empty($layout[0]) && is_string($layout[0])) {
+            $sections = [['fields' => $layout]];
+        }
+
+        $sectionCount = count($sections);
+        $totalFields  = array_sum(array_map(fn ($s) => count($s['fields'] ?? []), $sections));
+
+        return $sectionCount . ' ' . ($sectionCount === 1 ? 'section' : 'sections') . ' · ' . $totalFields . ' fields';
+    }
 }

@@ -384,6 +384,14 @@ class JsonFormBuilder
             ->schema(self::buildComponents($item['schema'] ?? []))
             ->columns($item['columns'] ?? 1);
 
+        if (! empty($item['description'])) {
+            $section->description($item['description']);
+        }
+
+        if (! empty($item['icon'])) {
+            $section->icon($item['icon']);
+        }
+
         if (! empty($item['collapsible'])) {
             $section->collapsible();
         }

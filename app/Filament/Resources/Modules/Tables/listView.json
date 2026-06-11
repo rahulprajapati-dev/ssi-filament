@@ -1,7 +1,7 @@
 {
     "title": "Modules",
     "model": "App\\Models\\Module",
-    "perPage": 10,
+    "perPage": 15,
     "defaultSort": {
         "column": "created_at",
         "direction": "desc"
@@ -10,68 +10,53 @@
         {
             "type": "text",
             "name": "name",
-            "label": "Name",
+            "label": "Module Name",
             "searchable": {
                 "global": true,
                 "individual": true
             },
-            "sortable": true
+            "sortable": true,
+            "wrap": false
         },
         {
             "type": "text",
             "name": "singular_label",
-            "label": "Singular Label",
+            "label": "Label",
             "searchable": {
                 "global": true,
-                "individual": true
+                "individual": false
             },
             "sortable": true
         },
         {
-            "type": "text",
-            "name": "plural_label",
-            "label": "Plural Label",
-            "searchable": {
-                "global": true,
-                "individual": true
-            },
+            "type": "icon",
+            "name": "is_deploy",
+            "label": "Deployed",
+            "boolean": true,
+            "sortable": true
+        },
+        {
+            "type": "icon",
+            "name": "is_enable",
+            "label": "Enabled",
+            "boolean": true,
             "sortable": true
         },
         {
             "type": "text",
-            "name": "icon",
-            "label": "Icon",
-            "searchable": {
-                "global": true,
-                "individual": true
-            },
-            "sortable": true
-        },
-        {
-            "type": "text",
-            "name": "description",
-            "label": "Description",
-            "searchable": {
-                "global": true,
-                "individual": true
-            },
-            "sortable": true
-        },
-        {
-            "type": "text",
-            "name": "createdBy.name",
-            "label": "Created By",
-            "searchable": {
-                "global": true,
-                "individual": true
-            },
-            "sortable": true
+            "name": "deployed_at",
+            "label": "Deployed At",
+            "date": true,
+            "format": "d M Y",
+            "sortable": true,
+            "default": "—"
         },
         {
             "type": "text",
             "name": "created_at",
-            "label": "Created At",
+            "label": "Created",
             "date": true,
+            "format": "d M Y",
             "sortable": true
         }
     ],
@@ -81,6 +66,16 @@
     "record_url": null,
     "actions": [
         {
+            "type": "view",
+            "label": "Details",
+            "ui": {
+                "hiddenLabel": true,
+                "iconButton": true,
+                "tooltip": "View Details",
+                "icon": "heroicon-o-eye"
+            }
+        },
+        {
             "type": "edit",
             "label": "Edit",
             "ui": {
@@ -88,19 +83,9 @@
                 "slideOver": true,
                 "hiddenLabel": true,
                 "iconButton": true,
-                "tooltip": "Edit",
-                "modalHeading": "Update the module",
+                "tooltip": "Edit Module",
+                "modalHeading": "Update Module",
                 "modalWidth": "SevenExtraLarge"
-            }
-        },
-        {
-            "type": "view",
-            "label": "Details",
-            "ui": {
-                "hiddenLabel": true,
-                "iconButton": true,
-                "tooltip": "Details",
-                "icon": "heroicon-o-eye"
             }
         },
         {
@@ -202,11 +187,11 @@
                         "action": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@repairRebuild"
                     }
                 },
-                 {
+                {
                     "type": "delete",
                     "name": "delete",
                     "label": "Delete",
-                    "hidden_when":{
+                    "hidden_when": {
                         "field": "is_deploy",
                         "value": true
                     }

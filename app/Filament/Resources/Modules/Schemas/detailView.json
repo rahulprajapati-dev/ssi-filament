@@ -4,47 +4,86 @@
     "components": [
         {
             "component": "section",
-            "label": "Module Information",
+            "label": "Module Identity",
+            "icon": "heroicon-o-cube",
             "columnSpan": "full",
-            "collapsible": true,
             "compact": true,
-            "columns": 2,
+            "columns": 3,
             "schema": [
                 {
                     "component": "textEntry",
-                    "weight": "black",
                     "name": "name",
-                    "label": "Name",
-                    "columnSpan": 1
+                    "label": "Module Name",
+                    "columnSpan": 1,
+                    "size": "lg",
+                    "weight": "bold",
+                    "color": "primary",
+                    "copyable": true
                 },
                 {
                     "component": "textEntry",
-                    "weight": "black",
-                    "name": "icon",
-                    "label": "Icon (Heroicon)",
-                    "columnSpan": 1
-                },
-                {
-                    "component": "textEntry",
-                    "weight": "black",
                     "name": "singular_label",
                     "label": "Singular Label",
-                    "columnSpan": 1
+                    "columnSpan": 1,
+                    "size": "md",
+                    "weight": "semibold"
                 },
                 {
                     "component": "textEntry",
-                    "weight": "black",
                     "name": "plural_label",
                     "label": "Plural Label",
-                    "columnSpan": 1
+                    "columnSpan": 1,
+                    "size": "md",
+                    "weight": "semibold"
                 },
                 {
                     "component": "textEntry",
-                    "weight": "black",
+                    "name": "icon",
+                    "label": "Navigation Icon",
+                    "columnSpan": 1,
+                    "badge": true,
+                    "color": "gray",
+                    "size": "sm"
+                },
+                {
+                    "component": "textEntry",
                     "name": "description",
                     "label": "Description",
                     "columnSpan": 2,
-                    "rows": 3
+                    "size": "sm",
+                    "color": "gray"
+                }
+            ]
+        },
+        {
+            "component": "section",
+            "label": "Deployment Status",
+            "icon": "heroicon-o-cloud-arrow-up",
+            "columnSpan": "full",
+            "compact": true,
+            "columns": 3,
+            "schema": [
+                {
+                    "component": "toggle",
+                    "name": "is_deploy",
+                    "label": "Deployed",
+                    "columnSpan": 1
+                },
+                {
+                    "component": "toggle",
+                    "name": "is_enable",
+                    "label": "Enabled",
+                    "columnSpan": 1
+                },
+                {
+                    "component": "textEntry",
+                    "name": "deployed_at",
+                    "label": "Deployed At",
+                    "columnSpan": 1,
+                    "dateTime": true,
+                    "size": "sm",
+                    "weight": "semibold",
+                    "color": "success"
                 }
             ]
         },
@@ -58,27 +97,39 @@
             "schema": [
                 {
                     "component": "textEntry",
-                    "weight": "black",
                     "name": "created_at",
-                    "label": "Created At"
+                    "label": "Created At",
+                    "dateTime": true,
+                    "size": "sm",
+                    "color": "gray",
+                    "inlineLabel": true
                 },
                 {
                     "component": "textEntry",
-                    "weight": "black",
                     "name": "updated_at",
-                    "label": "Updated At"
+                    "label": "Updated At",
+                    "dateTime": true,
+                    "size": "sm",
+                    "color": "gray",
+                    "inlineLabel": true
                 },
                 {
                     "component": "textEntry",
-                    "weight": "black",
                     "name": "createdBy.name",
-                    "label": "Created By"
+                    "label": "Created By",
+                    "size": "sm",
+                    "weight": "medium",
+                    "color": "gray",
+                    "inlineLabel": true
                 },
                 {
                     "component": "textEntry",
-                    "weight": "black",
                     "name": "updatedBy.name",
-                    "label": "Updated By"
+                    "label": "Updated By",
+                    "size": "sm",
+                    "weight": "medium",
+                    "color": "gray",
+                    "inlineLabel": true
                 }
             ]
         }

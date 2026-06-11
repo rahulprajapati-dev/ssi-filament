@@ -34,6 +34,7 @@ final class ResourceGenerator
 
         $vars = [
             'MODEL'             => $model,
+            'MODEL_LOWER'       => Str::lower($model),
             'RESOURCE'          => $resource,
             'RESOURCE_SINGULAR' => Str::singular($resource),
             'ICON'              => $icon,

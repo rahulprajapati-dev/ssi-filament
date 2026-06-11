@@ -4,16 +4,18 @@
     "components": [
         {
             "component": "section",
-            "label": "Module Information",
+            "label": "Module Identity",
+            "description": "Define the module name and display labels. The name is used as the database table key — lowercase letters, numbers, and underscores only.",
+            "icon": "heroicon-o-cube",
             "columnSpan": "full",
-            "collapsible": true,
+            "collapsible": false,
             "compact": true,
             "columns": 2,
             "schema": [
                 {
                     "component": "textInput",
                     "name": "name",
-                    "label": "Name",
+                    "label": "Module Name",
                     "columnSpan": 1,
                     "options_source": "helper",
                     "helper_type": "dynamic",
@@ -27,19 +29,19 @@
                     "reactive": true,
                     "required": true,
                     "populate_fields": [
-                       "singular_label",
-                       "plural_label"
+                        "singular_label",
+                        "plural_label"
                     ],
-                    "validation":[
+                    "hint": "Lowercase, underscores only — e.g. customer_order",
+                    "validation": [
                         "max:50",
                         "regex:/^[a-z][a-z0-9_]*$/"
                     ]
-                    
                 },
                 {
                     "component": "select",
                     "name": "icon",
-                    "label": "Icon (Heroicon)",
+                    "label": "Navigation Icon",
                     "options_source": "helper",
                     "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
                     "helper_method": "get",
@@ -47,21 +49,24 @@
                         "moudle_icons_dom"
                     ],
                     "columnSpan": 1,
-                    "required": false
+                    "required": false,
+                    "hint": "Heroicon displayed in the sidebar navigation"
                 },
                 {
                     "component": "textInput",
                     "name": "singular_label",
                     "label": "Singular Label",
                     "columnSpan": 1,
-                    "required": true
+                    "required": true,
+                    "hint": "e.g. Customer Order"
                 },
                 {
                     "component": "textInput",
                     "name": "plural_label",
                     "label": "Plural Label",
                     "columnSpan": 1,
-                    "required": true
+                    "required": true,
+                    "hint": "e.g. Customer Orders"
                 },
                 {
                     "component": "textarea",
@@ -69,7 +74,8 @@
                     "label": "Description",
                     "columnSpan": 2,
                     "rows": 3,
-                    "required": false
+                    "required": false,
+                    "hint": "Optional — briefly describe what this module manages"
                 }
             ]
         }
