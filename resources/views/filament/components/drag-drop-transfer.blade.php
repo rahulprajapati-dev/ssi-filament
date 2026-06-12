@@ -1,4 +1,4 @@
-<div class="fi-fo-drag-drop-transfer"
+<div class="fi-fo-drag-drop-transfer" wire:ignore
      x-data="{
         available: [],
         selected: @entangle($getStatePath()) ?? [],
@@ -154,8 +154,8 @@
         },
 
         updateState() {
-            // Force Alpine and Livewire sync
-            this.selected = [...this.selected];
+            // Force Alpine and Livewire sync via deep clone
+            this.selected = JSON.parse(JSON.stringify(this.selected));
         },
 
         dragStart(event, item, source, index = null) {
@@ -175,6 +175,14 @@
 
         dragOverSection(event, index) {
             event.preventDefault();
+        },
+
+        dragEnd(event) {
+            this.draggedItem = null;
+            this.draggedSource = null;
+            this.draggedIndex = null;
+            this.isDraggingSection = false;
+            this.draggedSectionIndex = null;
         },
 
         dropSection(event, targetIndex) {
@@ -202,6 +210,7 @@
         },
 
         drop(event, target, targetIndex = null) {
+            console.log('Drop event triggered:', { target, targetIndex, draggedSource: this.draggedSource, draggedIndex: this.draggedIndex, draggedItem: this.draggedItem });
             event.preventDefault();
             this.isDraggingOverAvailable = false;
 
@@ -216,11 +225,22 @@
             this.draggedSource = null;
             this.draggedIndex = null;
 
+            // Normalize source and target to string or number representation
+            const isSourceAvailable = source === 'available';
+            const isTargetAvailable = target === 'available';
+
+            // Convert numeric indices to numbers
+            const srcSec = isSourceAvailable ? null : parseInt(source, 10);
+            const tgtSec = isTargetAvailable ? null : parseInt(target, 10);
+            const srcIdx = sourceIndex !== null && sourceIndex !== undefined ? parseInt(sourceIndex, 10) : null;
+            const tgtIdx = targetIndex !== null && targetIndex !== undefined ? parseInt(targetIndex, 10) : null;
+
             // Dropping back into available pool
-            if (target === 'available') {
-                if (source !== 'available') {
-                    // Remove from original section
-                    this.selected[source].fields = this.selected[source].fields.filter(f => f !== item);
+            if (isTargetAvailable) {
+                if (!isSourceAvailable && srcSec !== null && !isNaN(srcSec)) {
+                    if (this.selected[srcSec]) {
+                        this.selected[srcSec].fields = this.selected[srcSec].fields.filter(f => f !== item);
+                    }
                     if (!this.available.includes(item)) {
                         this.available.push(item);
                     }
@@ -229,38 +249,41 @@
                 return;
             }
 
-            // Ensure target section exists (especially for list view where selected[0] may be missing)
-            if (typeof target === 'number') {
-                if (!this.selected[target]) {
-                    this.selected[target] = { title: 'Section ' + (target + 1), columns: '2', fields: [] };
-                } else if (!Array.isArray(this.selected[target].fields)) {
-                    this.selected[target].fields = [];
+            // Ensure target section exists
+            if (tgtSec !== null && !isNaN(tgtSec)) {
+                if (!this.selected[tgtSec]) {
+                    this.selected[tgtSec] = { title: 'Section ' + (tgtSec + 1), columns: 2, fields: [] };
+                } else if (!Array.isArray(this.selected[tgtSec].fields)) {
+                    this.selected[tgtSec].fields = [];
                 }
+            } else {
+                return;
             }
-            const targetSection = this.selected[target];
+
+            const targetSection = this.selected[tgtSec];
             if (!targetSection.fields) targetSection.fields = [];
 
-            if (source === 'available') {
+            if (isSourceAvailable) {
                 // Move from available to section
                 this.available = this.available.filter(i => i !== item);
-                if (targetIndex !== null) {
-                    targetSection.fields.splice(targetIndex, 0, item);
+                if (tgtIdx !== null && !isNaN(tgtIdx)) {
+                    targetSection.fields.splice(tgtIdx, 0, item);
                 } else {
                     targetSection.fields.push(item);
                 }
-            } else if (source === target) {
+            } else if (srcSec === tgtSec) {
                 // Reorder within the same section
-                if (sourceIndex !== null && targetIndex !== null && sourceIndex !== targetIndex) {
-                    targetSection.fields.splice(sourceIndex, 1);
-                    targetSection.fields.splice(targetIndex, 0, item);
+                if (srcIdx !== null && !isNaN(srcIdx) && tgtIdx !== null && !isNaN(tgtIdx) && srcIdx !== tgtIdx) {
+                    targetSection.fields.splice(srcIdx, 1);
+                    targetSection.fields.splice(tgtIdx, 0, item);
                 }
             } else {
                 // Move from one section to another
-                if (Array.isArray(this.selected[source].fields)) {
-                    this.selected[source].fields = this.selected[source].fields.filter(f => f !== item);
+                if (srcSec !== null && !isNaN(srcSec) && this.selected[srcSec] && Array.isArray(this.selected[srcSec].fields)) {
+                    this.selected[srcSec].fields = this.selected[srcSec].fields.filter(f => f !== item);
                 }
-                if (targetIndex !== null) {
-                    targetSection.fields.splice(targetIndex, 0, item);
+                if (tgtIdx !== null && !isNaN(tgtIdx)) {
+                    targetSection.fields.splice(tgtIdx, 0, item);
                 } else {
                     targetSection.fields.push(item);
                 }
@@ -270,17 +293,27 @@
         },
 
         moveToSection(item, sectionIndex) {
-            this.available = this.available.filter(i => i !== item);
             // Ensure target section exists
             if (!this.selected[sectionIndex]) {
                 this.selected[sectionIndex] = { title: 'Section ' + (sectionIndex + 1), columns: 2, fields: [] };
             }
-            const sec = this.selected[sectionIndex];
-            if (!Array.isArray(sec.fields)) {
-                sec.fields = [];
+            // For list view, enforce single column and title
+            if (this.isListView) {
+                this.selected[sectionIndex].title = 'Fields';
+                this.selected[sectionIndex].columns = 1;
             }
-            if (!sec.fields.includes(item)) {
-                sec.fields.push(item);
+            // Ensure fields array exists
+            if (!Array.isArray(this.selected[sectionIndex].fields)) {
+                this.selected[sectionIndex].fields = [];
+            }
+            // Add item if not already present
+            if (!this.selected[sectionIndex].fields.includes(item)) {
+                this.selected[sectionIndex].fields.push(item);
+            }
+            // Remove from available pool
+            const idx = this.available.indexOf(item);
+            if (idx !== -1) {
+                this.available.splice(idx, 1);
             }
             this.updateState();
         },
@@ -321,7 +354,7 @@
             {{-- Available Fields pool --}}
             <div style="display:flex; flex-direction:column; height:240px; border:1px solid #e5e7eb; border-radius:12px; background:#fff; overflow:hidden; transition:box-shadow .15s;"
                  :style="isDraggingOverAvailable ? 'box-shadow:0 0 0 2px #f59e0b; border-color:#f59e0b;' : ''"
-                 @dragover="dragOver($event, 'available')"
+                 @dragover.prevent="dragOver($event, 'available')"
                  @dragleave="dragLeave"
                  @drop="drop($event, 'available')">
 
@@ -358,7 +391,7 @@
                                 <span style="font-size:12px; font-weight:500; color:#374151; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" x-text="item"></span>
                             </div>
                             <button type="button"
-                                    @click="moveToSection(item, 0)"
+                                    @click.stop="moveToSection(item, 0)"
                                     style="padding:4px; border:none; background:transparent; cursor:pointer; color:#d97706; border-radius:4px;"
                                     title="Add to Section 1">
                                 <svg style="width:13px;height:13px;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -393,9 +426,10 @@
                     <div x-show="!isListView"
                          draggable="true"
                          @dragstart="dragStartSection($event, secIdx)"
+                         @dragend="dragEnd"
                          @dragover="dragOverSection($event, secIdx)"
                          @drop="dropSection($event, secIdx)"
-                         style="border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); margin-bottom: 16px;">
+                         style="border: 1px solid #e5e5eb; border-radius: 12px; background: #fff; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); margin-bottom: 16px;">
                         
                         {{-- Section Header --}}
                         <div style="padding: 10px 14px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: row; align-items: center; justify-content: space-between; cursor: grab; gap: 12px;">
@@ -430,8 +464,8 @@
                              style="min-height: 80px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: #fafafa;">
                             
                             <template x-for="(item, idx) in sec.fields" :key="item">
-                                <div draggable="true"
-                                     @dragstart="dragStart($event, item, secIdx, idx)"
+                                <div draggable="true" @dragend="dragEnd"
+                                     @dragstart.stop="dragStart($event, item, secIdx, idx)"
                                      @dragover.prevent=""
                                      @drop.stop="drop($event, secIdx, idx)"
                                      @dblclick="moveToAvailable(item, secIdx)"
@@ -470,7 +504,7 @@
                     
                     <template x-for="(item, idx) in (selected[0] ? selected[0].fields : [])" :key="item">
                         <div draggable="true"
-                             @dragstart="dragStart($event, item, 0, idx)"
+                             @dragstart.stop="dragStart($event, item, 0, idx)"
                              @dragover.prevent=""
                              @drop.stop="drop($event, 0, idx)"
                              @dblclick="moveToAvailable(item, 0)"
