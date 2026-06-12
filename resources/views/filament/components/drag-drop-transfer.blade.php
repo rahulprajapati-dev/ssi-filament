@@ -125,7 +125,7 @@
         addSection() {
             this.selected.push({
                 title: 'Section ' + (this.selected.length + 1),
-                columns: '2',
+                columns: 2,
                 fields: []
             });
             this.updateState();
@@ -140,7 +140,7 @@
                 });
                 this.selected[index].fields = [];
                 this.selected[index].title = 'Default Section';
-                this.selected[index].columns = '2';
+                this.selected[index].columns = 2;
                 this.updateState();
                 return;
             }
@@ -403,7 +403,7 @@
                                        @blur="$el.style.borderColor='transparent'; $el.style.background='transparent';" />
                             </div>
                             <div style="display: flex; flex-direction: row; align-items: center; gap: 10px; flex-shrink: 0;">
-                                <select x-model="sec.columns" @change="updateState()"
+                                <select x-model.number="sec.columns" @change="updateState()"
                                         style="font-size: 11px; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; outline: none; color: #475569; height: 26px;">
                                     <option value="1">1 Col</option>
                                     <option value="2">2 Cols</option>
@@ -562,12 +562,10 @@
                                 </div>
         
                                 {{-- Section Grid --}}
-                                <div style="display: grid; gap: 16px;"
-                                     :style="'grid-template-columns: repeat(' + (sec.columns || 2) + ', minmax(0, 1fr))'">
+                                <div style="display: grid; gap: 16px;" :style="{ gridTemplateColumns: `repeat(${sec.columns}, minmax(0, 1fr))` }">
                                     
                                     <template x-for="field in sec.fields" :key="field">
-                                        <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;"
-                                             :style="(sec.columns > 1 && field.toLowerCase().includes('desc') ? 'grid-column: span ' + (sec.columns) : '')">
+                                        <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
                                             
                                             {{-- Mock Label --}}
                                             <label style="font-size: 11px; font-weight: 600; color: #475569; display: flex; align-items: center; gap: 3px;">
