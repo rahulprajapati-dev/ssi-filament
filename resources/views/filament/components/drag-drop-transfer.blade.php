@@ -271,8 +271,14 @@
 
         moveToSection(item, sectionIndex) {
             this.available = this.available.filter(i => i !== item);
+            // Ensure target section exists
+            if (!this.selected[sectionIndex]) {
+                this.selected[sectionIndex] = { title: 'Section ' + (sectionIndex + 1), columns: 2, fields: [] };
+            }
             const sec = this.selected[sectionIndex];
-            if (!sec.fields) sec.fields = [];
+            if (!Array.isArray(sec.fields)) {
+                sec.fields = [];
+            }
             if (!sec.fields.includes(item)) {
                 sec.fields.push(item);
             }
