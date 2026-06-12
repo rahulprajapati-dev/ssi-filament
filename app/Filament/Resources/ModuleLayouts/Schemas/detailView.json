@@ -4,34 +4,45 @@
     "components": [
         {
             "component": "section",
-            "label": "Layout Settings",
+            "label": "Layout Overview",
             "columnSpan": "full",
-            "collapsible": true,
             "compact": true,
             "columns": 2,
             "schema": [
                 {
                     "component": "textEntry",
-                    "weight": "black",
                     "name": "module.plural_label",
                     "label": "Module",
-                    "columnSpan": 1
+                    "columnSpan": 1,
+                    "size": "lg",
+                    "weight": "bold",
+                    "color": "primary"
                 },
                 {
                     "component": "textEntry",
-                    "weight": "black",
                     "name": "layout_type",
                     "label": "Layout Type",
-                    "dropdown":"layout_type_dom",
-                    "columnSpan": 1
-                },
+                    "columnSpan": 1,
+                    "badge": true,
+                    "color": "info",
+                    "size": "md",
+                    "dropdown": "layout_type_dom"
+                }
+            ]
+        },
+        {
+            "component": "section",
+            "label": "Layout Structure",
+            "columnSpan": "full",
+            "compact": false,
+            "columns": 1,
+            "schema": [
                 {
-                    "component": "textarea",
-                    "name": "layout_json",
-                    "label": "Layout JSON Configuration",
-                    "columnSpan": 2,
-                    "rows": 10,
-                    "required": true
+                    "component": "placeholder",
+                    "name": "layout_preview",
+                    "label": null,
+                    "columnSpan": 1,
+                    "content_hook": "App\\Helpers\\Studio\\LayoutPreviewHelper@renderLayoutJson"
                 }
             ]
         },
@@ -45,27 +56,39 @@
             "schema": [
                 {
                     "component": "textEntry",
-                    "weight": "black",
                     "name": "created_at",
-                    "label": "Created At"
+                    "label": "Created At",
+                    "dateTime": true,
+                    "size": "sm",
+                    "color": "gray",
+                    "inlineLabel": true
                 },
                 {
                     "component": "textEntry",
-                    "weight": "black",
                     "name": "updated_at",
-                    "label": "Updated At"
+                    "label": "Updated At",
+                    "dateTime": true,
+                    "size": "sm",
+                    "color": "gray",
+                    "inlineLabel": true
                 },
                 {
                     "component": "textEntry",
-                    "weight": "black",
                     "name": "createdBy.name",
-                    "label": "Created By"
+                    "label": "Created By",
+                    "size": "sm",
+                    "weight": "medium",
+                    "color": "gray",
+                    "inlineLabel": true
                 },
                 {
                     "component": "textEntry",
-                    "weight": "black",
                     "name": "updatedBy.name",
-                    "label": "Updated By"
+                    "label": "Updated By",
+                    "size": "sm",
+                    "weight": "medium",
+                    "color": "gray",
+                    "inlineLabel": true
                 }
             ]
         }

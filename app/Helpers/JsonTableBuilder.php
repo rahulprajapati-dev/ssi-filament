@@ -202,14 +202,28 @@ class JsonTableBuilder
                     $col->limit((int)$c['limit']);
                 }
                 if (! empty($c['date'])) {
-                    $format = $c['format'] ?? 'd M Y';
-                    $col->dateTime($format);
+                    $format     = $c['format'] ?? 'd M Y';
+                    $defaultVal = $c['default'] ?? null;
+                    // Use formatStateUsing so null/empty states return the default
+                    // instead of passing it through Carbon (which would throw).
+                    $col->formatStateUsing(function ($state) use ($format, $defaultVal) {
+                        if ($state === null || $state === '' || $state === false) {
+                            return $defaultVal;
+                        }
+                        try {
+                            return \Carbon\Carbon::parse($state)->format($format);
+                        } catch (\Throwable $e) {
+                            return $defaultVal;
+                        }
+                    });
                 }
                 $enum = $c['enum'] ?? null;
                 if (!empty($enum)) {
                     $col->formatStateUsing(fn ($state) => $enum[$state] ?? $state);
                 }
-                if (! empty($c['default'])) {
+                // Only apply ->default() for non-date columns; date columns embed the
+                // default inside their formatStateUsing to prevent Carbon from parsing it.
+                if (! empty($c['default']) && empty($c['date'])) {
                     $col->default($c['default']);
                 }
 
@@ -220,6 +234,20 @@ class JsonTableBuilder
                         $options = DropdownHandler::get($dropdownType);
 
                         return $options[$state] ?? $state;
+                    });
+                }
+
+                // format_hook: "ClassName@method" — receives ($state, $record)
+                if (! empty($c['format_hook'])) {
+                    $hookString = $c['format_hook'];
+                    $col->formatStateUsing(function ($state, $record) use ($hookString) {
+                        if (str_contains($hookString, '@')) {
+                            [$class, $method] = explode('@', $hookString);
+
+                            return $class::$method($state, $record);
+                        }
+
+                        return $state;
                     });
                 }
 
@@ -330,22 +358,29 @@ class JsonTableBuilder
                     }
                 }
                 if (! empty($c['colors']) && is_array($c['colors'])) {
-                    // Expect colors like { "success": ["In Stock"], "danger": ["Sold"] }
-                    $mapped = array_flip($c['colors']);
+                    // Expect colors like { "success": "active", "danger": "inactive" }
+                    $colorMap = $c['colors'];
                     if (method_exists($col, 'color')) {
-                        $col->color(fn (string $state): string => $mapped[strtolower($state)] ?? 'gray');
+                        $col->color(fn ($state) => $colorMap[$state] ?? 'gray');
                     }
                 }
+
+                // color_map: { "create": "success", "edit": "warning", "detail": "info", "list": "primary" }
+                if (! empty($c['color_map']) && is_array($c['color_map'])) {
+                    $colorMap = $c['color_map'];
+                    $col->color(fn ($state) => $colorMap[$state] ?? 'gray');
+                }
+
                 $enum = $c['enum'] ?? null;
                 if ($enum) {
-                    $col->formatStateUsing(fn (string $state): string => $enum[$state] ?? $state);
+                    $col->formatStateUsing(fn ($state) => $enum[$state] ?? $state);
                 }
 
                 // Handle dropdown value mapping for badges
-                if (!empty($c['dropdown'])) {
+                if (! empty($c['dropdown'])) {
                     $dropdownType = $c['dropdown'];
                     $col->formatStateUsing(function ($state) use ($dropdownType) {
-                        $options = getDropdownValue($dropdownType);
+                        $options = DropdownHandler::get($dropdownType);
 
                         return $options[$state] ?? $state;
                     });
@@ -501,7 +536,8 @@ class JsonTableBuilder
             if ($source === 'relationship') {
                 $relationship = $f['relationship'] ?? null;
                 $title = $f['title_column'] ?? 'name';
-                $role = auth()->user()?->getRoleNames()->first();
+                $user = auth()->user();
+                $role = ($user && method_exists($user, 'getRoleNames')) ? $user->getRoleNames()->first() : null;
                 $allowEmpty = $f['allow_empty_for_roles'][$role]
                     ?? $f['allow_empty_for_roles']['default']
                     ?? true;

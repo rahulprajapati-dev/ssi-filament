@@ -22,7 +22,11 @@ class ModuleFieldResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedQueueList;
 
-    protected static ?string $recordTitleAttribute = 'Field Builder';
+    protected static ?string $modelLabel = 'Field';
+
+    protected static ?string $pluralModelLabel = 'Fields';
+
+    protected static ?string $recordTitleAttribute = 'label';
 
     protected static ?string $navigationLabel = 'Field Builder';
 

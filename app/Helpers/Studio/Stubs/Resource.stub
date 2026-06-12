@@ -7,21 +7,29 @@ use App\Models\{{MODEL}};
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
+use App\Support\ModuleState;
+use App\Filament\Resources\{{RESOURCE}}\Schemas\{{MODEL}}Form;
+use App\Filament\Resources\{{RESOURCE}}\Tables\{{RESOURCE}}Table;
 
 class {{MODEL}}Resource extends Resource
 {
     protected static ?string $model = {{MODEL}}::class;
 
-    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static string|\BackedEnum|null $navigationIcon = '{{ICON}}';
 
     public static function form(Schema $schema): Schema
     {
-        return \App\Filament\Resources\{{RESOURCE}}\Schemas\{{MODEL}}Form::configure($schema);
+        return {{MODEL}}Form::configure($schema);
+    }
+
+    public static function canAccess(): bool
+    {
+        return ModuleState::active('{{MODEL_LOWER}}');
     }
 
     public static function table(Table $table): Table
     {
-        return \App\Filament\Resources\{{RESOURCE}}\Tables\{{RESOURCE}}Table::configure($table);
+        return {{RESOURCE}}Table::configure($table);
     }
 
     public static function getPages(): array

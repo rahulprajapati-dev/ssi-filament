@@ -10,6 +10,11 @@ class View{{MODEL}} extends ViewRecord
 {
     protected static string $resource = {{MODEL}}Resource::class;
 
+    public function getTitle(): string 
+    {
+        return 'View {{MODEL}}';
+    }
+
     protected function getHeaderActions(): array
     {
         return [

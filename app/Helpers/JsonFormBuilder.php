@@ -384,6 +384,14 @@ class JsonFormBuilder
             ->schema(self::buildComponents($item['schema'] ?? []))
             ->columns($item['columns'] ?? 1);
 
+        if (! empty($item['description'])) {
+            $section->description($item['description']);
+        }
+
+        if (! empty($item['icon'])) {
+            $section->icon($item['icon']);
+        }
+
         if (! empty($item['collapsible'])) {
             $section->collapsible();
         }
@@ -1617,19 +1625,45 @@ class JsonFormBuilder
         return self::applyCommonFieldOptions($field, $item);
     }
 
+    // protected static function normalizeConditions(array $config): array
+    // {
+    //     // If it looks like a single condition (has 'field'), wrap in an array
+    //     if (isset($config['field'])) {
+    //         return [$config];
+    //     }
+
+    //     // Already a list of conditions
+    //     return $config;
+    // }
     protected static function normalizeConditions(array $config): array
     {
-        // If it looks like a single condition (has 'field'), wrap in an array
+       // Single condition
         if (isset($config['field'])) {
-            return [$config];
+          return [
+            'logic' => 'and',
+            'conditions' => [$config],
+          ];
         }
 
-        // Already a list of conditions
-        return $config;
+        // New structure with logic
+        if (isset($config['conditions'])) {
+            return [
+                'logic' => strtolower($config['logic'] ?? 'and'),
+                'conditions' => $config['conditions'],
+            ];
+
+        }
+        // Old array format
+        return [
+            'logic' => 'and',
+            'conditions' => $config,
+        ];
     }
 
-    protected static function evaluateConditions(Get $get, array $conditions): bool
+    protected static function evaluateConditions(Get $get, array  $config): bool
     {
+        $logic = strtolower($config['logic'] ?? 'and');
+        $conditions = $config['conditions'] ?? [];
         foreach ($conditions as $condition) {
             $field = $condition['field'] ?? null;
             $operator = $condition['operator'] ?? '=';
@@ -1658,12 +1692,15 @@ class JsonFormBuilder
                 default => true,
             };
 
-            if (! $result) {
-                return false; // AND logic: one false breaks
+           if ($logic === 'and' && ! $result) {
+                 return false;
+            }
+             if ($logic === 'or' && $result) {
+                return true;
             }
         }
 
-        return true;
+         return $logic === 'and';
     }
 
     /* ========== Common option appliers ========== */

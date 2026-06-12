@@ -29,7 +29,7 @@ final class LayoutGenerator
      */
     public static function generate(Module $module, bool $force = false): bool
     {
-        $model    = Str::studly($module->name);
+        $model = Str::studly($module->name);
         $resource = Str::studly(Str::plural($module->name));
         $basePath = app_path("Filament/Resources/{$resource}");
 
@@ -49,7 +49,11 @@ final class LayoutGenerator
         $wrote = false;
 
         foreach ($layouts as $layout) {
-            $fieldNames = is_array($layout->layout_json) ? $layout->layout_json : [];
+            $rawJson = is_array($layout->layout_json) ? $layout->layout_json : [];
+            // Normalize to sections format for unified processing
+            $sections = self::normalizeSections($rawJson);
+            // Flat list of all field names (used for list/table view)
+            $fieldNames = collect($sections)->flatMap(fn ($s) => $s['fields'] ?? [])->values()->all();
 
             $filePath = match ($layout->layout_type) {
                 'create' => "{$basePath}/Schemas/createView.json",
@@ -70,7 +74,7 @@ final class LayoutGenerator
 
             $content = $layout->layout_type === 'list'
                 ? self::buildListJson($model, $resource, $fieldNames, $fieldMap)
-                : self::buildFormJson($model, $layout->layout_type, $fieldNames, $fieldMap);
+                : self::buildFormJson($model, $layout->layout_type, $sections, $fieldMap);
 
             File::ensureDirectoryExists(dirname($filePath));
             File::put($filePath, json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -118,11 +122,14 @@ final class LayoutGenerator
         return $removed;
     }
 
-    /** @param Collection<string, ModuleField> $fieldMap */
+    /**
+     * @param  array<int, array{title: string, columns: int, fields: string[]}>  $sections
+     * @param  Collection<string, ModuleField>  $fieldMap
+     */
     private static function buildFormJson(
         string $model,
         string $layoutType,
-        array $fieldNames,
+        array $sections,
         Collection $fieldMap,
     ): array {
         $title = match ($layoutType) {
@@ -132,31 +139,106 @@ final class LayoutGenerator
             default  => $model,
         };
 
+        $isDetail = $layoutType === 'detail';
+
         $components = [];
-        foreach ($fieldNames as $fieldName) {
-            $field = $fieldMap->get($fieldName);
-            if ($field === null) {
+
+        foreach ($sections as $section) {
+            $sectionTitle = $section['title'] ?? 'General';
+            $sectionColumns = $section['columns'] ?? 2;
+            $fieldNames = $section['fields'] ?? [];
+
+            $sectionFields = [];
+            foreach ($fieldNames as $fieldName) {
+                $field = $fieldMap->get($fieldName);
+                if ($field === null) {
+                    continue;
+                }
+
+                $componentType = $isDetail
+                    ? self::fieldTypeToDetailComponent($field->type)
+                    : self::fieldTypeToFormComponent($field->type);
+
+                $component = [
+                    'component' => $componentType,
+                    'name'      => $field->field_name,
+                    'label'     => $field->label,
+                ];
+
+                if (! $isDetail && $field->required) {
+                    $component['required'] = true;
+                }
+
+                // Attach static options for select/radio/checkboxList fields
+                if (! $isDetail && in_array($field->type, ['select', 'dropdown', 'enum', 'radio', 'checkboxList', 'checkbox_list'], true)) {
+                    $modulename= Str::snake($model);
+                    $dropdownName = "{$modulename}_{$field->field_name}_dom";
+                    $component['options_source'] = 'helper';
+                    $component['helper_class']   = 'App\\Helpers\\Studio\\DropdownHandler';
+                    $component['helper_method']  = 'get';
+                    $component['helper_params']  = [
+                    $dropdownName
+                    ];
+                }
+
+                $sectionFields[] = $component;
+            }
+
+            if (empty($sectionFields)) {
                 continue;
             }
 
-            $component = [
-                'type'  => self::fieldTypeToFormComponent($field->type),
-                'name'  => $field->field_name,
-                'label' => $field->label,
+            $components[] = [
+                'component' => 'section',
+                'label' => $sectionTitle,
+                'columns' => $sectionColumns,
+                'collapsible' => false,
+                'columnSpan' => 'full',
+                'schema' => $sectionFields,
             ];
-
-            if ($field->required) {
-                $component['required'] = true;
-            }
-
-            $components[] = $component;
         }
 
         return [
-            'title'      => $title,
-            'model'      => "App\\Models\\{$model}",
+            'title' => $title,
+            'model' => "App\\Models\\{$model}",
             'components' => $components,
         ];
+    }
+
+    /**
+     * Normalize layout_json to the canonical sections array format.
+     *
+     * Supports:
+     *  - New format: [{"title":"...","columns":2,"fields":[...]}]
+     *  - Legacy flat format: ["field1","field2"]
+     *  - Empty / null → returns one empty default section.
+     *
+     * @param  array<mixed>  $raw
+     * @return array<int, array{title: string, columns: int, fields: string[]}>
+     */
+    private static function normalizeSections(array $raw): array
+    {
+        if (empty($raw)) {
+            return [['title' => 'General', 'columns' => 2, 'fields' => []]];
+        }
+
+        // Already sections format: first element is an associative array with a 'fields' key
+        if (isset($raw[0]) && is_array($raw[0]) && array_key_exists('fields', $raw[0])) {
+            return array_map(fn ($s) => [
+                'title' => $s['title'] ?? 'Section',
+                'columns' => isset($s['columns']) ? (is_numeric($s['columns']) ? (int) $s['columns'] : $s['columns']) : 2,
+                'fields' => array_values(array_filter((array) ($s['fields'] ?? []), 'is_string')),
+            ], $raw);
+        }
+
+        // Legacy flat array of strings
+        $fields = array_values(array_filter($raw, 'is_string'));
+
+        return [[
+            'title' => 'General',
+            'columns' => 2,
+            'fields' => $fields,
+        ]];
     }
 
     /** @param Collection<string, ModuleField> $fieldMap */
@@ -166,18 +248,26 @@ final class LayoutGenerator
         array $fieldNames,
         Collection $fieldMap,
     ): array {
-        $columns = [];
+        $boolTypes = ['boolean', 'toggle', 'checkbox'];
+        $columns   = [];
+
         foreach ($fieldNames as $fieldName) {
             $field = $fieldMap->get($fieldName);
             if ($field === null) {
                 continue;
             }
 
+            $isBool = in_array(strtolower($field->type), $boolTypes, true);
+
             $column = [
-                'type'  => self::fieldTypeToColumnComponent($field->type),
+                'type'  => $isBool ? 'icon' : self::fieldTypeToColumnComponent($field->type),
                 'name'  => $field->field_name,
                 'label' => $field->label,
             ];
+
+            if ($isBool) {
+                $column['boolean'] = true;
+            }
 
             if ($field->searchable) {
                 $column['searchable'] = true;
@@ -195,39 +285,55 @@ final class LayoutGenerator
             'model'   => "App\\Models\\{$model}",
             'columns' => $columns,
             'filters' => [],
-            'actions' => [],
+            'actions' => [
+                ['type' => 'edit',   'label' => 'Edit',    'ui' => ['icon' => 'heroicon-m-pencil-square', 'hiddenLabel' => true, 'iconButton' => true, 'tooltip' => 'Edit']],
+                ['type' => 'view',   'label' => 'Details', 'ui' => ['icon' => 'heroicon-o-eye',           'hiddenLabel' => true, 'iconButton' => true, 'tooltip' => 'Details']],
+                [ 
+                    "type"=> "group",
+                    "label"=> "More",
+                    "icon"=> "heroicon-o-ellipsis-horizontal",
+                    "items"=> [
+                        ['type' => 'delete',   'label' => 'Delete']
+                    ]
+                ],
+            ],
+            "record_actions_position"=> "BeforeColumns"
         ];
     }
 
     // ── Type maps ─────────────────────────────────────────────────────────────
 
+    /** Filament form component name for create/edit views. */
     private static function fieldTypeToFormComponent(string $type): string
     {
         return match (strtolower($type)) {
-            'textarea', 'longtext'                  => 'textarea',
-            'richtext'                              => 'richtext',
-            'integer', 'int', 'number',
-            'biginteger', 'bigint'                  => 'number',
-            'decimal', 'float', 'money'             => 'decimal',
-            'boolean', 'toggle'                     => 'toggle',
-            'checkbox'                              => 'checkbox',
-            'date'                                  => 'date',
-            'datetime', 'timestamp'                 => 'datetime',
-            'time'                                  => 'time',
-            'select', 'dropdown'                    => 'select',
-            'json', 'array', 'repeater'             => 'textarea',
-            default                                 => 'text',
+            'textarea', 'longtext', 'richtext'              => 'textarea',
+            'boolean', 'toggle'                             => 'toggle',
+            'checkbox'                                      => 'checkbox',
+            'date'                                          => 'datePicker',
+            'datetime', 'timestamp'                         => 'dateTimePicker',
+            'select', 'dropdown', 'enum'                    => 'select',
+            'radio'                                         => 'radio',
+            'checkboxList', 'checkbox_list'                 => 'checkboxList',
+            'fileUpload', 'file', 'image'                   => 'fileUpload',
+            'json', 'array', 'repeater'                     => 'textarea',
+            default                                         => 'textInput',
         };
     }
 
-    private static function fieldTypeToColumnComponent(string $type): string
+    /** Filament infolist component name for detail/view. */
+    private static function fieldTypeToDetailComponent(string $type): string
     {
         return match (strtolower($type)) {
-            'boolean', 'toggle', 'checkbox'         => 'boolean',
-            'date'                                  => 'date',
-            'datetime', 'timestamp'                 => 'datetime',
-            default                                 => 'text',
+            'boolean', 'toggle', 'checkbox'                 => 'toggle',
+            default                                         => 'textEntry',
         };
+    }
+
+    /** JsonTableBuilder column type for list view (non-boolean columns). */
+    private static function fieldTypeToColumnComponent(string $type): string
+    {
+        return 'text';
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

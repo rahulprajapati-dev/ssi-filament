@@ -9,7 +9,7 @@
     "columns": [
         {
             "type": "text",
-            "name": "module.name",
+            "name": "module.plural_label",
             "label": "Module",
             "searchable": {
                 "global": true,
@@ -38,15 +38,38 @@
             "sortable": true
         },
         {
-            "type": "text",
+            "type": "badge",
             "name": "type",
             "label": "Type",
-            "dropdown":"field_type_dom",
-            "searchable": {
-                "global": true,
-                "individual": true
+            "dropdown": "field_type_dom",
+            "color_map": {
+                "text": "gray",
+                "textarea": "gray",
+                "number": "info",
+                "email": "info",
+                "url": "info",
+                "phone": "info",
+                "select": "warning",
+                "toggle": "success",
+                "checkbox": "success",
+                "radio": "warning",
+                "checkbox_list": "warning",
+                "date": "primary",
+                "time": "primary",
+                "datetime": "primary",
+                "file": "danger",
+                "image": "danger",
+                "currency": "info",
+                "color": "warning",
+                "tags": "gray",
+                "relationship": "primary",
+                "json": "danger"
             },
-            "sortable": true
+            "sortable": true,
+            "searchable": {
+                "global": false,
+                "individual": false
+            }
         },
         {
             "type": "icon",
@@ -90,11 +113,30 @@
             "sortable": true
         }
     ],
-    "filters": [],
+    "filters": [
+        {
+            "type": "select",
+            "name": "module_id",
+            "label": "Module",
+            "options_source": "relationship",
+            "relationship": "module",
+            "title_column": "plural_label"
+        }
+    ],
     "filters_layout": "modal",
     "record_action": null,
     "record_url": null,
     "actions": [
+        {
+            "type": "view",
+            "label": "Details",
+            "ui": {
+                "hiddenLabel": true,
+                "iconButton": true,
+                "tooltip": "View Details",
+                "icon": "heroicon-o-eye"
+            }
+        },
         {
             "type": "edit",
             "label": "Edit",
@@ -103,19 +145,20 @@
                 "slideOver": true,
                 "hiddenLabel": true,
                 "iconButton": true,
-                "tooltip": "Edit",
-                "modalHeading": "Update the field",
+                "tooltip": "Edit Field",
+                "modalHeading": "Update Field",
                 "modalWidth": "SevenExtraLarge"
             }
         },
         {
-            "type": "view",
-            "label": "Details",
+            "type": "delete",
+            "label": "Delete",
             "ui": {
                 "hiddenLabel": true,
                 "iconButton": true,
-                "tooltip": "Details",
-                "icon": "heroicon-o-eye"
+                "tooltip": "Delete Field",
+                "icon": "heroicon-o-trash",
+                "color": "danger"
             }
         }
     ],

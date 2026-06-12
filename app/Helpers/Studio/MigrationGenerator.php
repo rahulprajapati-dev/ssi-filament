@@ -43,12 +43,14 @@ final class MigrationGenerator
             return false;
         }
 
-        $columns  = self::buildColumnBlock($module);
+        $createColumns = self::buildColumnBlock($module);
+        $updateColumns = self::buildUpdateColumnBlock($module);
         $filename = date('Y_m_d_His') . "_create_{$table}_table.php";
 
         $content = StubRenderer::render('Migration.stub', [
             'TABLE'   => $table,
-            'COLUMNS' => $columns,
+            'COLUMNS'         => $createColumns,
+            'COLUMNS_UPDATE'  => $updateColumns,
         ]);
 
         File::put(database_path("migrations/{$filename}"), $content);
@@ -59,6 +61,49 @@ final class MigrationGenerator
     // --------------------------------------------------------------------------
     // Column block builder
     // --------------------------------------------------------------------------
+
+    private static function buildUpdateColumnBlock(Module $module): string
+    {
+        $fields = $module->fields()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        if ($fields->isEmpty()) {
+            return '';
+        }
+
+        return $fields->map(function (ModuleField $field) {
+
+            $name = $field->field_name;
+            $pad  = self::INDENT;
+
+            return "{$pad}if (!in_array('{$name}', \$columns)) {"
+                . "\n{$pad}    " . self::columnLineRaw($field)
+                . "\n{$pad}}";
+
+        })->implode("\n") . "\n";
+    }
+
+    private static function columnLineRaw(ModuleField $field): string
+    {
+        $name   = $field->field_name;
+        $null   = $field->required ? '' : '->nullable()';
+        $unique = $field->unique_field ? '->unique()' : '';
+
+        return match ($field->type) {
+            'textarea', 'longtext', 'richtext'  => "\$table->text('{$name}'){$null};",
+            'integer', 'number', 'int'          => "\$table->integer('{$name}'){$null}{$unique};",
+            'biginteger', 'bigint'              => "\$table->bigInteger('{$name}'){$null}{$unique};",
+            'decimal', 'float', 'money'         => "\$table->decimal('{$name}', 15, 4){$null}{$unique};",
+            'boolean', 'toggle', 'checkbox'     => "\$table->boolean('{$name}')->default(false);",
+            'date'                              => "\$table->date('{$name}'){$null};",
+            'datetime', 'timestamp'             => "\$table->dateTime('{$name}'){$null};",
+            'time'                              => "\$table->time('{$name}'){$null};",
+            'json', 'array', 'repeater'         => "\$table->json('{$name}'){$null};",
+            default                             => "\$table->string('{$name}', " . self::length($field) . "){$null}{$unique};",
+        };
+    }
 
     public static function remove(Module $module): bool
     {

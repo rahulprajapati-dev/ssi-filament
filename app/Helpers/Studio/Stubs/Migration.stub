@@ -8,12 +8,35 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('{{TABLE}}', function (Blueprint $table) {
-            $table->id();
+        if (!Schema::hasTable('{{TABLE}}')) {
+
+            Schema::create('{{TABLE}}', function (Blueprint $table) {
+                $table->id();
 {{COLUMNS}}
-            $table->string('created_by', 36)->nullable()->index();
-            $table->string('updated_by', 36)->nullable()->index();
-            $table->timestamps();
+                $table->string('created_by', 36)->nullable()->index();
+                $table->string('updated_by', 36)->nullable()->index();
+                $table->timestamps();
+            });
+
+            return;
+        }
+
+        // Table exists → add missing columns one by one
+
+        $columns = Schema::getColumnListing('{{TABLE}}');
+
+        Schema::table('{{TABLE}}', function (Blueprint $table) use ($columns) {
+
+    {{COLUMNS_UPDATE}}
+
+            if (!in_array('created_by', $columns)) {
+                $table->string('created_by', 36)->nullable()->index();
+            }
+
+            if (!in_array('updated_by', $columns)) {
+                $table->string('updated_by', 36)->nullable()->index();
+            }
+
         });
     }
 

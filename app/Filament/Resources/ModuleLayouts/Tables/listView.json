@@ -1,7 +1,7 @@
 {
     "title": "Module Layouts",
     "model": "App\\Models\\ModuleLayout",
-    "perPage": 10,
+    "perPage": 15,
     "defaultSort": {
         "column": "created_at",
         "direction": "desc"
@@ -9,29 +9,38 @@
     "columns": [
         {
             "type": "text",
-            "name": "module.name",
+            "name": "module.plural_label",
             "label": "Module",
             "searchable": {
                 "global": true,
                 "individual": true
             },
-            "sortable": true
+            "sortable": true,
+            "wrap": false
         },
         {
-            "type": "text",
+            "type": "badge",
             "name": "layout_type",
-            "label": "Layout Type",
+            "label": "View Type",
+            "dropdown": "layout_type_dom",
+            "color_map": {
+                "create": "success",
+                "edit": "warning",
+                "detail": "info",
+                "list": "primary"
+            },
+            "sortable": true,
             "searchable": {
                 "global": true,
-                "individual": true
-            },
-            "sortable": true
+                "individual": false
+            }
         },
         {
             "type": "text",
             "name": "layout_json",
-            "label": "Layout Fields",
-            "sortable": true
+            "label": "Sections & Fields",
+            "format_hook": "App\\Helpers\\Studio\\LayoutPreviewHelper@formatLayoutSummary",
+            "sortable": false
         },
         {
             "type": "text",
@@ -39,23 +48,45 @@
             "label": "Created By",
             "searchable": {
                 "global": true,
-                "individual": true
+                "individual": false
             },
-            "sortable": true
+            "sortable": false,
+            "default": "—"
         },
         {
             "type": "text",
             "name": "created_at",
-            "label": "Created At",
+            "label": "Created",
             "date": true,
+            "format": "d M Y, h:i A",
             "sortable": true
         }
     ],
-    "filters": [],
+    "filters": [
+        {
+            "type": "select",
+            "name": "layout_type",
+            "label": "View Type",
+            "options_source": "helper",
+            "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
+            "helper_method": "get",
+            "helper_params": ["layout_type_dom"]
+        }
+    ],
     "filters_layout": "modal",
     "record_action": null,
     "record_url": null,
     "actions": [
+        {
+            "type": "view",
+            "label": "Details",
+            "ui": {
+                "hiddenLabel": true,
+                "iconButton": true,
+                "tooltip": "View Details",
+                "icon": "heroicon-o-eye"
+            }
+        },
         {
             "type": "edit",
             "label": "Edit",
@@ -64,19 +95,20 @@
                 "slideOver": true,
                 "hiddenLabel": true,
                 "iconButton": true,
-                "tooltip": "Edit",
-                "modalHeading": "Update the layout",
+                "tooltip": "Edit Layout",
+                "modalHeading": "Update Layout",
                 "modalWidth": "SevenExtraLarge"
             }
         },
         {
-            "type": "view",
-            "label": "Details",
+            "type": "delete",
+            "label": "Delete",
             "ui": {
                 "hiddenLabel": true,
                 "iconButton": true,
-                "tooltip": "Details",
-                "icon": "heroicon-o-eye"
+                "tooltip": "Delete Layout",
+                "icon": "heroicon-o-trash",
+                "color": "danger"
             }
         }
     ],

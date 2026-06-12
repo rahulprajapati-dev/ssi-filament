@@ -25,6 +25,10 @@ return new class extends Migration
             $table->text('default_value')->nullable();
             $table->json('options')->nullable();
             $table->integer('sort_order')->default(0);
+            $table->string('visibility_mode', 30)->default('always_visible');
+            $table->string('condition_logic', 10)->default('and');
+            $table->boolean('always_save_value')->default(false);
+            $table->json('visibility_conditions')->nullable();
             $table->string('created_by', 10)->nullable();
             $table->string('updated_by', 10)->nullable();
             $table->timestamps();
