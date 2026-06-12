@@ -99,6 +99,17 @@
                 "modalHeading": "Update Layout",
                 "modalWidth": "SevenExtraLarge"
             }
+        },
+        {
+            "type": "delete",
+            "label": "Delete",
+            "ui": {
+                "hiddenLabel": true,
+                "iconButton": true,
+                "tooltip": "Delete Layout",
+                "icon": "heroicon-o-trash",
+                "color": "danger"
+            }
         }
     ],
     "record_actions_position": "BeforeColumns",

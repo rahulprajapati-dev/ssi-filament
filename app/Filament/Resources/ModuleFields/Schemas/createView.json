@@ -84,13 +84,14 @@
                         },
                         {
                             "component": "section",
-                            "label": "Options (for Select/Radio Components)",
+                            "label": "Options (for Select / Radio / Checkbox List)",
                             "collapsible": true,
                             "compact": true,
                             "columns": 1,
                             "visible_when": {
                                 "field": "type",
-                                "value": "select"
+                                "operator": "in",
+                                "value": ["select", "radio", "checkbox_list"]
                             },
                             "schema": [
                                 {

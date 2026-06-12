@@ -31,12 +31,13 @@ class ModuleField extends Model
     ];
 
     protected $casts = [
-        'options' => 'array',
-        'required' => 'boolean',
-        'searchable' => 'boolean',
-        'sortable' => 'boolean',
-        'unique_field' => 'boolean',
-        'always_save_value' => 'boolean',
+        'options'               => 'array',
+        'required'              => 'boolean',
+        'searchable'            => 'boolean',
+        'sortable'              => 'boolean',
+        'unique_field'          => 'boolean',
+        'always_save_value'     => 'boolean',
+        'sort_order'            => 'boolean',
         'visibility_conditions' => 'array',
     ];
 

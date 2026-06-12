@@ -536,7 +536,8 @@ class JsonTableBuilder
             if ($source === 'relationship') {
                 $relationship = $f['relationship'] ?? null;
                 $title = $f['title_column'] ?? 'name';
-                $role = auth()->user()?->getRoleNames()->first();
+                $user = auth()->user();
+                $role = ($user && method_exists($user, 'getRoleNames')) ? $user->getRoleNames()->first() : null;
                 $allowEmpty = $f['allow_empty_for_roles'][$role]
                     ?? $f['allow_empty_for_roles']['default']
                     ?? true;

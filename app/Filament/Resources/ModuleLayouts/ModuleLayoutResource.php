@@ -22,7 +22,11 @@ class ModuleLayoutResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedViewColumns;
 
-    protected static ?string $recordTitleAttribute = 'Layout Builder';
+    protected static ?string $modelLabel = 'Layout';
+
+    protected static ?string $pluralModelLabel = 'Layouts';
+
+    protected static ?string $recordTitleAttribute = 'layout_type';
 
     protected static ?string $navigationLabel = 'Layout Builder';
 

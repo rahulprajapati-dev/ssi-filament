@@ -81,13 +81,14 @@
                         },
                         {
                             "component": "section",
-                            "label": "Options (for Select/Radio Components)",
+                            "label": "Options (for Select / Radio / Checkbox List)",
                             "collapsible": true,
                             "compact": true,
                             "columns": 1,
-                            "visible_when":{
-                                "field":"type",
-                                "value":"select"
+                            "visible_when": {
+                                "field": "type",
+                                "operator": "in",
+                                "value": ["select", "radio", "checkbox_list"]
                             },
                             "schema": [
                                 {
@@ -230,16 +231,14 @@
                                             "name": "operator",
                                             "label": "Operator",
                                             "columnSpan": 1,
-                                            "options_source": "static",
-                                            "options": {
-                                                "=": "=",
-                                                "!=": "!=",
-                                                ">": ">",
-                                                "<": "<",
-                                                "contains": "contains",
-                                                "starts_with": "starts_with",
-                                                "ends_with": "ends_with"
-                                            },
+                                            "options_source": "helper",
+                                            "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
+                                            "helper_method": "get",
+                                            "helper_params": [
+                                                "operator_dom"
+                                            ],
+                                            "searchable": true,
+                                            "reactive": true,
                                             "required": true
                                         },
                                         {
