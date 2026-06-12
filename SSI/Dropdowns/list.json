@@ -104,6 +104,14 @@
         "and": "All conditions must be met (AND)",
         "or": "Any condition must be met (OR)"
     },
+    "relationship_type_dom": {
+        "hasOne": "Has One",
+        "hasMany": "Has Many",
+        "belongsTo": "Belongs To",
+        "belongsToMany": "Belongs To Many",
+        "hasOneThrough": "Has One Through",
+        "hasManyThrough": "Has Many Through"
+    },
     "operator_dom": {
         "=": "Equals",
         "!=": "Not Equals",

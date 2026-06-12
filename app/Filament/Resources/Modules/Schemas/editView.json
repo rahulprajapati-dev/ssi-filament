@@ -81,6 +81,69 @@
                     "hint": "Optional — briefly describe what this module manages"
                 }
             ]
+        },
+        {
+            "component": "section",
+            "label": "Module Relationships",
+            "description": "Define Eloquent relationships this module has with other modules. These are used when generating model code.",
+            "icon": "heroicon-o-arrow-path-rounded-square",
+            "columnSpan": "full",
+            "collapsible": true,
+            "compact": false,
+            "columns": 1,
+            "schema": [
+                {
+                    "component": "repeater",
+                    "name": "relationships_json",
+                    "label": null,
+                    "columnSpan": 1,
+                    "columns": 4,
+                    "schema": [
+                        {
+                            "component": "select",
+                            "name": "type",
+                            "label": "Relationship Type",
+                            "columnSpan": 1,
+                            "options_source": "helper",
+                            "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
+                            "helper_method": "get",
+                            "helper_params": [
+                                "relationship_type_dom"
+                            ],
+                            "required": true,
+                            "searchable": false
+                        },
+                        {
+                            "component": "select",
+                            "name": "related_module",
+                            "label": "Related Module",
+                            "columnSpan": 1,
+                            "options_source": "helper",
+                            "helper_class": "App\\Helpers\\CommonHelper",
+                            "helper_method": "getModulesOptions",
+                            "helper_params": [],
+                            "required": true,
+                            "searchable": true
+                        },
+                        {
+                            "component": "textInput",
+                            "name": "name",
+                            "label": "Method Name",
+                            "columnSpan": 1,
+                            "required": false,
+                            "hint": "e.g. orders — auto-suggested if left empty"
+                        },
+                        {
+                            "component": "textInput",
+                            "name": "foreign_key",
+                            "label": "Foreign Key",
+                            "columnSpan": 1,
+                            "required": false,
+                            "hint": "Leave empty for convention (e.g. module_id)"
+                        }
+                    ]
+                }
+            ]
         }
     ]
 }

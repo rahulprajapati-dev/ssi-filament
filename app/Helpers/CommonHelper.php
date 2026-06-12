@@ -2,6 +2,7 @@
 
 namespace App\Helpers;
 use Illuminate\Support\Str;
+use App\Models\Module;
 use App\Models\ModuleField;
 
 class CommonHelper
@@ -36,5 +37,10 @@ class CommonHelper
             return [];
         }
         return ModuleField::where('module_id', $moduleId)->pluck('label', 'field_name')->toArray();
+    }
+
+    public static function getModulesOptions(): array
+    {
+        return Module::orderBy('plural_label')->pluck('plural_label', 'name')->toArray();
     }
 }

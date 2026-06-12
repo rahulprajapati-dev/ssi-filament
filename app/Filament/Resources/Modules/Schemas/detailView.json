@@ -57,6 +57,24 @@
         },
         {
             "component": "section",
+            "label": "Module Relationships",
+            "icon": "heroicon-o-arrow-path-rounded-square",
+            "columnSpan": "full",
+            "compact": false,
+            "collapsible": true,
+            "columns": 1,
+            "schema": [
+                {
+                    "component": "placeholder",
+                    "name": "relationships_preview",
+                    "label": null,
+                    "columnSpan": 1,
+                    "content_hook": "App\\Helpers\\Studio\\ModuleRelationshipHelper@renderRelationships"
+                }
+            ]
+        },
+        {
+            "component": "section",
             "label": "Deployment Status",
             "icon": "heroicon-o-cloud-arrow-up",
             "columnSpan": "full",

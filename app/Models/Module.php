@@ -17,15 +17,17 @@ class Module extends Model
         'plural_label',
         'icon',
         'description',
+        'relationships_json',
         'is_deploy',
         'is_enable',
         'deployed_at',
     ];
 
     protected $casts = [
-        'is_deploy'   => 'boolean',
-        'is_enable'   => 'boolean',
-        'deployed_at' => 'datetime',
+        'is_deploy'          => 'boolean',
+        'is_enable'          => 'boolean',
+        'deployed_at'        => 'datetime',
+        'relationships_json' => 'array',
     ];
 
     public function fields()
