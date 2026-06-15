@@ -87,18 +87,26 @@ class LayoutPreviewHelper
     {
         $layout = $record?->layout_json;
 
-        if (empty($layout)) {
+        // Decode if stored as a raw JSON string (shouldn't happen with Eloquent cast, but defensive)
+        if (is_string($layout)) {
+            $layout = json_decode($layout, true);
+        }
+
+        if (empty($layout) || ! is_array($layout)) {
             return '—';
         }
 
-        // Normalize flat legacy array → sections format
-        $sections = $layout;
-        if (! empty($layout[0]) && is_string($layout[0])) {
+        // Normalize flat legacy format: ["field1", "field2", ...]
+        if (isset($layout[0]) && is_string($layout[0])) {
             $sections = [['fields' => $layout]];
+        } else {
+            $sections = array_values($layout);
         }
 
         $sectionCount = count($sections);
-        $totalFields  = array_sum(array_map(fn ($s) => count($s['fields'] ?? []), $sections));
+        $totalFields  = array_sum(
+            array_map(fn ($s) => is_array($s['fields'] ?? null) ? count($s['fields']) : 0, $sections)
+        );
 
         return $sectionCount . ' ' . ($sectionCount === 1 ? 'section' : 'sections') . ' · ' . $totalFields . ' fields';
     }

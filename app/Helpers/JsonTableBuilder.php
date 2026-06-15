@@ -242,17 +242,18 @@ class JsonTableBuilder
                 }
 
                 // format_hook: "ClassName@method" — receives ($state, $record)
+                // Uses getStateUsing (not formatStateUsing) so Filament receives a string,
+                // preventing per-element iteration when the column attribute is an array (e.g. layout_json).
                 if (! empty($c['format_hook'])) {
                     $hookString = $c['format_hook'];
-                    $col->formatStateUsing(function ($state, $record) use ($hookString) {
-                        if (str_contains($hookString, '@')) {
-                            [$class, $method] = explode('@', $hookString);
-
-                            return $class::$method($state, $record);
-                        }
-
-                        return $state;
-                    });
+                    $columnName = $name;
+                    if (str_contains($hookString, '@')) {
+                        [$hookClass, $hookMethod] = explode('@', $hookString);
+                        $col->getStateUsing(function ($record) use ($hookClass, $hookMethod, $columnName) {
+                            $state = $record?->{$columnName} ?? null;
+                            return $hookClass::$hookMethod($state, $record);
+                        });
+                    }
                 }
 
                 // apply searchable with individual option where supported
