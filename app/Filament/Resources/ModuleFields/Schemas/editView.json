@@ -21,6 +21,12 @@
                                     "options_source": "relationship",
                                     "relationship": "module",
                                     "title_column": "plural_label",
+                                    "disabled_if_record": {
+                                        "relation": "module",
+                                        "field": "is_deploy",
+                                        "operator": "=",
+                                        "value": true
+                                    },
                                     "required": true,
                                     "searchable": true,
                                     "dehydrated": true,
@@ -46,7 +52,13 @@
                                     "validation":[
                                         "max:50",
                                         "regex:/^[a-z][a-z0-9_]*$/"
-                                    ]
+                                    ],
+                                    "disabled_if_record": {
+                                        "relation": "module",
+                                        "field": "is_deploy",
+                                        "operator": "=",
+                                        "value": true
+                                    }
                                 },
                                 {
                                     "component": "textInput",

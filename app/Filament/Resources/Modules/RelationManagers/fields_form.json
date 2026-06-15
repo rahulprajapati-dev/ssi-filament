@@ -29,7 +29,13 @@
                                     "validation": [
                                         "max:50",
                                         "regex:/^[a-z][a-z0-9_]*$/"
-                                    ]
+                                    ],
+                                    "disabled_if_record": {
+                                        "relation": "module",
+                                        "field": "is_deploy",
+                                        "operator": "=",
+                                        "value": true
+                                    }
                                 },
                                 {
                                     "component": "select",
