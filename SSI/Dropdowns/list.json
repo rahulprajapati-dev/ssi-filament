@@ -15,7 +15,7 @@
         "email": "Email",
         "url": "URL",
         "phone": "Phone Number",
-        "select": "Select Dropdown",
+        "select": "Dropdown",
         "toggle": "Toggle",
         "checkbox": "Checkbox",
         "radio": "Radio Button",

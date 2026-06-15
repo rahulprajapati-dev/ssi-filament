@@ -1,0 +1,65 @@
+{
+    "form_name": "module_layout_panel_form",
+    "model": "App\\Models\\ModuleLayout",
+    "components": [
+        {
+            "component": "section",
+            "label": "Module & View Type",
+            "description": "Choose which module this layout belongs to and what type of view you are designing.",
+            "icon": "heroicon-o-cog-6-tooth",
+            "columnSpan": "full",
+            "collapsible": false,
+            "compact": true,
+            "columns": 2,
+            "schema": [
+                {
+                    "component": "select",
+                    "name": "module_id",
+                    "label": "Module",
+                    "columnSpan": 1,
+                    "options_source": "relationship",
+                    "relationship": "module",
+                    "title_column": "plural_label",
+                    "required": true,
+                    "searchable": true,
+                    "dehydrated": true,
+                    "preload": true,
+                    "live": true
+                },
+                {
+                    "component": "select",
+                    "name": "layout_type",
+                    "label": "View Type",
+                    "columnSpan": 1,
+                    "options_source": "helper",
+                    "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
+                    "helper_method": "get",
+                    "helper_params": [
+                        "layout_type_dom"
+                    ],
+                    "required": true
+                }
+            ]
+        },
+        {
+            "component": "section",
+            "label": "Design Your Layout",
+            "description": "Drag fields from the available pool on the left into sections to build your form layout. Double-click a field to move it quickly.",
+            "icon": "heroicon-o-view-columns",
+            "columnSpan": "full",
+            "collapsible": false,
+            "compact": false,
+            "columns": 1,
+            "schema": [
+                {
+                    "component": "dragDrop",
+                    "name": "layout_json",
+                    "label": null,
+                    "source": "module_fields",
+                    "depends_on": "module_id",
+                    "columnSpan": 1
+                }
+            ]
+        }
+    ]
+}

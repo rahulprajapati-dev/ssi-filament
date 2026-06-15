@@ -1,0 +1,144 @@
+{
+    "title": "Fields",
+    "model": "App\\Models\\ModuleField",
+    "perPage": 15,
+    "reorderable": "sort_order",
+    "defaultSort": {
+        "column": "sort_order",
+        "direction": "asc"
+    },
+    "columns": [
+        {
+            "type": "text",
+            "name": "field_name",
+            "label": "Field Name",
+            "sortable": true,
+            "searchable": {
+                "global": true,
+                "individual": false
+            }
+        },
+        {
+            "type": "text",
+            "name": "label",
+            "label": "Display Label",
+            "sortable": true,
+            "searchable": {
+                "global": true,
+                "individual": false
+            }
+        },
+        {
+            "type": "badge",
+            "name": "type",
+            "label": "Type",
+            "dropdown": "field_type_dom",
+            "color_map": {
+                "text": "gray",
+                "textarea": "gray",
+                "tags": "gray",
+                "number": "info",
+                "email": "info",
+                "url": "info",
+                "phone": "info",
+                "currency": "info",
+                "select": "warning",
+                "radio": "warning",
+                "checkbox_list": "warning",
+                "color": "warning",
+                "toggle": "success",
+                "checkbox": "success",
+                "date": "primary",
+                "time": "primary",
+                "datetime": "primary",
+                "relationship": "primary",
+                "file": "danger",
+                "image": "danger",
+                "json": "danger"
+            }
+        },
+        {
+            "type": "icon",
+            "name": "required",
+            "label": "Req.",
+            "boolean": true
+        },
+        {
+            "type": "icon",
+            "name": "searchable",
+            "label": "Search",
+            "boolean": true
+        },
+        {
+            "type": "icon",
+            "name": "sortable",
+            "label": "Sort",
+            "boolean": true
+        },
+        {
+            "type": "text",
+            "name": "sort_order",
+            "label": "#",
+            "sortable": true,
+            "default": "—"
+        }
+    ],
+    "filters": [],
+    "filters_layout": "modal",
+    "record_action": null,
+    "record_url": null,
+    "headerActions": [
+        {
+            "type": "create",
+            "label": "Add Field",
+            "ui": {
+                "slideOver": true,
+                "modalWidth": "FourExtraLarge",
+                "modalHeading": "Add Field"
+            }
+        }
+    ],
+    "actions": [
+        {
+            "type": "navigate",
+            "name": "open_field",
+            "label": "Open",
+            "resource": "App\\Filament\\Resources\\ModuleFields\\ModuleFieldResource",
+            "resource_method": "view",
+            "open_new_tab": true,
+            "ui": {
+                "hiddenLabel": true,
+                "iconButton": true,
+                "icon": "heroicon-o-arrow-top-right-on-square",
+                "tooltip": "Open Full Detail View",
+                "color": "gray"
+            }
+        },
+        {
+            "type": "edit",
+            "label": "Edit",
+            "ui": {
+                "icon": "heroicon-m-pencil-square",
+                "slideOver": true,
+                "hiddenLabel": true,
+                "iconButton": true,
+                "tooltip": "Edit Field",
+                "modalHeading": "Edit Field",
+                "modalWidth": "FourExtraLarge"
+            }
+        },
+        {
+            "type": "delete",
+            "label": "Delete",
+            "ui": {
+                "hiddenLabel": true,
+                "iconButton": true,
+                "icon": "heroicon-o-trash",
+                "tooltip": "Delete Field",
+                "color": "danger"
+            }
+        }
+    ],
+    "record_actions_position": "BeforeColumns",
+    "bulkActions": []
+}

@@ -1,0 +1,97 @@
+{
+    "title": "Layouts",
+    "model": "App\\Models\\ModuleLayout",
+    "perPage": 15,
+    "defaultSort": {
+        "column": "layout_type",
+        "direction": "asc"
+    },
+    "columns": [
+        {
+            "type": "badge",
+            "name": "layout_type",
+            "label": "View Type",
+            "dropdown": "layout_type_dom",
+            "color_map": {
+                "create": "success",
+                "edit": "warning",
+                "detail": "info",
+                "list": "primary"
+            },
+            "sortable": true
+        },
+        {
+            "type": "text",
+            "name": "layout_json",
+            "label": "Sections & Fields",
+            "format_hook": "App\\Helpers\\Studio\\LayoutPreviewHelper@formatLayoutSummary",
+            "sortable": false,
+            "default": "Not designed yet"
+        },
+        {
+            "type": "text",
+            "name": "updated_at",
+            "label": "Last Modified",
+            "date": true,
+            "format": "d M Y, h:i A",
+            "sortable": true
+        }
+    ],
+    "filters": [],
+    "filters_layout": "modal",
+    "record_action": null,
+    "record_url": null,
+    "headerActions": [
+        {
+            "type": "create",
+            "label": "Add Layout",
+            "ui": {
+                "modalHeading": "Add Layout",
+                "modalDescription": "Choose the view type. After saving, click Design to build the layout structure."
+            }
+        }
+    ],
+    "actions": [
+        {
+            "type": "navigate",
+            "name": "design_layout",
+            "label": "Design",
+            "resource": "App\\Filament\\Resources\\ModuleLayouts\\ModuleLayoutResource",
+            "resource_method": "edit",
+            "ui": {
+                "hiddenLabel": true,
+                "iconButton": true,
+                "icon": "heroicon-o-view-columns",
+                "tooltip": "Open Layout Designer",
+                "color": "primary"
+            }
+        },
+        {
+            "type": "navigate",
+            "name": "preview_layout",
+            "label": "Preview",
+            "resource": "App\\Filament\\Resources\\ModuleLayouts\\ModuleLayoutResource",
+            "resource_method": "view",
+            "ui": {
+                "hiddenLabel": true,
+                "iconButton": true,
+                "icon": "heroicon-o-eye",
+                "tooltip": "View Layout Detail",
+                "color": "gray"
+            }
+        },
+        {
+            "type": "delete",
+            "label": "Delete",
+            "ui": {
+                "hiddenLabel": true,
+                "iconButton": true,
+                "icon": "heroicon-o-trash",
+                "tooltip": "Delete Layout",
+                "color": "danger"
+            }
+        }
+    ],
+    "record_actions_position": "BeforeColumns",
+    "bulkActions": []
+}

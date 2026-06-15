@@ -11,10 +11,6 @@
             "type": "text",
             "name": "plural_label",
             "label": "Module Name",
-            "searchable": {
-                "global": true,
-                "individual": true
-            },
             "sortable": true,
             "wrap": false
         },
@@ -22,10 +18,12 @@
             "type": "text",
             "name": "singular_label",
             "label": "Label",
-            "searchable": {
-                "global": true,
-                "individual": false
-            },
+            "sortable": true
+        },
+        {
+            "type": "text",
+            "name": "relationships_json",
+            "label": "Relationship",
             "sortable": true
         },
         {

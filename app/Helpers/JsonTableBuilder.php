@@ -141,6 +141,10 @@ class JsonTableBuilder
             }
         }
 
+        if (! empty($config['reorderable'])) {
+            $table->reorderable($config['reorderable']);
+        }
+
         return $table;
     }
 
@@ -711,6 +715,7 @@ class JsonTableBuilder
             'edit' => EditAction::make()->label($label),
             'view' => ViewAction::make()->label($label),
             'delete' => DeleteAction::make()->label($label),
+            'navigate' => ActionClass::make($name)->label($label),
             'activity_log' => ActionClass::make($name)->label($label ?? 'Change Log')->modal(),
             'popup' => ActionClass::make($name)->label($label)->modal(),
             'custom' => ActionClass::make($name)->label($label), // Generic Action
@@ -733,7 +738,14 @@ class JsonTableBuilder
         // 2. Apply UI Options (Icon, Modal, Color)
         self::applyUiOptionsToAction($act, $ui);
 
-        if (!empty($a['url_route'])) {
+        if ($type === 'navigate' && !empty($a['resource'])) {
+            $resource = $a['resource'];
+            $method = $a['resource_method'] ?? 'view';
+            $act->url(fn ($record) => $resource::getUrl($method, ['record' => $record]));
+            if (!empty($a['open_new_tab'])) {
+                $act->openUrlInNewTab();
+            }
+        } elseif (!empty($a['url_route'])) {
             // Allows defining a route name in JSON: "url_route": "filament.admin.resources.stocks.delivery"
             $act->url(fn ($record) => route($a['url_route'], ['record' => $record]));
         } elseif (!empty($a['url'])) {

@@ -1,0 +1,206 @@
+{
+    "form_name": "module_field_panel_form",
+    "model": "App\\Models\\ModuleField",
+    "components": [
+        {
+            "component": "tabs",
+            "columnSpan": "full",
+            "tabs": [
+                {
+                    "label": "General",
+                    "schema": [
+                        {
+                            "component": "grid",
+                            "columns": 2,
+                            "schema": [
+                                {
+                                    "component": "textInput",
+                                    "name": "field_name",
+                                    "label": "Field Name",
+                                    "columnSpan": 1,
+                                    "required": true,
+                                    "options_source": "helper",
+                                    "helper_type": "dynamic",
+                                    "helper_class": "App\\Helpers\\CommonHelper",
+                                    "helper_method": "populatefieldlabel",
+                                    "helper_params": ["field_name"],
+                                    "reactive": true,
+                                    "populate_fields": ["label"],
+                                    "validation": [
+                                        "max:50",
+                                        "regex:/^[a-z][a-z0-9_]*$/"
+                                    ]
+                                },
+                                {
+                                    "component": "select",
+                                    "name": "type",
+                                    "label": "Field Type",
+                                    "columnSpan": 1,
+                                    "options_source": "helper",
+                                    "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
+                                    "helper_method": "get",
+                                    "helper_params": ["field_type_dom"],
+                                    "searchable": true,
+                                    "reactive": true,
+                                    "required": true
+                                },
+                                {
+                                    "component": "textInput",
+                                    "name": "label",
+                                    "label": "Display Label",
+                                    "columnSpan": 1,
+                                    "required": true
+                                },
+                                {
+                                    "component": "textInput",
+                                    "name": "default_value",
+                                    "label": "Default Value",
+                                    "columnSpan": 1,
+                                    "required": false
+                                }
+                            ]
+                        },
+                        {
+                            "component": "section",
+                            "label": "Options (for Select / Radio / Checkbox List)",
+                            "collapsible": true,
+                            "compact": true,
+                            "columns": 1,
+                            "visible_when": {
+                                "field": "type",
+                                "operator": "in",
+                                "value": ["select", "radio", "checkbox_list"]
+                            },
+                            "schema": [
+                                {
+                                    "component": "repeater",
+                                    "name": "options",
+                                    "label": "Options List",
+                                    "columnSpan": 1,
+                                    "columns": 2,
+                                    "schema": [
+                                        {
+                                            "component": "textInput",
+                                            "name": "key",
+                                            "label": "Option Value / Key",
+                                            "columnSpan": 1,
+                                            "required": true
+                                        },
+                                        {
+                                            "component": "textInput",
+                                            "name": "value",
+                                            "label": "Option Display Label",
+                                            "columnSpan": 1,
+                                            "required": true
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "label": "Validation",
+                    "schema": [
+                        {
+                            "component": "grid",
+                            "columns": 2,
+                            "schema": [
+                                {
+                                    "component": "toggle",
+                                    "name": "required",
+                                    "label": "Required Field",
+                                    "columnSpan": 1
+                                },
+                                {
+                                    "component": "toggle",
+                                    "name": "unique_field",
+                                    "label": "Unique Value",
+                                    "columnSpan": 1
+                                },
+                                {
+                                    "component": "textInput",
+                                    "name": "length",
+                                    "label": "Max Length (characters)",
+                                    "type": "numeric",
+                                    "columnSpan": 2,
+                                    "required": false
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "label": "Settings",
+                    "schema": [
+                        {
+                            "component": "grid",
+                            "columns": 3,
+                            "schema": [
+                                {
+                                    "component": "toggle",
+                                    "name": "searchable",
+                                    "label": "Searchable",
+                                    "columnSpan": 1
+                                },
+                                {
+                                    "component": "toggle",
+                                    "name": "sortable",
+                                    "label": "Sortable in List",
+                                    "columnSpan": 1
+                                },
+                                {
+                                    "component": "textInput",
+                                    "name": "sort_order",
+                                    "label": "Sort Order",
+                                    "type": "numeric",
+                                    "columnSpan": 1,
+                                    "required": false,
+                                    "hint": "Lower numbers appear first"
+                                }
+                            ]
+                        },
+                        {
+                            "component": "select",
+                            "name": "visibility_mode",
+                            "label": "Visibility Mode",
+                            "options_source": "helper",
+                            "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
+                            "helper_method": "get",
+                            "helper_params": ["visibility_mode_dom"],
+                            "required": true,
+                            "reactive": true,
+                            "default": "always_visible"
+                        },
+                        {
+                            "component": "select",
+                            "name": "condition_logic",
+                            "label": "Condition Logic",
+                            "options_source": "helper",
+                            "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
+                            "helper_method": "get",
+                            "helper_params": ["condition_logic_dom"],
+                            "required": true,
+                            "default": "and",
+                            "visible_when": {
+                                "field": "visibility_mode",
+                                "operator": "!=",
+                                "value": "always_visible"
+                            }
+                        },
+                        {
+                            "component": "toggle",
+                            "name": "always_save_value",
+                            "label": "Always Save Value (even when hidden)",
+                            "visible_when": {
+                                "field": "visibility_mode",
+                                "operator": "!=",
+                                "value": "always_visible"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

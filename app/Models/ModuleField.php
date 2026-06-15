@@ -37,7 +37,7 @@ class ModuleField extends Model
         'sortable'              => 'boolean',
         'unique_field'          => 'boolean',
         'always_save_value'     => 'boolean',
-        'sort_order'            => 'boolean',
+        'sort_order'            => 'integer',
         'visibility_conditions' => 'array',
     ];
 
