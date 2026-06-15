@@ -32,7 +32,6 @@
                         "singular_label",
                         "plural_label"
                     ],
-                    "hint": "Lowercase, underscores only — e.g. customer_order",
                     "validation": [
                         "max:50",
                         "regex:/^[a-z][a-z0-9_]*$/"
@@ -49,24 +48,21 @@
                         "moudle_icons_dom"
                     ],
                     "columnSpan": 1,
-                    "required": false,
-                    "hint": "Heroicon displayed in the sidebar navigation"
+                    "required": false
                 },
                 {
                     "component": "textInput",
                     "name": "singular_label",
                     "label": "Singular Label",
                     "columnSpan": 1,
-                    "required": true,
-                    "hint": "e.g. Customer Order"
+                    "required": true
                 },
                 {
                     "component": "textInput",
                     "name": "plural_label",
                     "label": "Plural Label",
                     "columnSpan": 1,
-                    "required": true,
-                    "hint": "e.g. Customer Orders"
+                    "required": true
                 },
                 {
                     "component": "textarea",
@@ -74,8 +70,7 @@
                     "label": "Description",
                     "columnSpan": 2,
                     "rows": 3,
-                    "required": false,
-                    "hint": "Optional — briefly describe what this module manages"
+                    "required": false
                 }
             ]
         },
@@ -127,16 +122,14 @@
                             "name": "name",
                             "label": "Method Name",
                             "columnSpan": 1,
-                            "required": false,
-                            "hint": "e.g. orders — auto-suggested if left empty"
+                            "required": false
                         },
                         {
                             "component": "textInput",
                             "name": "foreign_key",
                             "label": "Foreign Key",
                             "columnSpan": 1,
-                            "required": false,
-                            "hint": "Leave empty for convention (e.g. module_id)"
+                            "required": false
                         }
                     ]
                 }
