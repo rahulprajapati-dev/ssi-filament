@@ -115,6 +115,18 @@
             }
         },
         {
+            "type": "view",
+            "label": "View",
+            "ui": {
+                "slideOver": true,
+                "hiddenLabel": true,
+                "iconButton": true,
+                "tooltip": "View Field",
+                "modalHeading": "View Field",
+                "modalWidth": "SixExtraLarge"
+            }
+        },
+        {
             "type": "edit",
             "label": "Edit",
             "ui": {
