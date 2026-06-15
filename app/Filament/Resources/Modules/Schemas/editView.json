@@ -106,7 +106,8 @@
                                 "relationship_type_dom"
                             ],
                             "required": true,
-                            "searchable": false
+                            "searchable": false,
+                            "live": true
                         },
                         {
                             "component": "select",
@@ -114,25 +115,38 @@
                             "label": "Related Module",
                             "columnSpan": 1,
                             "options_source": "helper",
+                            "helper_type": "dynamic",
                             "helper_class": "App\\Helpers\\CommonHelper",
-                            "helper_method": "getModulesOptions",
-                            "helper_params": [],
+                            "helper_method": "getModulesOptionsExcluding",
+                            "helper_params": ["../../name"],
                             "required": true,
-                            "searchable": true
+                            "searchable": true,
+                            "live": true
                         },
                         {
                             "component": "textInput",
                             "name": "name",
                             "label": "Method Name",
+                            "placeholder": "e.g. orders",
                             "columnSpan": 1,
-                            "required": false
+                            "required": false,
+                            "validation": [
+                                "regex:/^[a-zA-Z_][a-zA-Z0-9_]*$/"
+                            ]
                         },
                         {
-                            "component": "textInput",
+                            "component": "select",
                             "name": "foreign_key",
                             "label": "Foreign Key",
                             "columnSpan": 1,
-                            "required": false
+                            "options_source": "helper",
+                            "helper_type": "dynamic",
+                            "helper_class": "App\\Helpers\\CommonHelper",
+                            "helper_method": "getForeignKeyOptions",
+                            "helper_params": ["related_module", "type", "../../name"],
+                            "required": false,
+                            "searchable": true,
+                            "placeholder": "Auto (use Laravel default)"
                         }
                     ]
                 }

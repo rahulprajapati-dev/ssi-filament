@@ -34,12 +34,63 @@ final class ModelGenerator
             'TABLE'           => $table,
             'RESOURCE'        => $resource,
             'PLURAL_RESOURCE' => $resource,
+            'RELATIONSHIPS'   => self::buildRelationshipMethods($module),
         ]);
 
         File::ensureDirectoryExists(app_path('Models'));
         File::put($path, $content);
 
         return true;
+    }
+
+    private static function buildRelationshipMethods(Module $module): string
+    {
+        $relationships = $module->relationships_json;
+
+        if (empty($relationships) || ! is_array($relationships)) {
+            return '';
+        }
+
+        $methods = [];
+
+        foreach ($relationships as $rel) {
+            $type          = $rel['type']          ?? '';
+            $relatedModule = $rel['related_module'] ?? '';
+
+            if (! $type || ! $relatedModule) {
+                continue;
+            }
+
+            $relatedModel = 'App\\Models\\' . Str::studly(Str::singular($relatedModule));
+            $methodName   = ! empty($rel['name'])
+                ? $rel['name']
+                : self::guessMethodName($type, $relatedModule);
+            $foreignKey   = $rel['foreign_key'] ?? '';
+            $fkArg        = $foreignKey ? ", '{$foreignKey}'" : '';
+
+            $methods[] = implode("\n", [
+                "    public function {$methodName}()",
+                '    {',
+                "        return \$this->{$type}(\\{$relatedModel}::class{$fkArg});",
+                '    }',
+            ]);
+        }
+
+        if (empty($methods)) {
+            return '';
+        }
+
+        return "\n" . implode("\n\n", $methods) . "\n";
+    }
+
+    private static function guessMethodName(string $type, string $relatedModule): string
+    {
+        $base = Str::camel($relatedModule);
+
+        return match ($type) {
+            'hasMany', 'belongsToMany', 'hasManyThrough' => Str::plural($base),
+            default                                      => Str::singular($base),
+        };
     }
 
     public static function remove(Module $module): bool

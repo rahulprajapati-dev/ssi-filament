@@ -23,8 +23,9 @@
         {
             "type": "text",
             "name": "relationships_json",
-            "label": "Relationship",
-            "sortable": true
+            "label": "Relationships",
+            "format_hook": "App\\Helpers\\Studio\\ModuleRelationshipHelper@formatRelationshipSummary",
+            "default": "—"
         },
         {
             "type": "icon",

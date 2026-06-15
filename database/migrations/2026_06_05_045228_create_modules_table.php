@@ -20,6 +20,7 @@ return new class extends Migration
 
             $table->string('icon')->nullable();
             $table->text('description')->nullable();
+            $table->json('relationships_json')->nullable()->after('description');
 
             $table->boolean('is_enable')->default(false)->index();
             $table->boolean('is_deploy')->default(false)->index();
