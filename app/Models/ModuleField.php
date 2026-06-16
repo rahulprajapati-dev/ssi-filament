@@ -5,11 +5,22 @@ namespace App\Models;
 use App\Traits\HasCreatedBy;
 use App\Traits\ModuleHookTrait;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class ModuleField extends Model
 {
     use HasCreatedBy;
     use ModuleHookTrait;
+
+    protected static function boot(): void
+    {
+        parent::boot();
+        static::creating(function ($model) {
+            if (empty($model->uuid)) {
+                $model->uuid = (string) Str::uuid();
+            }
+        });
+    }
 
     protected $fillable = [
         'module_id',

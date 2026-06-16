@@ -5,11 +5,22 @@ namespace App\Models;
 use App\Traits\HasCreatedBy;
 use App\Traits\ModuleHookTrait;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Module extends Model
 {
     use HasCreatedBy;
     use ModuleHookTrait;
+
+    protected static function boot(): void
+    {
+        parent::boot();
+        static::creating(function ($model) {
+            if (empty($model->uuid)) {
+                $model->uuid = (string) Str::uuid();
+            }
+        });
+    }
 
     protected $fillable = [
         'name',
@@ -18,6 +29,7 @@ class Module extends Model
         'icon',
         'description',
         'relationships_json',
+        'use_uuid',
         'is_deploy',
         'is_enable',
         'deployed_at',
@@ -26,6 +38,7 @@ class Module extends Model
     protected $casts = [
         'is_deploy'          => 'boolean',
         'is_enable'          => 'boolean',
+        'use_uuid'           => 'boolean',
         'deployed_at'        => 'datetime',
         'relationships_json' => 'array',
     ];

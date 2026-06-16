@@ -19,11 +19,10 @@ final class ModelGenerator
 {
     public static function generate(Module $module): bool
     {
-        $name     = (string) $module->name;
-        $model    = Str::studly($name);
-        $resource = Str::studly(Str::plural($name));
-        $table    = Str::snake(Str::plural($name));
-        $path     = app_path("Models/{$model}.php");
+        $name  = (string) $module->name;
+        $model = Str::studly($name);
+        $table = Str::snake(Str::plural($name));
+        $path  = app_path("Models/{$model}.php");
 
         if (File::exists($path)) {
             return false;
@@ -32,8 +31,9 @@ final class ModelGenerator
         $content = StubRenderer::render('Model.stub', [
             'MODEL'           => $model,
             'TABLE'           => $table,
-            'RESOURCE'        => $resource,
-            'PLURAL_RESOURCE' => $resource,
+            'RESOURCE'        => Str::studly(Str::plural($name)),
+            'PLURAL_RESOURCE' => Str::studly(Str::plural($name)),
+            'UUID_ROUTE_KEY'  => self::buildRouteKeyMethod($module),
             'RELATIONSHIPS'   => self::buildRelationshipMethods($module),
         ]);
 
@@ -44,12 +44,9 @@ final class ModelGenerator
     }
 
     /**
-     * Update the relationship methods in an already-deployed model file.
-     * Finds the studio-relationships region and replaces only that block,
-     * leaving all custom code untouched.
-     *
-     * Returns true on success, false when the model doesn't exist or has no region markers
-     * (e.g. generated before this feature — we don't overwrite unknown files).
+     * Sync studio-managed regions (route-key + relationships) in an existing model file.
+     * Only the content inside the region markers is replaced — all custom code is preserved.
+     * Returns true when the file was updated, false when unchanged or markers are absent.
      */
     public static function sync(Module $module): bool
     {
@@ -61,26 +58,49 @@ final class ModelGenerator
         }
 
         $content = File::get($path);
+        $changed = false;
 
-        // Replace content between the two region markers (inclusive of the end marker line).
-        // The regex is dotall so it spans multiple lines.
-        $updated = preg_replace_callback(
-            '/(?m)^(\s*\/\/ region:studio-relationships[^\n]*\n).*?(\s*\/\/ endregion:studio-relationships)/s',
-            function (array $m) use ($module): string {
-                $relationships = self::buildRelationshipMethods($module);
-                return $m[1] . $relationships . '    // endregion:studio-relationships';
-            },
-            $content,
-        );
+        $regions = [
+            'studio-route-key'     => self::buildRouteKeyMethod($module),
+            'studio-relationships' => self::buildRelationshipMethods($module),
+        ];
 
-        if ($updated === null || $updated === $content) {
-            // No region markers found (old model) or nothing changed — skip silently.
+        foreach ($regions as $region => $newContent) {
+            $updated = preg_replace_callback(
+                '/(?m)^(\s*\/\/ region:' . preg_quote($region, '/') . '[^\n]*\n).*?([ \t]*\/\/ endregion:' . preg_quote($region, '/') . ')/s',
+                fn (array $m) => $m[1] . $newContent . '    // endregion:' . $region,
+                $content,
+            );
+
+            if ($updated !== null && $updated !== $content) {
+                $content = $updated;
+                $changed = true;
+            }
+        }
+
+        if (! $changed) {
             return false;
         }
 
-        File::put($path, $updated);
+        File::put($path, $content);
 
         return true;
+    }
+
+    private static function buildRouteKeyMethod(Module $module): string
+    {
+        if (! $module->use_uuid) {
+            return '';
+        }
+
+        return implode("\n", [
+            '',
+            '    public function getRouteKeyName(): string',
+            '    {',
+            "        return 'uuid';",
+            '    }',
+            '',
+        ]);
     }
 
     private static function buildRelationshipMethods(Module $module): string
@@ -141,7 +161,9 @@ final class ModelGenerator
         if (! File::exists($path)) {
             return false;
         }
+
         File::delete($path);
+
         return true;
     }
 }

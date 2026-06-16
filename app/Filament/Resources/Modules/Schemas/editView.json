@@ -74,6 +74,13 @@
                     "columnSpan": 2,
                     "rows": 3,
                     "required": false
+                },
+                {
+                    "component": "toggle",
+                    "name": "use_uuid",
+                    "label": "Use UUID in URLs",
+                    "hint": "When ON — record URLs show a UUID instead of the numeric ID. Takes effect on next Deploy or Repair & Rebuild.",
+                    "columnSpan": 2
                 }
             ]
         },

@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class DummyModulesSeeder extends Seeder
 {
@@ -15,6 +16,7 @@ class DummyModulesSeeder extends Seeder
 
         $modules = [
             [
+                'uuid'           => (string) Str::uuid(),
                 'name'           => 'lead',
                 'singular_label' => 'Lead',
                 'plural_label'   => 'Leads',
@@ -26,6 +28,7 @@ class DummyModulesSeeder extends Seeder
                 'updated_at'     => $now,
             ],
             [
+                'uuid'           => (string) Str::uuid(),
                 'name'           => 'user',
                 'singular_label' => 'User',
                 'plural_label'   => 'Users',
@@ -37,6 +40,7 @@ class DummyModulesSeeder extends Seeder
                 'updated_at'     => $now,
             ],
             [
+                'uuid'           => (string) Str::uuid(),
                 'name'           => 'client',
                 'singular_label' => 'Client',
                 'plural_label'   => 'Clients',
@@ -48,6 +52,7 @@ class DummyModulesSeeder extends Seeder
                 'updated_at'     => $now,
             ],
             [
+                'uuid'           => (string) Str::uuid(),
                 'name'           => 'account',
                 'singular_label' => 'Account',
                 'plural_label'   => 'Accounts',
@@ -137,6 +142,7 @@ class DummyModulesSeeder extends Seeder
             }
 
             DB::table('module_fields')->insert([
+                'uuid'          => (string) Str::uuid(),
                 'module_id'     => $modId,
                 'field_name'    => $fieldName,
                 'label'         => $label,
@@ -303,6 +309,7 @@ class DummyModulesSeeder extends Seeder
             }
 
             DB::table('module_layouts')->insert([
+                'uuid'        => (string) Str::uuid(),
                 'module_id'   => $layout['module_id'],
                 'layout_type' => $layout['layout_type'],
                 'layout_json' => $layout['layout_json'],
