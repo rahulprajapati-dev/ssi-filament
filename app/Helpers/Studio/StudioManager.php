@@ -133,6 +133,9 @@ final class StudioManager
                 return true;
             });
 
+            // Sync relationship methods in the existing model file.
+            $this->step('model_relationships', fn() => ModelGenerator::sync($this->module));
+
             // Regenerate JSON schema files from the current ModuleLayout records.
             $this->step('layouts', fn() => LayoutGenerator::generate($this->module, force: true));
             $module = $this->module;

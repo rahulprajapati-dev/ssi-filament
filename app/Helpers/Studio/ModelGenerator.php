@@ -43,6 +43,46 @@ final class ModelGenerator
         return true;
     }
 
+    /**
+     * Update the relationship methods in an already-deployed model file.
+     * Finds the studio-relationships region and replaces only that block,
+     * leaving all custom code untouched.
+     *
+     * Returns true on success, false when the model doesn't exist or has no region markers
+     * (e.g. generated before this feature — we don't overwrite unknown files).
+     */
+    public static function sync(Module $module): bool
+    {
+        $model = Str::studly((string) $module->name);
+        $path  = app_path("Models/{$model}.php");
+
+        if (! File::exists($path)) {
+            return self::generate($module);
+        }
+
+        $content = File::get($path);
+
+        // Replace content between the two region markers (inclusive of the end marker line).
+        // The regex is dotall so it spans multiple lines.
+        $updated = preg_replace_callback(
+            '/(?m)^(\s*\/\/ region:studio-relationships[^\n]*\n).*?(\s*\/\/ endregion:studio-relationships)/s',
+            function (array $m) use ($module): string {
+                $relationships = self::buildRelationshipMethods($module);
+                return $m[1] . $relationships . '    // endregion:studio-relationships';
+            },
+            $content,
+        );
+
+        if ($updated === null || $updated === $content) {
+            // No region markers found (old model) or nothing changed — skip silently.
+            return false;
+        }
+
+        File::put($path, $updated);
+
+        return true;
+    }
+
     private static function buildRelationshipMethods(Module $module): string
     {
         $relationships = $module->relationships_json;

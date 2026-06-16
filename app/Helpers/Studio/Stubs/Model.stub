@@ -26,5 +26,7 @@ class {{MODEL}} extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
-{{RELATIONSHIPS}}
+
+    // region:studio-relationships — managed by Studio, do not edit manually
+{{RELATIONSHIPS}}    // endregion:studio-relationships
 }
