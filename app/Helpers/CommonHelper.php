@@ -48,7 +48,7 @@ class CommonHelper
     {
         $query = Module::orderBy('plural_label');
 
-        if ($selfName !== '') {
+        if ($selfName !== null && $selfName !== '') {
             $query->where('name', '!=', $selfName);
         }
 

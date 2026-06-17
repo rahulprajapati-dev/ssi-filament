@@ -11,6 +11,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use App\Helpers\Studio\FieldTypeMap;
 
 /**
  * SchemaSyncService — direct database schema management without migration files.
@@ -26,12 +27,6 @@ use Illuminate\Support\Str;
  */
 final class SchemaSyncService
 {
-    // Types that map to a fixed-length string column.
-    private const STRING_TYPES = [
-        'text', 'string', 'email', 'url', 'phone',
-        'password', 'select', 'dropdown', 'radio',
-    ];
-
     // ─── Public API ───────────────────────────────────────────────────────────
 
     /**
@@ -97,7 +92,7 @@ final class SchemaSyncService
         );
 
         foreach ($present as $field) {
-            $desired = self::resolveLength($field);
+            $desired = FieldTypeMap::resolveLength($field);
             $current = self::getColumnLength($table, $field->field_name);
 
             if ($current !== null && $current !== $desired) {
@@ -125,7 +120,7 @@ final class SchemaSyncService
     public static function addColumn(Blueprint $blueprint, ModuleField $field): void
     {
         $name   = $field->field_name;
-        $isBool = in_array($field->type, ['boolean', 'toggle', 'checkbox'], true);
+        $isBool = FieldTypeMap::isBooleanType($field->type);
 
         $col = match (strtolower($field->type)) {
             'textarea', 'longtext', 'richtext'  => $blueprint->text($name),
@@ -137,7 +132,7 @@ final class SchemaSyncService
             'datetime', 'timestamp'             => $blueprint->dateTime($name),
             'time'                              => $blueprint->time($name),
             'json', 'array', 'repeater'         => $blueprint->json($name),
-            default                             => $blueprint->string($name, self::resolveLength($field)),
+            default                             => $blueprint->string($name, FieldTypeMap::resolveLength($field)),
         };
 
         // nullable — boolean columns always have a default so nullable is unnecessary
@@ -145,24 +140,11 @@ final class SchemaSyncService
             $col->nullable();
         }
 
-        // unique — not applicable to BLOB/TEXT/JSON or boolean columns
-        $noUnique = in_array($field->type, [
-            'textarea', 'longtext', 'richtext',
-            'json', 'array', 'repeater',
-            'boolean', 'toggle', 'checkbox',
-        ], true);
-
-        if ($field->unique_field && ! $noUnique) {
+        if ($field->unique_field && FieldTypeMap::supportsUnique($field->type)) {
             $col->unique();
         }
 
-        // default value — skip for booleans (already defaulted above) and json
-        $noDefault = in_array($field->type, [
-            'boolean', 'toggle', 'checkbox',
-            'json', 'array', 'repeater',
-        ], true);
-
-        if (! $noDefault && $field->default_value !== null && $field->default_value !== '') {
+        if (FieldTypeMap::supportsDefault($field->type) && $field->default_value !== null && $field->default_value !== '') {
             $col->default($field->default_value);
         }
     }
@@ -185,12 +167,7 @@ final class SchemaSyncService
 
     private static function isStringType(string $type): bool
     {
-        return in_array(strtolower($type), self::STRING_TYPES, true);
-    }
-
-    private static function resolveLength(ModuleField $field): int
-    {
-        return ($field->length > 0) ? (int) $field->length : 255;
+        return FieldTypeMap::isStringType($type);
     }
 
     /**

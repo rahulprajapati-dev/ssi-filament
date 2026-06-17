@@ -8,6 +8,7 @@ use App\Models\Module;
 use App\Models\ModuleField;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use App\Helpers\Studio\FieldTypeMap;
 
 /**
  * Generates a database migration file from a module's field definitions.
@@ -101,7 +102,7 @@ final class MigrationGenerator
             'datetime', 'timestamp'             => "\$table->dateTime('{$name}'){$null};",
             'time'                              => "\$table->time('{$name}'){$null};",
             'json', 'array', 'repeater'         => "\$table->json('{$name}'){$null};",
-            default                             => "\$table->string('{$name}', " . self::length($field) . "){$null}{$unique};",
+            default                             => "\$table->string('{$name}', " . FieldTypeMap::resolveLength($field) . "){$null}{$unique};",
         };
     }
 
@@ -180,18 +181,11 @@ final class MigrationGenerator
                 => "{$pad}\$table->json('{$name}'){$null};",
 
             default // string, text, email, url, phone, password, select, radio, etc.
-                => "{$pad}\$table->string('{$name}', " . self::length($field) . "){$null}{$unique}" . self::defaultStr($field) . ';',
+                => "{$pad}\$table->string('{$name}', " . FieldTypeMap::resolveLength($field) . "){$null}{$unique}" . self::defaultStr($field) . ';',
         };
     }
 
-    // --------------------------------------------------------------------------
-    // Helpers
-    // --------------------------------------------------------------------------
 
-    private static function length(ModuleField $field): int
-    {
-        return ($field->length > 0) ? (int) $field->length : 255;
-    }
 
     private static function hasDefault(ModuleField $field): bool
     {

@@ -1,17 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Helpers;
 
-use Filament\Forms;
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components;
-use Filament\Forms\Components\Repeater;
-use Filament\Forms\Components\Builder;
-use Filament\Schemas\Components\Utilities\Get;
-use App\Helpers\JsonFormBuilder;
-
-
+/**
+ * Studio-specific form builder.
+ *
+ * Extends JsonFormBuilder for use inside Filament RelationManagers (Fields, Layouts).
+ * Add overrides here when Studio forms need different behaviour from the generic builder.
+ */
 class JsonStudioFormBuilder extends JsonFormBuilder
 {
-   
 }
