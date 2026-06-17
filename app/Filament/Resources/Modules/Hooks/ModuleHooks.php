@@ -4,7 +4,10 @@ namespace App\Filament\Resources\Modules\Hooks;
 
 use App\Helpers\Studio\StudioManager;
 use App\Models\Module;
+use App\Models\ModuleField;
+use App\Models\ModuleLayout;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Str;
 
 class ModuleHooks
 {
@@ -47,6 +50,53 @@ class ModuleHooks
         }
 
         return ['success' => $result->success];
+    }
+
+    public function cloneModule(Module $record, array $data = []): array
+    {
+        $newName = $data['name'] ?? ($record->name . '_copy');
+
+        if (Module::where('name', $newName)->exists()) {
+            Notification::make()->danger()->title('Clone Failed')->body("A module named '{$newName}' already exists.")->send();
+            return ['success' => false];
+        }
+
+        $clone = Module::create([
+            'name'               => $newName,
+            'singular_label'     => ($data['singular_label'] ?? $record->singular_label) . ' (Copy)',
+            'plural_label'       => ($data['plural_label'] ?? $record->plural_label) . ' (Copy)',
+            'icon'               => $record->icon,
+            'description'        => $record->description,
+            'relationships_json' => $record->relationships_json,
+            'filters_json'       => $record->filters_json,
+            'use_uuid'           => $record->use_uuid,
+            'is_deploy'          => false,
+            'is_enable'          => false,
+        ]);
+
+        foreach ($record->fields as $field) {
+            ModuleField::create([
+                ...$field->only([
+                    'field_name', 'label', 'type', 'length', 'required',
+                    'searchable', 'sortable', 'unique_field', 'default_value',
+                    'options', 'sort_order', 'visibility_mode', 'condition_logic',
+                    'always_save_value', 'visibility_conditions',
+                ]),
+                'module_id' => $clone->id,
+            ]);
+        }
+
+        foreach ($record->layouts as $layout) {
+            ModuleLayout::create([
+                'module_id'   => $clone->id,
+                'layout_type' => $layout->layout_type,
+                'layout_json' => $layout->layout_json,
+            ]);
+        }
+
+        Notification::make()->success()->title('Module Cloned')->body("'{$clone->plural_label}' created successfully.")->send();
+
+        return ['success' => true];
     }
 
     public function uninstall(Module $record, array $_data = []): array

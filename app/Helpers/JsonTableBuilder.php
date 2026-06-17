@@ -18,7 +18,10 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
+use Filament\Forms\Components\TextInput as FilterTextInput;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
@@ -557,6 +560,22 @@ class JsonTableBuilder
                         $query->whereNotNull($title)
                     );
             }
+        }
+
+        if ($type === 'text') {
+            $fieldName = $name;
+
+            return Filter::make($name)
+                ->label($label)
+                ->form([FilterTextInput::make('value')->label($label)->placeholder("Search {$label}...")])
+                ->query(fn ($query, array $data) => $query->when(
+                    $data['value'] ?? null,
+                    fn ($q, $v) => $q->where($fieldName, 'like', "%{$v}%")
+                ));
+        }
+
+        if ($type === 'boolean') {
+            return TernaryFilter::make($name)->label($label);
         }
 
         return null;

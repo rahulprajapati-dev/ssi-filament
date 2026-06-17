@@ -73,7 +73,7 @@ final class LayoutGenerator
             }
 
             $content = $layout->layout_type === 'list'
-                ? self::buildListJson($model, $resource, $fieldNames, $fieldMap)
+                ? self::buildListJson($model, $resource, $fieldNames, $fieldMap, $module->filters_json ?? [])
                 : self::buildFormJson($model, $layout->layout_type, $sections, $fieldMap);
 
             File::ensureDirectoryExists(dirname($filePath));
@@ -247,6 +247,7 @@ final class LayoutGenerator
         string $resource,
         array $fieldNames,
         Collection $fieldMap,
+        array $filtersConfig = [],
     ): array {
         $boolTypes = ['boolean', 'toggle', 'checkbox'];
         $columns   = [];
@@ -280,11 +281,34 @@ final class LayoutGenerator
             $columns[] = $column;
         }
 
+        $filters = [];
+        $moduleName = Str::snake($model);
+        foreach ($filtersConfig as $fc) {
+            $fieldName = $fc['field_name'] ?? null;
+            if (! $fieldName) {
+                continue;
+            }
+            $field      = $fieldMap->get($fieldName);
+            $filterType = $fc['filter_type'] ?? 'text';
+            $filterLabel = ! empty($fc['label']) ? $fc['label'] : ($field?->label ?? Str::headline($fieldName));
+
+            $entry = ['type' => $filterType, 'name' => $fieldName, 'label' => $filterLabel];
+
+            if ($filterType === 'select' && $field !== null) {
+                $entry['options_source'] = 'helper';
+                $entry['helper_class']   = 'App\\Helpers\\Studio\\DropdownHandler';
+                $entry['helper_method']  = 'get';
+                $entry['helper_params']  = ["{$moduleName}_{$fieldName}_dom"];
+            }
+
+            $filters[] = $entry;
+        }
+
         return [
             'title'   => $resource,
             'model'   => "App\\Models\\{$model}",
             'columns' => $columns,
-            'filters' => [],
+            'filters' => $filters,
             'actions' => [
                 ['type' => 'edit',   'label' => 'Edit',    'ui' => ['icon' => 'heroicon-m-pencil-square', 'hiddenLabel' => true, 'iconButton' => true, 'tooltip' => 'Edit']],
                 ['type' => 'view',   'label' => 'Details', 'ui' => ['icon' => 'heroicon-o-eye',           'hiddenLabel' => true, 'iconButton' => true, 'tooltip' => 'Details']],
