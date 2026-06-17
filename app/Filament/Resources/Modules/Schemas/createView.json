@@ -78,6 +78,13 @@
                     "label": "Use UUID in URLs",
                     "hint": "When ON — record URLs show a UUID instead of the numeric ID (e.g. /leads/550e8400… instead of /leads/1)",
                     "columnSpan": 2
+                },
+                {
+                    "component": "toggle",
+                    "name": "is_relationships",
+                    "label": "Add Relationship",
+                    "columnSpan": 2,
+                    "reactive":true
                 }
             ]
         },
@@ -90,6 +97,10 @@
             "collapsible": true,
             "compact": false,
             "columns": 1,
+            "visible_when": {
+                "field": "is_relationships",
+                "value": true
+            },
             "schema": [
                 {
                     "component": "repeater",

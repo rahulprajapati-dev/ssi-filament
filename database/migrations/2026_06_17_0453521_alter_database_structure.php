@@ -15,6 +15,10 @@ return new class extends Migration
             if (! Schema::hasColumn('modules', 'filters_json')) {
                 $table->json('filters_json')->nullable()->after('relationships_json');
             }
+            if (! Schema::hasColumn('modules','is_relationships')) {
+                $table->boolean('is_relationships')->default(false)->after('use_uuid');
+            }
+
         });
         /*// One field_name per module (case-insensitive check is handled at the app layer)
         Schema::table('module_fields', function (Blueprint $table) {
