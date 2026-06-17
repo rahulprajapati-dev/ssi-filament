@@ -44,7 +44,7 @@ class CommonHelper
         return Module::orderBy('plural_label')->pluck('plural_label', 'name')->toArray();
     }
 
-    public static function getModulesOptionsExcluding(string $selfName = ''): array
+    public static function getModulesOptionsExcluding(?string $selfName = ''): array
     {
         $query = Module::orderBy('plural_label');
 
