@@ -31,6 +31,7 @@ class Module extends Model
         'relationships_json',
         'filters_json',
         'use_uuid',
+        'is_relationships',
         'is_deploy',
         'is_enable',
         'deployed_at',
@@ -38,6 +39,7 @@ class Module extends Model
 
     protected $casts = [
         'is_deploy'          => 'boolean',
+        'is_relationships'   => 'boolean',
         'is_enable'          => 'boolean',
         'use_uuid'           => 'boolean',
         'deployed_at'        => 'datetime',
