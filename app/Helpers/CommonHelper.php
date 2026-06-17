@@ -55,6 +55,24 @@ class CommonHelper
         return $query->pluck('plural_label', 'name')->toArray();
     }
 
+    public static function getModuleFieldsByName(?string $moduleName = ''): array
+    {
+        if (! $moduleName) {
+            return [];
+        }
+
+        $module = Module::where('name', $moduleName)->first();
+
+        if (! $module) {
+            return [];
+        }
+
+        return ModuleField::where('module_id', $module->id)
+            ->orderBy('sort_order')
+            ->pluck('label', 'field_name')
+            ->toArray();
+    }
+
     public static function getForeignKeyOptions(?string $relatedModule = '', ?string $type = '', ?string $selfName = ''): array
     {
         // belongsTo / belongsToMany → FK lives on THIS model's table

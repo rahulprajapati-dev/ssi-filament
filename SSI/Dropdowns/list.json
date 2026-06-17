@@ -112,6 +112,11 @@
         "hasOneThrough": "Has One Through",
         "hasManyThrough": "Has Many Through"
     },
+    "filter_type_dom": {
+        "text": "Text Search",
+        "select": "Dropdown Select",
+        "boolean": "Yes / No"
+    },
     "operator_dom": {
         "=": "Equals",
         "!=": "Not Equals",

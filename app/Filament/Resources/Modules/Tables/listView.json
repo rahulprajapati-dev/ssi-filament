@@ -187,6 +187,40 @@
                     }
                 },
                 {
+                    "type": "custom",
+                    "name": "clone_module",
+                    "label": "Clone",
+                    "ui": {
+                        "icon": "heroicon-o-document-duplicate",
+                        "color": "info",
+                        "modalHeading": "Clone Module",
+                        "modalSubmitActionLabel": "Clone",
+                        "modalWidth": "Medium"
+                    },
+                    "form": {
+                        "components": [
+                            {
+                                "component": "grid",
+                                "columns": 1,
+                                "schema": [
+                                    {
+                                        "component": "textInput",
+                                        "name": "name",
+                                        "label": "New Module Name",
+                                        "placeholder": "e.g. lead_copy",
+                                        "hint": "Lowercase letters, numbers and underscores only",
+                                        "required": true,
+                                        "validation": ["max:50", "regex:/^[a-z][a-z0-9_]*$/"]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    "hooks": {
+                        "action": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@cloneModule"
+                    }
+                },
+                {
                     "type": "delete",
                     "name": "delete",
                     "label": "Delete",
