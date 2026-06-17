@@ -115,7 +115,7 @@
     "filter_type_dom": {
         "text": "Text Search",
         "select": "Dropdown Select",
-        "boolean": "Yes / No"
+        "boolean": "Yes \/ No"
     },
     "operator_dom": {
         "=": "Equals",
