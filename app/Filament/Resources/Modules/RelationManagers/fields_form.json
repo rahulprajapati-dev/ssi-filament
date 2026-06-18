@@ -75,7 +75,7 @@
                             "visible_when": {
                                 "field": "type",
                                 "operator": "in",
-                                "value": ["select", "radio", "checkbox_list"]
+                                "value": ["select", "radio", "checkbox_list", "relationship"]
                             },
                             "schema": [
                                 {
@@ -154,15 +154,6 @@
                                     "name": "sortable",
                                     "label": "Sortable in List",
                                     "columnSpan": 1
-                                },
-                                {
-                                    "component": "textInput",
-                                    "name": "sort_order",
-                                    "label": "Sort Order",
-                                    "type": "numeric",
-                                    "columnSpan": 1,
-                                    "required": false,
-                                    "hint": "Lower numbers appear first"
                                 }
                             ]
                         },

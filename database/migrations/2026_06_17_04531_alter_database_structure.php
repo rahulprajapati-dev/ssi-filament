@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('modules', function (Blueprint $table) {
+        /*Schema::table('modules', function (Blueprint $table) {
             if (! Schema::hasColumn('modules', 'filters_json')) {
                 $table->json('filters_json')->nullable()->after('relationships_json');
             }
@@ -19,13 +19,13 @@ return new class extends Migration
                 $table->boolean('is_relationships')->default(false)->after('use_uuid');
             }
 
-        });
-        /*// One field_name per module (case-insensitive check is handled at the app layer)
+        });*/
+        // One field_name per module (case-insensitive check is handled at the app layer)
         Schema::table('module_fields', function (Blueprint $table) {
-            $table->unique(['module_id', 'field_name'], 'uq_module_fields_module_field');
+            $table->smallInteger('sort_order')->nullable()->change();
         });
 
-        // One layout_type per module (create / edit / detail / list)
+        /*// One layout_type per module (create / edit / detail / list)
         Schema::table('module_layouts', function (Blueprint $table) {
             $table->unique(['module_id', 'layout_type'], 'uq_module_layouts_module_type');
         });*/

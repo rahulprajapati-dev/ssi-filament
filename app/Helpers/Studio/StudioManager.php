@@ -105,7 +105,7 @@ final class StudioManager
             $module = $this->module;
             $fields = $module->fields;
             foreach ($fields as $field) {
-                if ($field->type == 'select') {
+                if (in_array($field->type, ['select', 'relationship'], true)) {
                     $this->step('create_dom', fn() => DropdownHandler::createGroup($module->name, $field->field_name, $field->options));
                 }
             }
@@ -141,7 +141,7 @@ final class StudioManager
             $module = $this->module;
             $fields = $module->fields;
             foreach ($fields as $field) {
-                if ($field->type == 'select') {
+                if (in_array($field->type, ['select', 'relationship'], true)) {
                     $group = $module->name . '_' . $field->field_name . '_dom';
                     $options = is_array($field->options) ? $field->options : [];
                     foreach ($options as $option) {
@@ -171,7 +171,7 @@ final class StudioManager
             $module = $this->module;
             $fields = $module->fields;
             foreach ($fields as $field) {
-                if ($field->type == 'select') {
+                if (in_array($field->type, ['select', 'relationship'], true)) {
                     $name = $module->name . '_' . $field->field_name . '_dom';
                     $this->step('remove_dom', fn() => DropdownHandler::deleteGroup($name));
                 }

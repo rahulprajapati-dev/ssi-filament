@@ -44,7 +44,7 @@ return new class extends Migration
             $table->boolean('unique_field')->default(false);
             $table->text('default_value')->nullable();
             $table->json('options')->nullable();
-            $table->integer('sort_order')->default(0);
+            $table->smallInteger('sort_order')->nullable();
             $table->string('visibility_mode', 30)->default('always_visible');
             $table->string('condition_logic', 10)->default('and');
             $table->boolean('always_save_value')->default(false);

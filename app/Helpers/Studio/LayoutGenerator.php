@@ -171,7 +171,7 @@ final class LayoutGenerator
                 }
 
                 // Attach static options for select/radio/checkboxList fields
-                if (! $isDetail && in_array($field->type, ['select', 'dropdown', 'enum', 'radio', 'checkboxList', 'checkbox_list'], true)) {
+                if (! $isDetail && in_array($field->type, ['select', 'dropdown', 'enum', 'radio', 'checkboxList', 'checkbox_list', 'relationship'], true)) {
                     $modulename= Str::snake($model);
                     $dropdownName = "{$modulename}_{$field->field_name}_dom";
                     $component['options_source'] = 'helper';
