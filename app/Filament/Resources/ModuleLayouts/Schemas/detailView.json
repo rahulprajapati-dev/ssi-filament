@@ -52,7 +52,7 @@
             "columnSpan": "full",
             "collapsed": false,
             "compact": true,
-            "columns": 4,
+            "columns": 2,
             "schema": [
                 {
                     "component": "textEntry",
