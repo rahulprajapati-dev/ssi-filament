@@ -97,8 +97,8 @@
     },
     "visibility_mode_dom": {
         "always_visible": "Always visible",
-        "show_when": "Show when conditions are met",
-        "hide_when": "Hide when conditions are met"
+        "visible_when": "Show when conditions are met",
+        "hidden_when": "Hide when conditions are met"
     },
     "condition_logic_dom": {
         "and": "All conditions must be met (AND)",

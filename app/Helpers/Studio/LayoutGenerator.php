@@ -142,6 +142,17 @@ final class LayoutGenerator
         $isDetail = $layoutType === 'detail';
 
         $components = [];
+        // Collect field names that appear in any visibility condition across all fields
+        $reactiveFields = [];
+        foreach ($fieldMap as $f) {
+            $conds = $f->visibility_conditions ?? [];
+            foreach ($conds as $c) {
+                if (isset($c['field'])) {
+                    $reactiveFields[] = $c['field'];
+                }
+            }
+        }
+        $reactiveFields = array_unique($reactiveFields);
 
         foreach ($sections as $section) {
             $sectionTitle = $section['title'] ?? 'General';
@@ -164,9 +175,17 @@ final class LayoutGenerator
                     'name'      => $field->field_name,
                     'label'     => $field->label,
                 ];
+                // If this field is referenced in any visibility condition, make it reactive
+                if (in_array($field->field_name, $reactiveFields, true)) {
+                    $component['reactive'] = true;
+                }
 
                 if (! $isDetail && $field->required) {
                     $component['required'] = true;
+                }
+
+                if ($field->always_save_value) {
+                    $component['dehydrate'] = true;
                 }
 
                 // Attach static options for select/radio/checkboxList fields
@@ -177,8 +196,22 @@ final class LayoutGenerator
                     $component['helper_class']   = 'App\\Helpers\\Studio\\DropdownHandler';
                     $component['helper_method']  = 'get';
                     $component['helper_params']  = [
-                    $dropdownName
+                        $dropdownName
                     ];
+                }
+
+                // Add visibility configuration for fields with visibility settings
+                if (! empty($field->visibility_mode) && $field->visibility_mode !== 'always_visible') {
+                    $key = $field->visibility_mode; // e.g., 'visible_when' or 'hidden_when'
+                    $conditions = $field->visibility_conditions ?? [];
+                    if (! empty($field->condition_logic) && $field->condition_logic !== 'and') {
+                        $component[$key] = [
+                            'logic' => $field->condition_logic,
+                            'conditions' => $conditions,
+                        ];
+                    } else {
+                        $component[$key] = $conditions;
+                    }
                 }
 
                 $sectionFields[] = $component;

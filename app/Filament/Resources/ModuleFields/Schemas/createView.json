@@ -91,7 +91,11 @@
                             "visible_when": {
                                 "field": "type",
                                 "operator": "in",
-                                "value": ["select", "radio", "checkbox_list"]
+                                "value": [
+                                    "select",
+                                    "radio",
+                                    "checkbox_list"
+                                ]
                             },
                             "schema": [
                                 {
@@ -189,8 +193,11 @@
                                     "default": "and",
                                     "visible_when": {
                                         "field": "visibility_mode",
-                                        "operator": "!=",
-                                        "value": "always_visible"
+                                        "operator": "in",
+                                        "value": [
+                                            "visible_when",
+                                            "hidden_when"
+                                        ]
                                     }
                                 },
                                 {
@@ -200,8 +207,11 @@
                                     "columnSpan": 2,
                                     "visible_when": {
                                         "field": "visibility_mode",
-                                        "operator": "!=",
-                                        "value": "always_visible"
+                                        "operator": "in",
+                                        "value": [
+                                            "visible_when",
+                                            "hidden_when"
+                                        ]
                                     }
                                 },
                                 {
@@ -212,8 +222,11 @@
                                     "columns": 3,
                                     "visible_when": {
                                         "field": "visibility_mode",
-                                        "operator": "!=",
-                                        "value": "always_visible"
+                                        "operator": "in",
+                                        "value": [
+                                            "visible_when",
+                                            "hidden_when"
+                                        ]
                                     },
                                     "schema": [
                                         {

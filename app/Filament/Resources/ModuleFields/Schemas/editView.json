@@ -47,9 +47,9 @@
                                     ],
                                     "reactive": true,
                                     "populate_fields": [
-                                       "label"
+                                        "label"
                                     ],
-                                    "validation":[
+                                    "validation": [
                                         "max:50",
                                         "regex:/^[a-z][a-z0-9_]*$/"
                                     ],
@@ -78,7 +78,7 @@
                                     "helper_params": [
                                         "field_type_dom"
                                     ],
-                                    "searchable":true,
+                                    "searchable": true,
                                     "reactive": true,
                                     "required": true
                                 },
@@ -100,7 +100,11 @@
                             "visible_when": {
                                 "field": "type",
                                 "operator": "in",
-                                "value": ["select", "radio", "checkbox_list"]
+                                "value": [
+                                    "select",
+                                    "radio",
+                                    "checkbox_list"
+                                ]
                             },
                             "schema": [
                                 {
@@ -173,12 +177,12 @@
                                     "name": "visibility_mode",
                                     "label": "Visibility Mode",
                                     "columnSpan": 1,
-                                    "options_source": "static",
-                                    "options": {
-                                        "always_visible": "Always visible",
-                                        "show_when": "Show when conditions are met",
-                                        "hide_when": "Hide when conditions are met"
-                                    },
+                                    "options_source": "helper",
+                                    "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
+                                    "helper_method": "get",
+                                    "helper_params": [
+                                        "visibility_mode_dom"
+                                    ],
                                     "required": true,
                                     "reactive": true,
                                     "default": "always_visible"
@@ -197,8 +201,11 @@
                                     "default": "and",
                                     "visible_when": {
                                         "field": "visibility_mode",
-                                        "operator": "!=",
-                                        "value": "always_visible"
+                                        "operator": "in",
+                                        "value": [
+                                            "visible_when",
+                                            "hidden_when"
+                                        ]
                                     }
                                 },
                                 {
@@ -208,8 +215,11 @@
                                     "columnSpan": 2,
                                     "visible_when": {
                                         "field": "visibility_mode",
-                                        "operator": "!=",
-                                        "value": "always_visible"
+                                        "operator": "in",
+                                        "value": [
+                                            "visible_when",
+                                            "hidden_when"
+                                        ]
                                     }
                                 },
                                 {
@@ -220,8 +230,11 @@
                                     "columns": 3,
                                     "visible_when": {
                                         "field": "visibility_mode",
-                                        "operator": "!=",
-                                        "value": "always_visible"
+                                        "operator": "in",
+                                        "value": [
+                                            "visible_when",
+                                            "hidden_when"
+                                        ]
                                     },
                                     "schema": [
                                         {

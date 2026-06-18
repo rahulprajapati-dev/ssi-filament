@@ -175,8 +175,11 @@
                                     "dropdown": "condition_logic_dom",
                                     "visible_when": {
                                         "field": "visibility_mode",
-                                        "operator": "!=",
-                                        "value": "always_visible"
+                                        "operator": "in",
+                                        "value": [
+                                            "visible_when",
+                                            "hidden_when"
+                                        ]
                                     }
                                 },
                                 {
@@ -186,8 +189,11 @@
                                     "columnSpan": 2,
                                     "visible_when": {
                                         "field": "visibility_mode",
-                                        "operator": "!=",
-                                        "value": "always_visible"
+                                        "operator": "in",
+                                        "value": [
+                                            "visible_when",
+                                            "hidden_when"
+                                        ]
                                     }
                                 }
                             ]
@@ -199,8 +205,11 @@
                             "columns": 1,
                             "visible_when": {
                                 "field": "visibility_mode",
-                                "operator": "!=",
-                                "value": "always_visible"
+                                "operator": "in",
+                                "value": [
+                                    "visible_when",
+                                    "hidden_when"
+                                ]
                             },
                             "schema": [
                                 {
