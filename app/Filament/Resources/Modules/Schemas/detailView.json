@@ -74,6 +74,10 @@
             "columnSpan": "full",
             "compact": false,
             "collapsible": true,
+            "visible_when": {
+                "field": "is_relationships",
+                "value": true
+            },
             "columns": 1,
             "schema": [
                 {
