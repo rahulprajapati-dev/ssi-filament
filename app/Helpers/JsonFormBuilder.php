@@ -1868,6 +1868,10 @@ class JsonFormBuilder
             $field->hint($item['hint']);
         }
 
+        if (! empty($item['hintIcon'])) {
+            $field->label(new HtmlString($item['label'].' <span title="' . e($item['hintIcon']) . '">🛈</span>'));
+        }
+
         if (! empty($item['columnSpan'])) {
             $field->columnSpan($item['columnSpan']);
         }

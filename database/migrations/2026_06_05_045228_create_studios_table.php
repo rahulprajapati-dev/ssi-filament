@@ -22,6 +22,7 @@ return new class extends Migration
             $table->json('relationships_json')->nullable();
             $table->json('filters_json')->nullable();
             $table->boolean('use_uuid')->default(false);
+            $table->boolean('is_relationships')->default(false);
             $table->boolean('is_enable')->default(false)->index();
             $table->boolean('is_deploy')->default(false)->index();
             $table->timestamp('deployed_at')->nullable();
