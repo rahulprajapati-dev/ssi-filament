@@ -76,14 +76,14 @@
                     "component": "toggle",
                     "name": "use_uuid",
                     "label": "Use UUID in URLs",
-                    "hint": "When ON — record URLs show a UUID instead of the numeric ID (e.g. /leads/550e8400… instead of /leads/1)",
-                    "columnSpan": 2
+                    "hintIcon": "When ON — record URLs show a UUID instead of the numeric ID (e.g. /leads/550e8400… instead of /leads/1)",
+                    "columnSpan": 1
                 },
                 {
                     "component": "toggle",
                     "name": "is_relationships",
                     "label": "Add Relationship",
-                    "columnSpan": 2,
+                    "columnSpan": 1,
                     "reactive":true
                 }
             ]
@@ -143,7 +143,7 @@
                             "name": "name",
                             "label": "Method Name",
                             "placeholder": "e.g. orders",
-                            "hint": "Leave blank to auto-generate",
+                            "hintIcon": "Leave blank to auto-generate",
                             "columnSpan": 1,
                             "required": false,
                             "validation": [
@@ -163,7 +163,7 @@
                             "required": false,
                             "searchable": true,
                             "placeholder": "Auto (use Laravel default)",
-                            "hint": "hasOne/hasMany → field on related table · belongsTo → field on this table"
+                            "hintIcon": "hasOne/hasMany → field on related table · belongsTo → field on this table"
                         }
                     ]
                 }

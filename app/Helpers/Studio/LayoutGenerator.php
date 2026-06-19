@@ -10,6 +10,7 @@ use App\Models\ModuleLayout;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use App\Helpers\Studio\FieldTypeMap;
 
 /**
  * Generates/overwrites JSON schema files from ModuleLayout records.
@@ -167,8 +168,8 @@ final class LayoutGenerator
                 }
 
                 $componentType = $isDetail
-                    ? self::fieldTypeToDetailComponent($field->type)
-                    : self::fieldTypeToFormComponent($field->type);
+                    ? FieldTypeMap::toDetailComponent($field->type)
+                    : FieldTypeMap::toFormComponent($field->type);
 
                 $component = [
                     'component' => $componentType,
@@ -189,7 +190,7 @@ final class LayoutGenerator
                 }
 
                 // Attach static options for select/radio/checkboxList fields
-                if (! $isDetail && in_array($field->type, ['select', 'dropdown', 'enum', 'radio', 'checkboxList', 'checkbox_list'], true)) {
+                if (! $isDetail && in_array($field->type, ['select', 'dropdown', 'enum', 'radio', 'checkboxList', 'checkbox_list', 'relationship'], true)) {
                     $modulename= Str::snake($model);
                     $dropdownName = "{$modulename}_{$field->field_name}_dom";
                     $component['options_source'] = 'helper';
@@ -282,8 +283,7 @@ final class LayoutGenerator
         Collection $fieldMap,
         array $filtersConfig = [],
     ): array {
-        $boolTypes = ['boolean', 'toggle', 'checkbox'];
-        $columns   = [];
+        $columns = [];
 
         foreach ($fieldNames as $fieldName) {
             $field = $fieldMap->get($fieldName);
@@ -291,15 +291,13 @@ final class LayoutGenerator
                 continue;
             }
 
-            $isBool = in_array(strtolower($field->type), $boolTypes, true);
-
             $column = [
-                'type'  => $isBool ? 'icon' : self::fieldTypeToColumnComponent($field->type),
+                'type'  => FieldTypeMap::toColumnComponent($field->type),
                 'name'  => $field->field_name,
                 'label' => $field->label,
             ];
 
-            if ($isBool) {
+            if (FieldTypeMap::isBooleanType($field->type)) {
                 $column['boolean'] = true;
             }
 
@@ -356,41 +354,6 @@ final class LayoutGenerator
             ],
             "record_actions_position"=> "BeforeColumns"
         ];
-    }
-
-    // ── Type maps ─────────────────────────────────────────────────────────────
-
-    /** Filament form component name for create/edit views. */
-    private static function fieldTypeToFormComponent(string $type): string
-    {
-        return match (strtolower($type)) {
-            'textarea', 'longtext', 'richtext'              => 'textarea',
-            'boolean', 'toggle'                             => 'toggle',
-            'checkbox'                                      => 'checkbox',
-            'date'                                          => 'datePicker',
-            'datetime', 'timestamp'                         => 'dateTimePicker',
-            'select', 'dropdown', 'enum'                    => 'select',
-            'radio'                                         => 'radio',
-            'checkboxList', 'checkbox_list'                 => 'checkboxList',
-            'fileUpload', 'file', 'image'                   => 'fileUpload',
-            'json', 'array', 'repeater'                     => 'textarea',
-            default                                         => 'textInput',
-        };
-    }
-
-    /** Filament infolist component name for detail/view. */
-    private static function fieldTypeToDetailComponent(string $type): string
-    {
-        return match (strtolower($type)) {
-            'boolean', 'toggle', 'checkbox'                 => 'toggle',
-            default                                         => 'textEntry',
-        };
-    }
-
-    /** JsonTableBuilder column type for list view (non-boolean columns). */
-    private static function fieldTypeToColumnComponent(string $type): string
-    {
-        return 'text';
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

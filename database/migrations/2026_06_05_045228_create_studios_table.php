@@ -20,7 +20,9 @@ return new class extends Migration
             $table->string('icon')->nullable();
             $table->text('description')->nullable();
             $table->json('relationships_json')->nullable();
+            $table->json('filters_json')->nullable();
             $table->boolean('use_uuid')->default(false);
+            $table->boolean('is_relationships')->default(false);
             $table->boolean('is_enable')->default(false)->index();
             $table->boolean('is_deploy')->default(false)->index();
             $table->timestamp('deployed_at')->nullable();
@@ -43,7 +45,7 @@ return new class extends Migration
             $table->boolean('unique_field')->default(false);
             $table->text('default_value')->nullable();
             $table->json('options')->nullable();
-            $table->integer('sort_order')->default(0);
+            $table->smallInteger('sort_order')->nullable();
             $table->string('visibility_mode', 30)->default('always_visible');
             $table->string('condition_logic', 10)->default('and');
             $table->boolean('always_save_value')->default(false);

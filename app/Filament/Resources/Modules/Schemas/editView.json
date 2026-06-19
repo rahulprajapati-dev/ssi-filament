@@ -79,61 +79,15 @@
                     "component": "toggle",
                     "name": "use_uuid",
                     "label": "Use UUID in URLs",
-                    "hint": "When ON — record URLs show a UUID instead of the numeric ID. Takes effect on next Deploy or Repair & Rebuild.",
-                    "columnSpan": 2
-                }
-            ]
-        },
-        {
-            "component": "section",
-            "label": "List Filters",
-            "description": "Choose which fields appear as filters in the list view table. Repair & Rebuild the module after saving.",
-            "icon": "heroicon-o-funnel",
-            "columnSpan": "full",
-            "collapsible": true,
-            "compact": false,
-            "columns": 1,
-            "schema": [
+                    "hintIcon": "When ON — record URLs show a UUID instead of the numeric ID. Takes effect on next Deploy or Repair & Rebuild.",
+                    "columnSpan": 1
+                },
                 {
-                    "component": "repeater",
-                    "name": "filters_json",
-                    "label": null,
+                    "component": "toggle",
+                    "name": "is_relationships",
+                    "label": "Add Relationship",
                     "columnSpan": 1,
-                    "columns": 3,
-                    "schema": [
-                        {
-                            "component": "select",
-                            "name": "field_name",
-                            "label": "Field",
-                            "columnSpan": 1,
-                            "options_source": "helper",
-                            "helper_type": "dynamic",
-                            "helper_class": "App\\Helpers\\CommonHelper",
-                            "helper_method": "getModuleFieldsByName",
-                            "helper_params": ["../../name"],
-                            "required": true,
-                            "searchable": true
-                        },
-                        {
-                            "component": "select",
-                            "name": "filter_type",
-                            "label": "Filter Type",
-                            "columnSpan": 1,
-                            "options_source": "helper",
-                            "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
-                            "helper_method": "get",
-                            "helper_params": ["filter_type_dom"],
-                            "required": true
-                        },
-                        {
-                            "component": "textInput",
-                            "name": "label",
-                            "label": "Filter Label",
-                            "columnSpan": 1,
-                            "placeholder": "Leave blank to use field label",
-                            "required": false
-                        }
-                    ]
+                    "reactive":true
                 }
             ]
         },
@@ -211,6 +165,59 @@
                             "required": false,
                             "searchable": true,
                             "placeholder": "Auto (use Laravel default)"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "component": "section",
+            "label": "List Filters",
+            "description": "Choose which fields appear as filters in the list view table. Repair & Rebuild the module after saving.",
+            "icon": "heroicon-o-funnel",
+            "columnSpan": "full",
+            "collapsible": true,
+            "compact": false,
+            "columns": 1,
+            "schema": [
+                {
+                    "component": "repeater",
+                    "name": "filters_json",
+                    "label": null,
+                    "columnSpan": 1,
+                    "columns": 3,
+                    "schema": [
+                        {
+                            "component": "select",
+                            "name": "field_name",
+                            "label": "Field",
+                            "columnSpan": 1,
+                            "options_source": "helper",
+                            "helper_type": "dynamic",
+                            "helper_class": "App\\Helpers\\CommonHelper",
+                            "helper_method": "getModuleFieldsByName",
+                            "helper_params": ["../../name"],
+                            "required": true,
+                            "searchable": true
+                        },
+                        {
+                            "component": "select",
+                            "name": "filter_type",
+                            "label": "Filter Type",
+                            "columnSpan": 1,
+                            "options_source": "helper",
+                            "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
+                            "helper_method": "get",
+                            "helper_params": ["filter_type_dom"],
+                            "required": true
+                        },
+                        {
+                            "component": "textInput",
+                            "name": "label",
+                            "label": "Filter Label",
+                            "columnSpan": 1,
+                            "placeholder": "Leave blank to use field label",
+                            "required": false
                         }
                     ]
                 }

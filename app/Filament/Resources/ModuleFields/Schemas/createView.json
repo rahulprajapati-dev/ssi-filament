@@ -274,7 +274,7 @@
                             "label": "Listing & Search Settings",
                             "collapsible": true,
                             "compact": true,
-                            "columns": 3,
+                            "columns": 2,
                             "schema": [
                                 {
                                     "component": "toggle",
@@ -286,12 +286,6 @@
                                     "component": "toggle",
                                     "name": "sortable",
                                     "label": "Sortable Field",
-                                    "columnSpan": 1
-                                },
-                                {
-                                    "component": "toggle",
-                                    "name": "sort_order",
-                                    "label": "Sort Order",
                                     "columnSpan": 1
                                 }
                             ]
