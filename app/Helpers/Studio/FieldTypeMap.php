@@ -119,8 +119,9 @@ final class FieldTypeMap
     public static function toDetailComponent(string $type): string
     {
         return match (strtolower($type)) {
-            'boolean', 'toggle', 'checkbox' => 'toggle',
-            default                         => 'textEntry',
+            'boolean', 'toggle', 'checkbox'    => 'toggle',
+            'file', 'image', 'fileupload'      => 'imageEntry',
+            default                            => 'textEntry',
         };
     }
 

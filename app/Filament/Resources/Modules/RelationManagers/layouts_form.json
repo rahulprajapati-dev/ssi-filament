@@ -24,13 +24,14 @@
                     "searchable": true,
                     "dehydrated": true,
                     "preload": true,
-                    "live": true
+                    "live": true,
+                    "hidden": true
                 },
                 {
                     "component": "select",
                     "name": "layout_type",
                     "label": "View Type",
-                    "columnSpan": 1,
+                    "columnSpan": 2,
                     "options_source": "helper",
                     "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
                     "helper_method": "get",

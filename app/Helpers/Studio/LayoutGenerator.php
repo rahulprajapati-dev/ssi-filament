@@ -201,6 +201,14 @@ final class LayoutGenerator
                     ];
                 }
 
+                // Use public disk for file/image fields (avoids S3 default in JsonFormBuilder)
+                if (in_array($field->type, ['file', 'image', 'fileupload'], true)) {
+                    $component['disk'] = 'public';
+                    if (! empty($field->is_multiple)) {
+                        $component['multiple'] = true;
+                    }
+                }
+
                 // Add visibility configuration for fields with visibility settings
                 if (! empty($field->visibility_mode) && $field->visibility_mode !== 'always_visible') {
                     $key = $field->visibility_mode; // e.g., 'visible_when' or 'hidden_when'

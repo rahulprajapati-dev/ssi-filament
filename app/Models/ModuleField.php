@@ -34,6 +34,7 @@ class ModuleField extends Model
         'unique_field',
         'default_value',
         'options',
+        'is_multiple',
         'sort_order',
         'visibility_mode',
         'condition_logic',
@@ -43,6 +44,7 @@ class ModuleField extends Model
 
     protected $casts = [
         'options'               => 'array',
+        'is_multiple'           => 'boolean',
         'required'              => 'boolean',
         'searchable'            => 'boolean',
         'sortable'              => 'boolean',

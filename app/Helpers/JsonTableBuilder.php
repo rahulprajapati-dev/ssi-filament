@@ -15,6 +15,7 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
@@ -392,6 +393,21 @@ class JsonTableBuilder
 
                         return $options[$state] ?? $state;
                     });
+                }
+            }),
+
+            'image' => tap(ImageColumn::make($name)->label($label ?? Str::headline($name)), function ($col) use ($c) {
+                if (! empty($c['disk'])) {
+                    $col->disk($c['disk']);
+                }
+                if (! empty($c['height'])) {
+                    $col->height($c['height']);
+                }
+                if (! empty($c['width'])) {
+                    $col->width($c['width']);
+                }
+                if (! empty($c['circular'])) {
+                    $col->circular();
                 }
             }),
 

@@ -8,6 +8,7 @@ use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Pages\EditRecord;
@@ -216,6 +217,7 @@ class JsonFormBuilder
 
             'textInput' => self::buildTextInput($item),
             'textEntry' => self::buildTextEntry($item),
+            'imageEntry' => self::buildImageEntry($item),
             'textarea' => self::buildTextarea($item),
             'select' => self::buildSelect($item),
             'toggle' => self::buildToggle($item),
@@ -653,6 +655,24 @@ class JsonFormBuilder
         }
 
         return self::applyCommonFieldOptions($field, $item);
+    }
+
+    protected static function buildImageEntry(array $item): ImageEntry
+    {
+        $field = ImageEntry::make($item['name'])
+            ->label($item['label'] ?? null);
+
+        if (! empty($item['disk'])) {
+            $field->disk($item['disk']);
+        }
+        if (! empty($item['height'])) {
+            $field->height($item['height']);
+        }
+        if (! empty($item['circular'])) {
+            $field->circular();
+        }
+
+        return $field;
     }
 
     protected static function buildTextInput(array $item): TextInput
@@ -1589,6 +1609,40 @@ class JsonFormBuilder
         }
         if (! empty($item['visibility'])) {
             $field->visibility($item['visibility']);
+        }
+
+        // For local/public disks with no special URL handling, give FilePond
+        // a concrete {name, size, url} so it doesn't hang on "Waiting for size".
+        $isLocalDisk = in_array(config("filesystems.disks.{$disk}.driver"), ['local'], true);
+        $hasSaveFullUrl = isset($item['save_full_url']) && $item['save_full_url'] === true;
+        $hasLegacyPassthrough = ! empty($item['legacy_url_passthrough']);
+
+        if ($isLocalDisk && ! $hasSaveFullUrl && ! $hasLegacyPassthrough) {
+            // Stop Filament's built-in file-existence check — we handle it ourselves below.
+            $field->fetchFileInformation(false);
+
+            $field->getUploadedFileUsing(function ($file, $state) use ($disk) {
+                if (blank($state)) {
+                    return null;
+                }
+
+                try {
+                    $storage = Storage::disk($disk);
+
+                    if (! $storage->exists($state)) {
+                        return null;
+                    }
+
+                    return [
+                        'name' => basename($state),
+                        'size' => $storage->size($state),
+                        'type' => $storage->mimeType($state) ?: 'application/octet-stream',
+                        'url'  => $storage->url($state),
+                    ];
+                } catch (\Throwable) {
+                    return null;
+                }
+            });
         }
 
         if (isset($item['image_editor']) && $item['image_editor'] === true) {
