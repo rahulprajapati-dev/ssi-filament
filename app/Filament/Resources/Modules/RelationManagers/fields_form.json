@@ -58,6 +58,17 @@
                                     "required": true
                                 },
                                 {
+                                    "component": "toggle",
+                                    "name": "is_multiple",
+                                    "label": "Allow Multiple",
+                                    "visible_when": {
+                                        "field": "type",
+                                        "operator": "in",
+                                        "value": ["file", "image" , "select"]
+                                    },
+                                    "columnSpan": 1
+                                },
+                                {
                                     "component": "textInput",
                                     "name": "default_value",
                                     "label": "Default Value",
@@ -100,26 +111,6 @@
                                             "required": true
                                         }
                                     ]
-                                }
-                            ]
-                        },
-                        {
-                            "component": "section",
-                            "label": "File Upload Options",
-                            "collapsible": true,
-                            "compact": true,
-                            "columns": 2,
-                            "visible_when": {
-                                "field": "type",
-                                "operator": "in",
-                                "value": ["file", "image"]
-                            },
-                            "schema": [
-                                {
-                                    "component": "toggle",
-                                    "name": "is_multiple",
-                                    "label": "Allow Multiple Files",
-                                    "columnSpan": 1
                                 }
                             ]
                         }
