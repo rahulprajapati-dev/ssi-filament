@@ -1,20 +1,28 @@
 <div class="fi-fo-drag-drop-transfer" wire:ignore
+     data-owner-module-id="{{ $ownerModuleId ?? '' }}"
+     data-owner-module-fields="{{ json_encode($ownerModuleFields ?? null) }}"
      x-data="{
         available: [],
         selected: @entangle($getStatePath()) ?? [],
         searchQuery: '',
         isDraggingOverAvailable: false,
         draggedItem: null,
-        draggedSource: null, // 'available' or section index
-        draggedIndex: null,  // index within source
+        draggedSource: null,
+        draggedIndex: null,
         source: '{{ $source ?? 'repeater' }}',
         dependsOn: '{{ $dependsOn ?? '' }}',
-        draggedSectionIndex: null, // for reordering sections
+        ownerModuleId: null,
+        ownerModuleFields: null,
+        draggedSectionIndex: null,
         isDraggingSection: false,
 
         isListView: false,
 
         init() {
+            const rawId = this.$el.dataset.ownerModuleId;
+            this.ownerModuleId = rawId ? parseInt(rawId) : null;
+            try { this.ownerModuleFields = JSON.parse(this.$el.dataset.ownerModuleFields || 'null'); } catch(e) {}
+
             this.normalizeSelected();
 
             const currentType = this.$wire.data?.layout_type;
@@ -31,7 +39,7 @@
 
             if (this.source === 'module_fields') {
                 this.$nextTick(async () => {
-                    const mid = this.$wire.data?.[this.dependsOn];
+                    let mid = this.$wire.data?.[this.dependsOn] || this.ownerModuleId || null;
                     if (mid) await this.syncFromModuleId(mid);
                 });
 
@@ -78,8 +86,13 @@
                 return;
             }
             try {
-                const allFields = await this.$wire.call('getModuleFields', parseInt(moduleId));
-                
+                let allFields;
+                if (this.ownerModuleFields !== null && String(moduleId) === String(this.ownerModuleId)) {
+                    allFields = this.ownerModuleFields;
+                } else {
+                    allFields = await this.$wire.call('getModuleFields', parseInt(moduleId));
+                }
+
                 // Collect all currently selected fields in all sections
                 const selectedFieldsSet = new Set();
                 this.selected.forEach(sec => {
