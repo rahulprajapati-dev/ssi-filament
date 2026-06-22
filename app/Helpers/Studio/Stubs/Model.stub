@@ -26,6 +26,8 @@ class {{MODEL}} extends Model
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        // region:studio-casts — managed by Studio, do not edit manually
+{{FIELD_CASTS}}        // endregion:studio-casts
     ];
 
     protected static function boot(): void

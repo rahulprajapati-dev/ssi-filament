@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Helpers\Studio;
 
 use App\Models\Module;
+use App\Models\ModuleField;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
@@ -35,6 +36,7 @@ final class ModelGenerator
             'PLURAL_RESOURCE' => Str::studly(Str::plural($name)),
             'UUID_ROUTE_KEY'  => self::buildRouteKeyMethod($module),
             'RELATIONSHIPS'   => self::buildRelationshipMethods($module),
+            'FIELD_CASTS'     => self::buildFieldCasts($module),
         ]);
 
         File::ensureDirectoryExists(app_path('Models'));
@@ -63,6 +65,7 @@ final class ModelGenerator
         $regions = [
             'studio-route-key'     => self::buildRouteKeyMethod($module),
             'studio-relationships' => self::buildRelationshipMethods($module),
+            'studio-casts'         => self::buildFieldCasts($module),
         ];
 
         foreach ($regions as $region => $newContent) {
@@ -151,6 +154,31 @@ final class ModelGenerator
             'hasMany', 'belongsToMany', 'hasManyThrough' => Str::plural($base),
             default                                      => Str::singular($base),
         };
+    }
+
+    /**
+     * Build cast entries for fields that need Eloquent casting.
+     * - is_multiple select/file/image → 'array' (stored as JSON)
+     * - json/array/repeater types     → 'array'
+     */
+    private static function buildFieldCasts(Module $module): string
+    {
+        $fields = ModuleField::where('module_id', $module->id)
+            ->orderBy('sort_order')
+            ->get();
+
+        $lines = [];
+        foreach ($fields as $field) {
+            $needsArrayCast =
+                (! empty($field->is_multiple) && in_array($field->type, ['select', 'dropdown', 'enum', 'file', 'image', 'fileupload'], true))
+                || in_array($field->type, ['json', 'array', 'repeater'], true);
+
+            if ($needsArrayCast) {
+                $lines[] = "        '{$field->field_name}' => 'array',";
+            }
+        }
+
+        return empty($lines) ? '' : implode("\n", $lines) . "\n";
     }
 
     public static function remove(Module $module): bool

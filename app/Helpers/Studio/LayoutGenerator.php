@@ -209,6 +209,11 @@ final class LayoutGenerator
                     }
                 }
 
+                // Multi-select: inject multiple flag for select/dropdown types
+                if (in_array($field->type, ['select', 'dropdown', 'enum'], true) && ! empty($field->is_multiple)) {
+                    $component['multiple'] = true;
+                }
+
                 // Add visibility configuration for fields with visibility settings
                 if (! empty($field->visibility_mode) && $field->visibility_mode !== 'always_visible') {
                     $key = $field->visibility_mode; // e.g., 'visible_when' or 'hidden_when'
@@ -318,6 +323,10 @@ final class LayoutGenerator
 
             if (FieldTypeMap::isBooleanType($field->type)) {
                 $column['boolean'] = true;
+            }
+
+            if (in_array($field->type, ['image', 'file', 'fileupload'], true)) {
+                $column['disk'] = 'public';
             }
 
             if ($field->searchable) {

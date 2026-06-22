@@ -127,10 +127,18 @@ final class FieldTypeMap
 
     /**
      * Field type → JsonTableBuilder column type (list view).
-     * Boolean types use 'icon' (IconColumn); everything else 'text' (TextColumn).
+     * Boolean types use 'icon' (IconColumn); image/file use 'image' (ImageColumn); everything else 'text' (TextColumn).
      */
     public static function toColumnComponent(string $type): string
     {
-        return self::isBooleanType($type) ? 'icon' : 'text';
+        if (self::isBooleanType($type)) {
+            return 'icon';
+        }
+
+        if (in_array(strtolower($type), ['image', 'file', 'fileupload'], true)) {
+            return 'image';
+        }
+
+        return 'text';
     }
 }

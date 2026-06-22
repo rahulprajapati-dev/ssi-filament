@@ -92,6 +92,11 @@ final class MigrationGenerator
         $null   = $field->required ? '' : '->nullable()';
         $unique = $field->unique_field ? '->unique()' : '';
 
+        // Multi-value fields store arrays → json column
+        if (! empty($field->is_multiple) && in_array($field->type, ['select', 'dropdown', 'enum', 'file', 'image', 'fileupload'], true)) {
+            return "\$table->json('{$name}'){$null};";
+        }
+
         return match ($field->type) {
             'textarea', 'longtext', 'richtext'  => "\$table->text('{$name}'){$null};",
             'integer', 'number', 'int'          => "\$table->integer('{$name}'){$null}{$unique};",
@@ -151,6 +156,11 @@ final class MigrationGenerator
         $null   = $field->required   ? ''         : '->nullable()';
         $unique = $field->unique_field ? '->unique()' : '';
         $pad    = self::INDENT;
+
+        // Multi-value fields store arrays → json column
+        if (! empty($field->is_multiple) && in_array($field->type, ['select', 'dropdown', 'enum', 'file', 'image', 'fileupload'], true)) {
+            return "{$pad}\$table->json('{$name}'){$null};";
+        }
 
         return match ($field->type) {
             'textarea', 'longtext', 'richtext'

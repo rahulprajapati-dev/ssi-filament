@@ -122,6 +122,15 @@ final class SchemaSyncService
         $name   = $field->field_name;
         $isBool = FieldTypeMap::isBooleanType($field->type);
 
+        // Multi-value fields (multiple select/file/image) store JSON arrays
+        if (! empty($field->is_multiple) && in_array(strtolower($field->type), ['select', 'dropdown', 'enum', 'file', 'image', 'fileupload'], true)) {
+            $col = $blueprint->json($name);
+            if (! $field->required) {
+                $col->nullable();
+            }
+            return;
+        }
+
         $col = match (strtolower($field->type)) {
             'textarea', 'longtext', 'richtext'  => $blueprint->text($name),
             'integer', 'number', 'int'          => $blueprint->integer($name),
