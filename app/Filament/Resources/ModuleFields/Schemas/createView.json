@@ -262,6 +262,7 @@
                                             "component": "textInput",
                                             "name": "value",
                                             "label": "Value",
+                                            "placeholder": "Enter value (comma-separated for IN/NOT IN)",
                                             "columnSpan": 1,
                                             "required": true
                                         }
