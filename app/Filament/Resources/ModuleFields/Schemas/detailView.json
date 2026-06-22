@@ -42,6 +42,17 @@
                                     "color": "info",
                                     "size": "md",
                                     "dropdown": "field_type_dom"
+                                },
+                                {
+                                    "component": "toggle",
+                                    "name": "is_multiple",
+                                    "label": "Allow Multiple",
+                                    "visible_when": {
+                                        "field": "type",
+                                        "operator": "in",
+                                        "value": ["file", "image", "select"]
+                                    },
+                                    "columnSpan": 1
                                 }
                             ]
                         },

@@ -77,8 +77,19 @@
                                     "component": "textInput",
                                     "name": "default_value",
                                     "label": "Default Value",
-                                    "columnSpan": 2,
+                                    "columnSpan": 1,
                                     "required": false
+                                },
+                                {
+                                    "component": "toggle",
+                                    "name": "is_multiple",
+                                    "label": "Allow Multiple",
+                                    "visible_when": {
+                                        "field": "type",
+                                        "operator": "in",
+                                        "value": ["file", "image", "select"]
+                                    },
+                                    "columnSpan": 1
                                 }
                             ]
                         },
