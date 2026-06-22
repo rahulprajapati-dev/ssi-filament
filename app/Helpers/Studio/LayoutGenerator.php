@@ -213,6 +213,17 @@ final class LayoutGenerator
                 if (! empty($field->visibility_mode) && $field->visibility_mode !== 'always_visible') {
                     $key = $field->visibility_mode; // e.g., 'visible_when' or 'hidden_when'
                     $conditions = $field->visibility_conditions ?? [];
+
+                    // Normalize condition values for "in", "not_in", and "user_guid" operators
+                    if (is_array($conditions)) {
+                        foreach ($conditions as &$cond) {
+                            if (isset($cond['operator']) && in_array($cond['operator'], ['in','not_in','user_guid'], true)) {
+                                $raw = $cond['value'] ?? '';
+                                $cond['value'] = array_values(array_filter(array_map('trim', explode(',', $raw))));
+                            }
+                        }
+                        unset($cond);
+                    }
                     if (! empty($field->condition_logic) && $field->condition_logic !== 'and') {
                         $component[$key] = [
                             'logic' => $field->condition_logic,
