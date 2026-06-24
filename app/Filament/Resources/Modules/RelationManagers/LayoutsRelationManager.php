@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Modules\RelationManagers;
 
 use App\Helpers\JsonStudioFormBuilder;
 use App\Helpers\JsonTableBuilder;
+use App\Models\ModuleField;
 use App\Models\ModuleLayout;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
@@ -19,7 +20,32 @@ class LayoutsRelationManager extends RelationManager
     public function form(Schema $schema): Schema
     {
         $config = json_decode(file_get_contents(__DIR__ . '/layouts_form.json'), true);
+
+        $moduleId = $this->getOwnerRecord()->id;
+        $fields   = ModuleField::where('module_id', $moduleId)
+            ->orderBy('sort_order')
+            ->pluck('field_name')
+            ->toArray();
+
+        $config['components'] = $this->injectOwnerData($config['components'], $moduleId, $fields);
+
         return JsonStudioFormBuilder::buildSchema($schema, $config);
+    }
+
+    private function injectOwnerData(array $components, int $moduleId, array $fields): array
+    {
+        foreach ($components as &$item) {
+            if (($item['component'] ?? null) === 'dragDrop') {
+                $item['owner_module_id']     = $moduleId;
+                $item['owner_module_fields'] = $fields;
+            }
+            foreach (['schema', 'items'] as $key) {
+                if (! empty($item[$key]) && is_array($item[$key])) {
+                    $item[$key] = $this->injectOwnerData($item[$key], $moduleId, $fields);
+                }
+            }
+        }
+        return $components;
     }
 
     public function table(Table $table): Table
