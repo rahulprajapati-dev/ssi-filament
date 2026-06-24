@@ -39,6 +39,53 @@ class CommonHelper
         return ModuleField::where('module_id', $moduleId)->pluck('label', 'field_name')->toArray();
     }
 
+    public static function getSelectedFieldOptions(?string $fieldName = null, $moduleId = null): array
+    {
+        if (! $fieldName || ! $moduleId) {
+            return [];
+        }
+
+        $field = ModuleField::where('module_id', $moduleId)
+            ->where('field_name', $fieldName)
+            ->first();
+
+        if (! $field) {
+            return [];
+        }
+
+        if (is_array($field->options)) {
+            $options = [];
+            foreach ($field->options as $option) {
+                if (isset($option['key'])) {
+                    $options[$option['key']] = $option['value'] ?? $option['key'];
+                }
+            }
+            return $options;
+        }
+
+        return [];
+    }
+
+    public static function updateConditionFieldType($state, $set, $get): void
+    {
+        $set('value', null);
+        if (! $state) {
+            $set('field_type', null);
+            return;
+        }
+
+        $moduleId = $get('../../module_id');
+        if (! $moduleId) {
+            $set('field_type', null);
+            return;
+        }
+
+        $type = ModuleField::where('module_id', $moduleId)
+            ->where('field_name', $state)
+            ->value('type');
+        $set('field_type', $type);
+    }
+
     public static function getModulesOptions(): array
     {
         return Module::orderBy('plural_label')->pluck('plural_label', 'name')->toArray();
