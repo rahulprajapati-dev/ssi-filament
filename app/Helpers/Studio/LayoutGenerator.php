@@ -222,9 +222,13 @@ final class LayoutGenerator
                     // Normalize condition values for "in", "not_in", and "user_guid" operators
                     if (is_array($conditions)) {
                         foreach ($conditions as &$cond) {
-                            if (isset($cond['operator']) && in_array($cond['operator'], ['in','not_in','user_guid'], true)) {
+                            if (isset($cond['operator']) && in_array($cond['operator'], ['in','not_in'], true)) {
                                 $raw = $cond['value'] ?? '';
-                                $cond['value'] = array_values(array_filter(array_map('trim', explode(',', $raw))));
+                                if (is_string($raw)) {
+                                    $cond['value'] = array_values(array_filter(array_map('trim', explode(',', $raw))));
+                                } elseif (is_array($raw)) {
+                                    $cond['value'] = array_values(array_filter(array_map(fn ($v) => is_string($v) ? trim($v) : $v, $raw)));
+                                }
                             }
                         }
                         unset($cond);

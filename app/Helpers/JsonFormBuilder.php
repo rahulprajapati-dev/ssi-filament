@@ -549,9 +549,11 @@ class JsonFormBuilder
             ->label($item['label'] ?? null);
 
         $viewData = [
-            'repeaterName' => $item['repeater_name'] ?? null,
-            'source' => $item['source'] ?? 'repeater',   // 'repeater' | 'module_fields'
-            'dependsOn' => $item['depends_on'] ?? null,      // e.g. 'module_id'
+            'repeaterName'      => $item['repeater_name']       ?? null,
+            'source'            => $item['source']              ?? 'repeater',
+            'dependsOn'         => $item['depends_on']          ?? null,
+            'ownerModuleId'     => $item['owner_module_id']     ?? null,
+            'ownerModuleFields' => $item['owner_module_fields'] ?? null,
         ];
 
         $field->viewData($viewData);

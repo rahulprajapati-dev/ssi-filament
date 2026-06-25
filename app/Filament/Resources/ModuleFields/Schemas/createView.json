@@ -25,8 +25,9 @@
                                     "searchable": true,
                                     "dehydrated": true,
                                     "preload": true,
+                                    "reactive":true,
                                     "clear_on_update": [
-                                        "field"
+                                        "visibility_conditions"
                                     ]
                                 },
                                 {
@@ -87,7 +88,11 @@
                                     "visible_when": {
                                         "field": "type",
                                         "operator": "in",
-                                        "value": ["file", "image", "select"]
+                                        "value": [
+                                            "file",
+                                            "image",
+                                            "select"
+                                        ]
                                     },
                                     "columnSpan": 1
                                 }
@@ -252,7 +257,14 @@
                                             "helper_params": [
                                                 "../../module_id"
                                             ],
-                                            "required": true
+                                            "required": true,
+                                            "reactive": true,
+                                            "searchable": true,
+                                            "after_state_updated": "App\\Helpers\\CommonHelper@updateConditionFieldType",
+                                            "clear_on_update": [
+                                                "operator",
+                                                "value"
+                                            ]
                                         },
                                         {
                                             "component": "select",
@@ -267,7 +279,10 @@
                                             ],
                                             "searchable": true,
                                             "reactive": true,
-                                            "required": true
+                                            "required": true,
+                                            "clear_on_update": [
+                                                "value"
+                                            ]
                                         },
                                         {
                                             "component": "textInput",
@@ -275,7 +290,80 @@
                                             "label": "Value",
                                             "placeholder": "Enter value (comma-separated for IN/NOT IN)",
                                             "columnSpan": 1,
-                                            "required": true
+                                            "required": true,
+                                            "visible_when": {
+                                                "field": "field_type",
+                                                "operator": "!=",
+                                                "value": "select"
+                                            }
+                                        },
+                                        {
+                                            "component": "select",
+                                            "name": "value",
+                                            "label": "Value",
+                                            "options_source": "helper",
+                                            "helper_class": "App\\Helpers\\CommonHelper",
+                                            "helper_method": "getSelectedFieldOptions",
+                                            "helper_type": "hybrid",
+                                            "helper_params": [
+                                                "@field",
+                                                "@../../module_id"
+                                            ],
+                                            "multiple": false,
+                                            "columnSpan": 1,
+                                            "required": true,
+                                            "visible_when": {
+                                                "logic": "and",
+                                                "conditions": [
+                                                    {
+                                                        "field": "field_type",
+                                                        "operator": "=",
+                                                        "value": "select"
+                                                    },
+                                                    {
+                                                        "field": "operator",
+                                                        "operator": "not_in",
+                                                        "value": [
+                                                            "in",
+                                                            "not_in"
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "component": "select",
+                                            "name": "value",
+                                            "label": "Value",
+                                            "options_source": "helper",
+                                            "helper_class": "App\\Helpers\\CommonHelper",
+                                            "helper_method": "getSelectedFieldOptions",
+                                            "helper_type": "hybrid",
+                                            "helper_params": [
+                                                "@field",
+                                                "@../../module_id"
+                                            ],
+                                            "multiple": true,
+                                            "columnSpan": 1,
+                                            "required": true,
+                                            "visible_when": {
+                                                "logic": "and",
+                                                "conditions": [
+                                                    {
+                                                        "field": "field_type",
+                                                        "operator": "=",
+                                                        "value": "select"
+                                                    },
+                                                    {
+                                                        "field": "operator",
+                                                        "operator": "in",
+                                                        "value": [
+                                                            "in",
+                                                            "not_in"
+                                                        ]
+                                                    }
+                                                ]
+                                            }
                                         }
                                     ]
                                 }
