@@ -6,6 +6,7 @@ use App\Filament\Resources\Modules\ModuleResource;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
+use App\Filament\Resources\Modules\Hooks\ModuleHooks;
 
 class EditModule extends EditRecord
 {
@@ -16,6 +17,7 @@ class EditModule extends EditRecord
         return [
             ViewAction::make(),
             DeleteAction::make()->visible(fn () =>!$this->record->is_deploy),
+            ModuleHooks::repairRebuildAction()->visible(fn () => $this->record->is_deploy),
         ];
     }
 }
