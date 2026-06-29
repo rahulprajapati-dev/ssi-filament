@@ -74,7 +74,7 @@ final class LayoutGenerator
             }
 
             $content = $layout->layout_type === 'list'
-                ? self::buildListJson($model, $resource, $fieldNames, $fieldMap, $module->filters_json ?? [])
+                ? self::buildListJson($model, $resource, $fieldNames, $fieldMap, $layout->filters_json ?? [])
                 : self::buildFormJson($model, $layout->layout_type, $sections, $fieldMap);
 
             File::ensureDirectoryExists(dirname($filePath));
@@ -352,7 +352,11 @@ final class LayoutGenerator
                 continue;
             }
             $field      = $fieldMap->get($fieldName);
-            $filterType = $fc['filter_type'] ?? 'text';
+            $filterType = match (true) {
+                $field !== null && FieldTypeMap::isBooleanType($field->type)                                          => 'boolean',
+                $field !== null && in_array($field->type, ['select', 'radio', 'dropdown', 'enum'], true) => 'select',
+                default                                                                                   => 'text',
+            };
             $filterLabel = ! empty($fc['label']) ? $fc['label'] : ($field?->label ?? Str::headline($fieldName));
 
             $entry = ['type' => $filterType, 'name' => $fieldName, 'label' => $filterLabel];

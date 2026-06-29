@@ -29,7 +29,6 @@ class Module extends Model
         'icon',
         'description',
         'relationships_json',
-        'filters_json',
         'use_uuid',
         'is_relationships',
         'is_deploy',
@@ -44,7 +43,6 @@ class Module extends Model
         'use_uuid'           => 'boolean',
         'deployed_at'        => 'datetime',
         'relationships_json' => 'array',
-        'filters_json'       => 'array',
     ];
 
     public function fields()

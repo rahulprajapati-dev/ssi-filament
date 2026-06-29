@@ -63,6 +63,49 @@
                     "columnSpan": 1
                 }
             ]
+        },
+        {
+            "component": "section",
+            "label": "List Filters",
+            "description": "Define which fields appear as filters in this list view. Repair & Rebuild after saving.",
+            "icon": "heroicon-o-funnel",
+            "columnSpan": "full",
+            "collapsible": true,
+            "compact": false,
+            "columns": 1,
+            "visible_when": { "field": "layout_type", "value": "list" },
+            "schema": [
+                {
+                    "component": "repeater",
+                    "name": "filters_json",
+                    "label": null,
+                    "columnSpan": 1,
+                    "columns": 2,
+                    "schema": [
+                        {
+                            "component": "select",
+                            "name": "field_name",
+                            "label": "Field",
+                            "columnSpan": 1,
+                            "options_source": "helper",
+                            "helper_type": "dynamic",
+                            "helper_class": "App\\Helpers\\CommonHelper",
+                            "helper_method": "getModuleFieldsById",
+                            "helper_params": ["../../module_id"],
+                            "required": true,
+                            "searchable": true
+                        },
+                        {
+                            "component": "textInput",
+                            "name": "label",
+                            "label": "Filter Label",
+                            "columnSpan": 1,
+                            "placeholder": "Leave blank to use field label",
+                            "required": false
+                        }
+                    ]
+                }
+            ]
         }
     ]
 }

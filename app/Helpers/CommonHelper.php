@@ -102,6 +102,18 @@ class CommonHelper
         return $query->pluck('plural_label', 'name')->toArray();
     }
 
+    public static function getModuleFieldsById($moduleId = null): array
+    {
+        if (! $moduleId) {
+            return [];
+        }
+
+        return ModuleField::where('module_id', $moduleId)
+            ->orderBy('sort_order')
+            ->pluck('label', 'field_name')
+            ->toArray();
+    }
+
     public static function getModuleFieldsByName(?string $moduleName = ''): array
     {
         if (! $moduleName) {

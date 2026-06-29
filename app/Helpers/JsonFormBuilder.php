@@ -2338,12 +2338,13 @@ class JsonFormBuilder
         $populateMode = $item['populate_mode'] ?? 'both';
         $helperParams = $item['helper_params'] ?? [];
         $helperType = $item['helper_type'] ?? 'static';
+        $populateParams = $item['populate_params'] ?? null;
 
         if (! class_exists($helperClass) || ! method_exists($helperClass, $helperMethod)) {
             return;
         }
 
-        $field->live()->afterStateUpdated(function ($state, Set $set, Get $get, $livewire, $component) use ($helperClass, $helperMethod, $populateFields, $populateMode, $helperParams, $helperType) {
+        $field->live()->afterStateUpdated(function ($state, Set $set, Get $get, $livewire, $component) use ($helperClass, $helperMethod, $populateFields, $populateMode, $helperParams, $helperType, $populateParams) {
             if ($state === null || $state === '') {
 
                   foreach ($populateFields as $targetField) {
@@ -2375,7 +2376,11 @@ class JsonFormBuilder
             // Build helper arguments
             $args = [];
 
-            if (! empty($helperParams)) {
+            if ($populateParams !== null) {
+                foreach ($populateParams as $param) {
+                    $args[] = ($param === '$state') ? $state : $get($param);
+                }
+            } elseif (! empty($helperParams)) {
                 foreach ($helperParams as $param) {
 
                     if ($helperType === 'hybrid') {

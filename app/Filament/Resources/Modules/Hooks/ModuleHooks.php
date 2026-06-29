@@ -89,7 +89,6 @@ class ModuleHooks
             'icon'               => $record->icon,
             'description'        => $record->description,
             'relationships_json' => $record->relationships_json,
-            'filters_json'       => $record->filters_json,
             'use_uuid'           => $record->use_uuid,
             'is_deploy'          => false,
             'is_enable'          => false,

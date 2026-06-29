@@ -48,6 +48,24 @@
         },
         {
             "component": "section",
+            "label": "List Filters",
+            "icon": "heroicon-o-funnel",
+            "columnSpan": "full",
+            "compact": false,
+            "columns": 1,
+            "visible_when": { "field": "layout_type", "value": "list" },
+            "schema": [
+                {
+                    "component": "placeholder",
+                    "name": "filters_preview",
+                    "label": null,
+                    "columnSpan": 1,
+                    "content_hook": "App\\Helpers\\Studio\\FiltersPreviewHelper@render"
+                }
+            ]
+        },
+        {
+            "component": "section",
             "label": "System Info",
             "columnSpan": "full",
             "collapsed": false,
