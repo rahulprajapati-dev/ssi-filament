@@ -1508,33 +1508,7 @@ class JsonFormBuilder
 
                 return $key; // stock_images/01KH.png
             });
-            $field->getUploadedFileUsing(function ($file, $state) use ($disk) {
-                $url = Storage::disk($disk)->url($state);
-                if (blank($state)) {
-                    return null;
-                }
-
-                // Strip full URL to relative key
-                if (filter_var($state, FILTER_VALIDATE_URL)) {
-                    $baseUrl = rtrim(config("filesystems.disks.{$disk}.url", ''), '/');
-                    $key = str_starts_with($state, $baseUrl)
-                        ? ltrim(str_replace($baseUrl, '', $state), '/')
-                        : ltrim(parse_url($state, PHP_URL_PATH), '/');
-
-                    $root = trim(config("filesystems.disks.{$disk}.root", ''), '/');
-                    if ($root && str_starts_with($key, $root.'/')) {
-                        $key = substr($key, strlen($root) + 1);
-                    }
-                } else {
-                    $key = $state; // already relative key
-                }
-
-                // Return array with explicit keys FilePond expects
-                return [
-                    'name' => basename($key),
-                    'url' => Storage::disk($disk)->url($key),
-                ];
-            });
+        
         }
         if (! empty($item['legacy_url_passthrough'])) {
             $visibility = $item['visibility'] ?? 'public';
@@ -1543,71 +1517,8 @@ class JsonFormBuilder
             // legacy absolute URLs (pointing at the old bucket) aren't
             // stripped from state before getUploadedFileUsing runs.
             // a martandedit image change
-            $field->fetchFileInformation(false);
 
-            $field->getUploadedFileUsing(function ($file, $state) use ($disk, $visibility) {
-                if (blank($state)) {
-                    return null;
-                }
-
-                $guessType = static function (string $path): ?string {
-                    $ext = strtolower(pathinfo(parse_url($path, PHP_URL_PATH) ?: $path, PATHINFO_EXTENSION));
-
-                    return match ($ext) {
-                        'jpg', 'jpeg' => 'image/jpeg',
-                        'png' => 'image/png',
-                        'gif' => 'image/gif',
-                        'webp' => 'image/webp',
-                        'svg' => 'image/svg+xml',
-                        'pdf' => 'application/pdf',
-                        default => null,
-                    };
-                };
-
-                if (filter_var($state, FILTER_VALIDATE_URL)) {
-                    // Legacy bucket has no CORS headers, so FilePond's XHR fetch
-                    // for image-preview thumbnails is blocked. Route through the
-                    // signed in-app proxy so it's same-origin.
-                    //
-                    // The path filename intentionally omits the image extension —
-                    // staging nginx intercepts `*.jpg/.jpeg/.png` paths as static
-                    // assets and returns 404 before PHP runs. FilePond detects the
-                    // mime from the proxy response Content-Type header instead.
-                    $filename = basename(parse_url($state, PHP_URL_PATH) ?: $state) ?: 'image';
-                    $filename = pathinfo($filename, PATHINFO_FILENAME);
-                    $filename = preg_replace('/[^A-Za-z0-9._-]/', '_', $filename) ?: 'image';
-
-                    $proxied = URL::temporarySignedRoute(
-                        'admin.legacy-image-proxy',
-                        now()->addHours(2),
-                        ['url' => $state, 'filename' => $filename],
-                    );
-
-                    return [
-                        'name' => $filename,
-                        'size' => 0,
-                        'type' => $guessType($state),
-                        'url' => $proxied,
-                    ];
-                }
-
-                $storage = Storage::disk($disk);
-                // try {
-                $url = $visibility === 'private'
-                    ? $storage->temporaryUrl($state, now()->addMinutes(5))
-                    : $storage->url($state);
-                /* } catch (\Throwable $e) {
-                     // Local-style disks don't implement temporaryUrl().
-                     $url = $storage->url($state);
-                 } */
-
-                return [
-                    'name' => basename($state),
-                    'size' => 0,
-                    'type' => $guessType($state),
-                    'url' => $url,
-                ];
-            });
+           
         }
         if (! empty($item['visibility'])) {
             $field->visibility($item['visibility']);
@@ -1621,30 +1532,8 @@ class JsonFormBuilder
 
         if ($isLocalDisk && ! $hasSaveFullUrl && ! $hasLegacyPassthrough) {
             // Stop Filament's built-in file-existence check — we handle it ourselves below.
-            $field->fetchFileInformation(false);
+            
 
-            $field->getUploadedFileUsing(function ($file, $state) use ($disk) {
-                if (blank($state)) {
-                    return null;
-                }
-
-                try {
-                    $storage = Storage::disk($disk);
-
-                    if (! $storage->exists($state)) {
-                        return null;
-                    }
-
-                    return [
-                        'name' => basename($state),
-                        'size' => $storage->size($state),
-                        'type' => $storage->mimeType($state) ?: 'application/octet-stream',
-                        'url'  => $storage->url($state),
-                    ];
-                } catch (\Throwable) {
-                    return null;
-                }
-            });
         }
 
         if (isset($item['image_editor']) && $item['image_editor'] === true) {
