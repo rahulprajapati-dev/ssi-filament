@@ -26,10 +26,12 @@ class ModuleLayout extends Model
         'module_id',
         'layout_type',
         'layout_json',
+        'filters_json',
     ];
 
     protected $casts = [
-        'layout_json' => 'array',
+        'layout_json'  => 'array',
+        'filters_json' => 'array',
     ];
 
     public function module()

@@ -6,6 +6,7 @@ use App\Helpers\Studio\StudioManager;
 use App\Models\Module;
 use App\Models\ModuleField;
 use App\Models\ModuleLayout;
+use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Str;
 
@@ -39,6 +40,26 @@ class ModuleHooks
         return ['success' => $result->success];
     }
 
+    public static function repairRebuildAction(): Action
+    {
+        return Action::make('repair_rebuild')
+            ->label('Repair & Rebuild')
+            ->icon('heroicon-o-arrow-path')
+            ->color('warning')
+            ->requiresConfirmation()
+            ->modalHeading('Repair & Rebuild Module')
+            ->modalDescription('This will repair and rebuild the module by regenerating missing files and ensuring the database schema and layouts are up to date. Do you want to continue?')
+            ->modalSubmitActionLabel('Yes, Repair & Rebuild')
+            ->action(function (Module $record) {
+                $result = StudioManager::rebuild($record);
+                if ($result->success) {
+                    Notification::make()->success()->title($result->message)->send();
+                } else {
+                    Notification::make()->danger()->title('Rebuild Failed')->body($result->message)->send();
+                }
+            });
+    }
+
     public function repairRebuild(Module $record, array $_data = []): array
     {
         $result = StudioManager::rebuild($record);
@@ -68,7 +89,6 @@ class ModuleHooks
             'icon'               => $record->icon,
             'description'        => $record->description,
             'relationships_json' => $record->relationships_json,
-            'filters_json'       => $record->filters_json,
             'use_uuid'           => $record->use_uuid,
             'is_deploy'          => false,
             'is_enable'          => false,

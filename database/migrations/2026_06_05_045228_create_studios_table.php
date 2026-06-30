@@ -20,7 +20,6 @@ return new class extends Migration
             $table->string('icon')->nullable();
             $table->text('description')->nullable();
             $table->json('relationships_json')->nullable();
-            $table->json('filters_json')->nullable();
             $table->boolean('use_uuid')->default(false);
             $table->boolean('is_relationships')->default(false);
             $table->boolean('is_enable')->default(false)->index();
@@ -63,6 +62,7 @@ return new class extends Migration
             $table->foreignId('module_id')->constrained()->cascadeOnDelete();
             $table->enum('layout_type', ['create', 'edit', 'detail', 'list']);
             $table->json('layout_json');
+            $table->json('filters_json')->nullable();
             $table->string('created_by', 36)->nullable();
             $table->string('updated_by', 36)->nullable();
             $table->timestamps();
