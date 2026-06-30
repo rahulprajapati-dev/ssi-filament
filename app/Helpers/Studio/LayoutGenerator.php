@@ -213,6 +213,9 @@ final class LayoutGenerator
                 if (in_array($field->type, ['select', 'dropdown', 'enum'], true) && ! empty($field->is_multiple)) {
                     $component['multiple'] = true;
                 }
+                if (in_array($field->type, [ 'image'], true)) {
+                    $component['image'] = true;
+                }
 
                 // Add visibility configuration for fields with visibility settings
                 if (! empty($field->visibility_mode) && $field->visibility_mode !== 'always_visible') {
