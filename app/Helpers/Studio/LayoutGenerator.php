@@ -216,6 +216,9 @@ final class LayoutGenerator
                 if (in_array($field->type, [ 'image'], true)) {
                     $component['image'] = true;
                 }
+                if ($field->type == 'email') {
+                    $component['type'] = 'email';
+                }
 
                 // Add visibility configuration for fields with visibility settings
                 if (! empty($field->visibility_mode) && $field->visibility_mode !== 'always_visible') {
