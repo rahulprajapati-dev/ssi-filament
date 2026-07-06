@@ -1,5 +1,5 @@
 {
-    "form_name": "module_field_detail_form",
+    "form_name": "module_field_panel_form_detail_view",
     "model": "App\\Models\\ModuleField",
     "components": [
         {
@@ -50,32 +50,13 @@
                                     "visible_when": {
                                         "field": "type",
                                         "operator": "in",
-                                        "value": ["file", "image", "select"]
+                                        "value": [
+                                            "file",
+                                            "image",
+                                            "select"
+                                        ]
                                     },
                                     "columnSpan": 1
-                                }
-                            ]
-                        },
-                        {
-                            "component": "grid",
-                            "columns": 2,
-                            "schema": [
-                                {
-                                    "component": "textEntry",
-                                    "name": "module.plural_label",
-                                    "label": "Module",
-                                    "columnSpan": 1,
-                                    "weight": "medium",
-                                    "color": "gray"
-                                },
-                                {
-                                    "component": "textEntry",
-                                    "name": "default_value",
-                                    "label": "Default Value",
-                                    "columnSpan": 1,
-                                    "size": "sm",
-                                    "color": "gray",
-                                    "prefix": "Default: "
                                 }
                             ]
                         },

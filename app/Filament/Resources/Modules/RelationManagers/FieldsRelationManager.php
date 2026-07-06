@@ -21,6 +21,7 @@ class FieldsRelationManager extends RelationManager
         $op = $schema->getOperation();
         $file = match ($op) {
             'edit' => __DIR__ . '/fields_form.json',
+            'view' => __DIR__ . '/fields_form_detail_view.json',
             default => __DIR__ . '/fields_form.json',
         };
         $config = json_decode(file_get_contents($file), true);
