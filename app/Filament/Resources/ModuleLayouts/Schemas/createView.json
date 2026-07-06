@@ -39,6 +39,7 @@
                         "layout_type_dom"
                     ],
                     "required": true,
+                    "reactive":true,
                     "hint": "Create / Edit / Detail / List"
                 }
             ]
@@ -80,6 +81,7 @@
                     "label": null,
                     "columnSpan": 1,
                     "columns": 2,
+                    "default" :[],
                     "schema": [
                         {
                             "component": "select",

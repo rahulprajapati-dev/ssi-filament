@@ -45,6 +45,7 @@
         {
             "type": "create",
             "label": "Add Layout",
+            "createAnother": false,
             "ui": {
                 "modalHeading": "Add Layout",
                 "modalDescription": "Choose the view type. After saving, click Design to build the layout structure."

@@ -615,6 +615,9 @@ class JsonTableBuilder
                 if ($icon && method_exists($act, 'icon')) {
                     $act->icon($icon);
                 }
+                if (array_key_exists('createAnother', $h)) {
+                    $act->createAnother($h['createAnother']);
+                }
                 // UI customization (slideOver/modal) for header create action
                 self::applyUiOptionsToAction($act, $h['ui'] ?? []);
             }),

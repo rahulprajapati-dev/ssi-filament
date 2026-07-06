@@ -40,6 +40,7 @@
                         "layout_type_dom"
                     ],
                     "required": true,
+                    "reactive":true,
                     "hint": "Create / Edit / Detail / List"
                 }
             ]
