@@ -25,6 +25,8 @@
                     "dehydrated": true,
                     "preload": true,
                     "live": true,
+                    "custom_after_state_updated": "\\App\\Filament\\Resources\\ModuleLayouts\\Hooks\\ModuleLayoutHooks@validateUniqueModuleLayout",
+                    "custom_after_state_updated_related": ["layout_type"],
                     "hint": "Select the module this layout belongs to"
                 },
                 {
@@ -38,8 +40,10 @@
                     "helper_params": [
                         "layout_type_dom"
                     ],
+                    "custom_after_state_updated": "\\App\\Filament\\Resources\\ModuleLayouts\\Hooks\\ModuleLayoutHooks@validateUniqueModuleLayout",
+                    "custom_after_state_updated_related": ["module_id"],
                     "required": true,
-                    "reactive":true,
+                    "reactive": true,
                     "hint": "Create / Edit / Detail / List"
                 }
             ]

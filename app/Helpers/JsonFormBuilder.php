@@ -27,11 +27,13 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Livewire\Component;
 use Livewire\Form;
 use App\Helpers\Studio\DropdownHandler;
+use Illuminate\Validation\ValidationException;
 
 class JsonFormBuilder
 {
@@ -2077,6 +2079,41 @@ class JsonFormBuilder
             });
         }
 
+        if (isset($item['custom_after_state_updated'])) {
+            $callback = $item['custom_after_state_updated'];
+            // Sibling field names (relative to this field) that share the same check,
+            // so a stale error left on one of them gets cleared once this one passes.
+            $relatedFields = $item['custom_after_state_updated_related'] ?? [];
+
+            $field->afterStateUpdated(function ($state, Set $set, Get $get, $livewire, $record, $component) use ($callback, $relatedFields) {
+                $statePath = $component->getStatePath();
+                $basePath = Str::contains($statePath, '.') ? Str::beforeLast($statePath, '.') : null;
+
+                $relatedPaths = array_map(
+                    fn ($name) => $basePath ? "{$basePath}.{$name}" : $name,
+                    $relatedFields
+                );
+
+                $errorStatus = app()->call($callback, [
+                    'state' => $state,
+                    'set' => $set,
+                    'get' => $get,
+                    'livewire' => $livewire,
+                    'record' => $record,
+                    'component' => $component,
+                ]);
+
+                if (! empty($errorStatus) && ! empty($errorStatus['status'])) {
+                    throw ValidationException::withMessages([
+                        $statePath => $errorStatus['error'],
+                    ]);
+                }
+
+                // Passed: clear any stale error left on this field or its siblings
+                // by a previous run of this same check.
+                $livewire->resetErrorBag([$statePath, ...$relatedPaths]);
+            });
+        }
         // custom_rule
         if (isset($item['custom_rule'])) {
             $callbackString = $item['custom_rule'];
