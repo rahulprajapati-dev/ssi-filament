@@ -34,23 +34,13 @@
                                     "component": "textInput",
                                     "name": "field_name",
                                     "label": "Field Name",
-                                    "columnSpan": 1,
                                     "required": true,
-                                    "options_source": "helper",
-                                    "helper_type": "dynamic",
-                                    "helper_class": "App\\Helpers\\CommonHelper",
-                                    "helper_method": "populatefieldlabel",
-                                    "helper_params": [
+                                    "custom_after_state_updated": "\\App\\Filament\\Resources\\ModuleFields\\Hooks\\ModuleFieldHooks@filedValidation",
+                                    "custom_after_state_updated_related": [
                                         "field_name"
                                     ],
                                     "reactive": true,
-                                    "populate_fields": [
-                                        "label"
-                                    ],
-                                    "validation": [
-                                        "max:50",
-                                        "regex:/^[a-z][a-z0-9_]*$/"
-                                    ]
+                                    "columnSpan": 1
                                 },
                                 {
                                     "component": "textInput",
@@ -73,13 +63,6 @@
                                     "searchable": true,
                                     "reactive": true,
                                     "required": true
-                                },
-                                {
-                                    "component": "textInput",
-                                    "name": "default_value",
-                                    "label": "Default Value",
-                                    "columnSpan": 1,
-                                    "required": false
                                 },
                                 {
                                     "component": "toggle",
@@ -119,19 +102,25 @@
                                     "name": "options",
                                     "label": "Options List",
                                     "columnSpan": 1,
-                                    "columns": 2,
+                                    "columns": 3,
                                     "schema": [
+                                        {
+                                            "component": "checkbox",
+                                            "name": "default",
+                                            "label": "Default",
+                                            "columnSpan": 1
+                                        },
                                         {
                                             "component": "textInput",
                                             "name": "key",
-                                            "label": "Option Value / Key",
+                                            "label": "Value",
                                             "columnSpan": 1,
                                             "required": true
                                         },
                                         {
                                             "component": "textInput",
                                             "name": "value",
-                                            "label": "Option Display Label",
+                                            "label": "Display Label",
                                             "columnSpan": 1,
                                             "required": true
                                         }
@@ -142,7 +131,7 @@
                     ]
                 },
                 {
-                    "label": "Validation",
+                    "label": "Properties",
                     "schema": [
                         {
                             "component": "grid",
@@ -162,10 +151,18 @@
                                 },
                                 {
                                     "component": "textInput",
+                                    "name": "default_value",
+                                    "label": "Default Value",
+                                    "columnSpan": 1,
+                                    "required": false
+                                },
+                                {
+                                    "component": "textInput",
                                     "name": "length",
-                                    "label": "Length (Max Characters)",
+                                    "label": "Length (Max)",
                                     "type": "numeric",
-                                    "columnSpan": 2,
+                                    "max_value": 4,
+                                    "columnSpan": 1,
                                     "required": false
                                 }
                             ]
