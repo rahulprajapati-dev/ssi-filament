@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('modules', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid');
+            $table->string('key',10)->nullable();
             $table->string('name', 100)->unique();
             $table->string('singular_label', 100);
             $table->string('plural_label', 100);

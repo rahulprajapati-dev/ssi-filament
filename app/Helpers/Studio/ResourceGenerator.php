@@ -21,7 +21,7 @@ final class ResourceGenerator
 
     public static function generate(Module $module): bool
     {
-        $model    = Str::studly((string) $module->name);
+        $model    = Str::studly((string) $module->fullname);
         $resource = Str::pluralStudly($model);
         $icon     = (string) ($module->icon ?: self::DEFAULT_ICON);
 
@@ -34,7 +34,7 @@ final class ResourceGenerator
 
         $vars = [
             'MODEL'             => $model,
-            'MODEL_LOWER'       => Str::lower($model),
+            'MODEL_LOWER'       => Str::lower($module->name),
             'RESOURCE'          => $resource,
             'RESOURCE_SINGULAR' => Str::singular($resource),
             'ICON'              => $icon,
@@ -71,7 +71,7 @@ final class ResourceGenerator
 
     public static function remove(Module $module): bool
     {
-        $model    = Str::studly((string) $module->name);
+        $model    = Str::studly((string) $module->fullname);
         $resource = Str::pluralStudly($model);
         $basePath = app_path("Filament/Resources/{$resource}");
 

@@ -14,6 +14,23 @@
             "schema": [
                 {
                     "component": "textInput",
+                    "name": "key",
+                    "label": "Key",
+                    "columnSpan": 1,
+                    "validate_on_blur": true,
+                    "validation": [
+                        "max:4",
+                        "string",
+                        "regex:/^[a-zA-Z]*$/"
+                    ],
+                    "strict_messages": true,
+                    "messages": {
+                        "max": "Key must not exceed 4 characters.",
+                        "regex": "Key can contain only letters. Example: crm, Api, SSI."
+                    }
+                },
+                {
+                    "component": "textInput",
                     "name": "name",
                     "label": "Module Name",
                     "columnSpan": 1,
@@ -32,10 +49,16 @@
                         "singular_label",
                         "plural_label"
                     ],
+                    "validate_on_blur": true,
                     "validation": [
                         "max:50",
-                        "regex:/^[a-z][a-z0-9_]*$/"
-                    ]
+                        "regex:/^[A-Za-z][A-Za-z0-9_]*$/"
+                    ],
+                    "strict_messages": true,
+                    "messages": {
+                        "max": "Module name must not exceed 50 characters.",
+                        "regex": "Module name must start with a letter and can contain only letters, numbers, and underscores. Example: CustomerOrder or customer_order."
+                    }
                 },
                 {
                     "component": "select",
@@ -84,7 +107,7 @@
                     "name": "is_relationships",
                     "label": "Add Relationship",
                     "columnSpan": 1,
-                    "reactive":true
+                    "reactive": true
                 }
             ]
         },
@@ -133,7 +156,9 @@
                             "helper_type": "dynamic",
                             "helper_class": "App\\Helpers\\CommonHelper",
                             "helper_method": "getModulesOptionsExcluding",
-                            "helper_params": ["../../name"],
+                            "helper_params": [
+                                "../../name"
+                            ],
                             "required": true,
                             "searchable": true,
                             "live": true
@@ -159,7 +184,11 @@
                             "helper_type": "dynamic",
                             "helper_class": "App\\Helpers\\CommonHelper",
                             "helper_method": "getForeignKeyOptions",
-                            "helper_params": ["related_module", "type", "../../name"],
+                            "helper_params": [
+                                "related_module",
+                                "type",
+                                "../../name"
+                            ],
                             "required": false,
                             "searchable": true,
                             "placeholder": "Auto (use Laravel default)",

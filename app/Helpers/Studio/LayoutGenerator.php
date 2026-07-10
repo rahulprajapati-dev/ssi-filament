@@ -31,7 +31,7 @@ final class LayoutGenerator
     public static function generate(Module $module, bool $force = false): bool
     {
         $model = Str::studly($module->name);
-        $resource = Str::studly(Str::plural($module->name));
+        $resource = Str::studly(Str::plural($module->fullname));
         $basePath = app_path("Filament/Resources/{$resource}");
 
         /** @var Collection<string, ModuleField> $fieldMap field_name → ModuleField */
@@ -90,7 +90,7 @@ final class LayoutGenerator
 
     public static function remove(Module $module): bool
     {
-        $resource = Str::studly(Str::plural($module->name));
+        $resource = Str::studly(Str::plural($module->fullname));
         $basePath = app_path("Filament/Resources/{$resource}");
 
         $files = [

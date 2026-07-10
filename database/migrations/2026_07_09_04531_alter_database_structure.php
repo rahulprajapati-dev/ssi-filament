@@ -11,22 +11,6 @@ return new class extends Migration
      */
     public function up(): void
     {
-        /*Schema::table('modules', function (Blueprint $table) {
-            if (! Schema::hasColumn('modules', 'filters_json')) {
-                $table->json('filters_json')->nullable()->after('relationships_json');
-            }
-            if (! Schema::hasColumn('modules','is_relationships')) {
-                $table->boolean('is_relationships')->default(false)->after('use_uuid');
-            }
-
-        });*/
-
-        // One field_name per module (case-insensitive check is handled at the app layer)
-        // Schema::table('module_fields', function (Blueprint $table) {
-        //     $table->smallInteger('sort_order')->nullable()->change();
-        // });
-
-        // One layout_type per module (create / edit / detail / list)
         Schema::table('module_layouts', function (Blueprint $table) {
             if (! Schema::hasColumn('module_layouts','inherit_edit_layout')) {
                 $table->boolean('inherit_edit_layout')->default(false)->after('filters_json');

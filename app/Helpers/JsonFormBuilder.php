@@ -748,12 +748,44 @@ class JsonFormBuilder
             $field->email();
         }
 
-        if (! empty($item['messages'])) {
-            $field->validationMessages($item['messages']);
+         $messages = $item['messages'] ?? null;
+
+        if (! empty($messages)) {
+            $field->validationMessages($messages);
         }
 
-        if (! empty($item['validation'])) {
-            $field->rules($item['validation']);
+        $validationRules = $item['validation'] ?? [];
+
+        if (! empty($validationRules)) {
+            if (! empty($item['strict_messages'])) {
+                $rules = $validationRules;
+                $customMessages = $messages ?? [];
+
+                    $field->rules([
+                        fn (): \Closure => function (string $attribute, $value, \Closure $fail) use ($rules, $customMessages) {
+                            foreach ($rules as $rule) {
+                                [$ruleName, $ruleParam] = array_pad(explode(':', $rule, 2), 2, null);
+
+                                $failed = match ($ruleName) {
+                                    'max'      => mb_strlen((string) $value) > (int) $ruleParam,
+                                    'min'      => mb_strlen((string) $value) < (int) $ruleParam,
+                                    'regex'    => $value !== null && $value !== '' && ! preg_match($ruleParam, (string) $value),
+                                    'required' => $value === null || $value === '',
+                                    'string'   => ! is_string($value),
+                                    default    => false,
+                                };
+
+                                if ($failed) {
+                                    $fail($customMessages[$ruleName] ?? "The {$attribute} is invalid.");
+                                    return;
+                                }
+                            }
+                        },
+                    ]);
+            } 
+            else {
+                    $field->rules($validationRules);
+                }
         }
 
         /*

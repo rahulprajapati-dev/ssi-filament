@@ -106,7 +106,7 @@ final class StudioManager
             $fields = $module->fields;
             foreach ($fields as $field) {
                 if (in_array($field->type, ['select', 'relationship'], true)) {
-                    $this->step('create_dom', fn() => DropdownHandler::createGroup($module->name, $field->field_name, $field->options));
+                    $this->step('create_dom', fn() => DropdownHandler::createGroup($module->fullname, $field->field_name, $field->options));
                 }
             }
 
@@ -172,7 +172,7 @@ final class StudioManager
             $fields = $module->fields;
             foreach ($fields as $field) {
                 if (in_array($field->type, ['select', 'relationship'], true)) {
-                    $name = $module->name . '_' . $field->field_name . '_dom';
+                    $name = $module->fullname . '_' . $field->field_name . '_dom';
                     $this->step('remove_dom', fn() => DropdownHandler::deleteGroup($name));
                 }
             }

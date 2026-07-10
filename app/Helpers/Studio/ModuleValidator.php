@@ -29,7 +29,7 @@ final class ModuleValidator
 
     private static function assertNamePresent(Module $module): void
     {
-        if (empty($module->name)) {
+        if (empty($module->fullname)) {
             throw new RuntimeException('Module name is required before deployment.');
         }
     }
@@ -37,9 +37,9 @@ final class ModuleValidator
     private static function assertNameFormat(Module $module): void
     {
         // Must start with a letter; only letters, digits, and underscores allowed.
-        if (! preg_match('/^[a-zA-Z][a-zA-Z0-9_]*$/', (string) $module->name)) {
+        if (! preg_match('/^[a-zA-Z][a-zA-Z0-9_]*$/', (string) $module->fullname)) {
             throw new RuntimeException(
-                "Module name \"{$module->name}\" is invalid. "
+                "Module name \"{$module->fullname}\" is invalid. "
                 . 'Use only letters, digits, and underscores, starting with a letter. '
                 . 'Example: CustomerOrder or customer_order.'
             );
@@ -50,7 +50,7 @@ final class ModuleValidator
     {
         if ($module->is_deploy) {
             throw new RuntimeException(
-                "Module \"{$module->name}\" is already deployed."
+                "Module \"{$module->fullname}\" is already deployed."
             );
         }
     }
@@ -59,7 +59,7 @@ final class ModuleValidator
     {
         if ($module->fields()->count() === 0) {
             throw new RuntimeException(
-                "Module \"{$module->name}\" has no fields defined. "
+                "Module \"{$module->fullname}\" has no fields defined. "
                 . 'Add at least one field before deploying.'
             );
         }
