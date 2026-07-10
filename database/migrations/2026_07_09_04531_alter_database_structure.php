@@ -20,21 +20,25 @@ return new class extends Migration
             }
 
         });*/
-        // One field_name per module (case-insensitive check is handled at the app layer)
-        Schema::table('module_fields', function (Blueprint $table) {
-            $table->smallInteger('sort_order')->nullable()->change();
-        });
 
-        /*// One layout_type per module (create / edit / detail / list)
+        // One field_name per module (case-insensitive check is handled at the app layer)
+        // Schema::table('module_fields', function (Blueprint $table) {
+        //     $table->smallInteger('sort_order')->nullable()->change();
+        // });
+
+        // One layout_type per module (create / edit / detail / list)
         Schema::table('module_layouts', function (Blueprint $table) {
-            $table->unique(['module_id', 'layout_type'], 'uq_module_layouts_module_type');
-        });*/
+            if (! Schema::hasColumn('module_layouts','inherit_edit_layout')) {
+                $table->boolean('inherit_edit_layout')->default(false)->after('filters_json');
+            }
+            if (! Schema::hasColumn('module_layouts','inherit_detail_layout')) {
+                $table->boolean('inherit_detail_layout')->default(false)->after('inherit_edit_layout');
+            }
+        });
     }
 
     public function down(): void
     {
-        Schema::table('modules', function (Blueprint $table) {
-            $table->dropColumn('filters_json');
-        });
+        
     }
 };

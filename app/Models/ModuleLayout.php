@@ -27,11 +27,15 @@ class ModuleLayout extends Model
         'layout_type',
         'layout_json',
         'filters_json',
+        'inherit_edit_layout',
+        'inherit_detail_layout',
     ];
 
     protected $casts = [
         'layout_json'  => 'array',
         'filters_json' => 'array',
+        'inherit_edit_layout'   => 'boolean',
+        'inherit_detail_layout' => 'boolean',
     ];
 
     public function module()

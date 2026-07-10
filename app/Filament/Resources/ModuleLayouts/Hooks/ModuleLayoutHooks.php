@@ -35,4 +35,69 @@ class ModuleLayoutHooks
             ];
         }
     }
+
+    /**
+     * Handles the "inherit_edit_layout" / "inherit_detail_layout" toggles.
+     *
+     * For each enabled toggle: if the module already has that view type, its
+     * layout_json is pulled into the record being saved; if it doesn't exist
+     * yet, it's created now using the layout_json being saved.
+     */
+    public function applyLayoutInheritance(array $data, ?ModuleLayout $currentRecord = null): array
+    {
+        $moduleId = $data['module_id'] ?? null;
+
+        if (blank($moduleId)) {
+            return $data;
+        }
+
+        /**
+         * Only run inheritance when creating Create View
+         */
+        if (($data['layout_type'] ?? null) !== 'create') {
+            return $data;
+        }
+
+        $createLayoutJson = $data['layout_json'] ?? [];
+
+        $inheritLayouts = [
+            'inherit_edit_layout' => 'edit',
+            'inherit_detail_layout' => 'detail',
+        ];
+
+        foreach ($inheritLayouts as $toggle => $targetType) {
+
+            if (empty($data[$toggle])) {
+                continue;
+            }
+
+            $existingLayout = ModuleLayout::where('module_id', $moduleId)
+                ->where('layout_type', $targetType)->first();
+
+            if ($existingLayout) {
+
+                $existingLayout->update([
+                    'layout_json' => $createLayoutJson,
+                ]);
+
+                Notification::make()
+                    ->title(ucfirst($targetType).' View updated')
+                    ->body('Layout copied from Create View.')->success()->send();
+
+            } else {
+
+                ModuleLayout::create([
+                    'module_id'   => $moduleId,
+                    'layout_type' => $targetType,
+                    'layout_json' => $createLayoutJson,
+                ]);
+
+                Notification::make()
+                    ->title(ucfirst($targetType).' View created')
+                    ->body('Layout copied from Create View.')->success()->send();
+            }
+        }
+
+        return $data;
+    }
 }

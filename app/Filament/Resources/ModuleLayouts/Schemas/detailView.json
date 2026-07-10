@@ -4,6 +4,33 @@
     "components": [
         {
             "component": "section",
+            "label": "Layout Inheritance",
+            "description": "Reuse an existing view layout structure to quickly create this layout. Enable an option to copy the configuration from another view type.",
+            "icon": "heroicon-o-document-duplicate",
+            "columnSpan": "full",
+            "collapsible": false,
+            "compact": true,
+            "columns": 2,
+            "visible_when": { "field": "layout_type", "value": "create" },
+            "schema": [
+                {
+                    "component": "toggle",
+                    "name": "inherit_edit_layout",
+                    "label": "Use Edit View Layout",
+                    "columnSpan": 1,
+                    "hint": "Copy the field structure and layout configuration from the Edit View."
+                },
+                {
+                    "component": "toggle",
+                    "name": "inherit_detail_layout",
+                    "label": "Use Detail View Layout",
+                    "columnSpan": 1,
+                    "hint": "Copy the field structure and layout configuration from the Detail View."
+                }
+            ]
+        },
+        {
+            "component": "section",
             "label": "Layout Overview",
             "columnSpan": "full",
             "compact": true,
