@@ -122,8 +122,14 @@
                                     "name": "options",
                                     "label": "Options List",
                                     "columnSpan": 1,
-                                    "columns": 2,
+                                    "columns": 3,
                                     "schema": [
+                                        {
+                                            "component": "toggle",
+                                            "name": "default",
+                                            "label": "Default",
+                                            "columnSpan": 1
+                                        },
                                         {
                                             "component": "textInput",
                                             "name": "key",

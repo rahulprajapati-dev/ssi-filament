@@ -191,6 +191,17 @@ final class LayoutGenerator
 
                 // Attach static options for select/radio/checkboxList fields
                 if (! $isDetail && in_array($field->type, ['select', 'dropdown', 'enum', 'radio', 'checkboxList', 'checkbox_list', 'relationship'], true)) {
+                    
+                    $default = null;
+
+                    if (! empty($field->options) && is_array($field->options)) {
+                        foreach ($field->options as $option) {
+                            if (! empty($option['default'])) {
+                                $default = $option['key'];
+                                break; // Stop once the default option is found
+                            }
+                        }
+                    }
                     $modulename= Str::snake($model);
                     $dropdownName = "{$modulename}_{$field->field_name}_dom";
                     $component['options_source'] = 'helper';
@@ -199,6 +210,9 @@ final class LayoutGenerator
                     $component['helper_params']  = [
                         $dropdownName
                     ];
+                    if ($default !== null) {
+                        $component['default'] = $default;
+                    }
                 }
 
                 // Use public disk for file/image fields (avoids S3 default in JsonFormBuilder)

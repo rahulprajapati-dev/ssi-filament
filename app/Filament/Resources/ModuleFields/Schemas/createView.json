@@ -105,6 +105,12 @@
                                     "columns": 3,
                                     "schema": [
                                         {
+                                            "component": "checkbox",
+                                            "name": "default",
+                                            "label": "Default",
+                                            "columnSpan": 1
+                                        },
+                                        {
                                             "component": "textInput",
                                             "name": "key",
                                             "label": "Value",
