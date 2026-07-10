@@ -162,7 +162,7 @@ final class SchemaSyncService
 
     private static function tableName(Module $module): string
     {
-        return Str::snake(Str::plural((string) $module->name));
+        return Str::snake(Str::plural((string) $module->fullname));
     }
 
     /** @return Collection<int, ModuleField> */

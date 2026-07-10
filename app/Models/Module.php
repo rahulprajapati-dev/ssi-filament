@@ -6,6 +6,7 @@ use App\Traits\HasCreatedBy;
 use App\Traits\ModuleHookTrait;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class Module extends Model
 {
@@ -23,6 +24,7 @@ class Module extends Model
     }
 
     protected $fillable = [
+        'key',
         'name',
         'singular_label',
         'plural_label',
@@ -37,11 +39,11 @@ class Module extends Model
     ];
 
     protected $casts = [
-        'is_deploy'          => 'boolean',
-        'is_relationships'   => 'boolean',
-        'is_enable'          => 'boolean',
-        'use_uuid'           => 'boolean',
-        'deployed_at'        => 'datetime',
+        'is_deploy' => 'boolean',
+        'is_relationships' => 'boolean',
+        'is_enable' => 'boolean',
+        'use_uuid' => 'boolean',
+        'deployed_at' => 'datetime',
         'relationships_json' => 'array',
     ];
 
@@ -53,5 +55,15 @@ class Module extends Model
     public function layouts()
     {
         return $this->hasMany(ModuleLayout::class);
+    }
+    protected function fullname(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $key = trim($this->key ?? '');
+                $name = trim($this->name ?? '');
+                return !empty($key) ? $key . '_' . $name : $name;
+            }
+        );
     }
 }

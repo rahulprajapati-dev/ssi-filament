@@ -20,9 +20,9 @@ final class ModelGenerator
 {
     public static function generate(Module $module): bool
     {
-        $name  = (string) $module->name;
+        $name  = (string) $module->fullname;
         $model = Str::studly($name);
-        $table = Str::snake(Str::plural($name));
+        $table =strtolower($module->fullname);
         $path  = app_path("Models/{$model}.php");
 
         if (File::exists($path)) {
@@ -52,7 +52,7 @@ final class ModelGenerator
      */
     public static function sync(Module $module): bool
     {
-        $model = Str::studly((string) $module->name);
+        $model = Str::studly((string) $module->fullname);
         $path  = app_path("Models/{$model}.php");
 
         if (! File::exists($path)) {
@@ -183,7 +183,7 @@ final class ModelGenerator
 
     public static function remove(Module $module): bool
     {
-        $model = Str::studly((string) $module->name);
+        $model = Str::studly((string) $module->fullname);
         $path  = app_path("Models/{$model}.php");
 
         if (! File::exists($path)) {

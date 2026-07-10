@@ -21,10 +21,12 @@ return new class extends Migration
 
         });*/
         // One field_name per module (case-insensitive check is handled at the app layer)
-        Schema::table('module_fields', function (Blueprint $table) {
-            $table->smallInteger('sort_order')->nullable()->change();
+        // Schema::table('module_fields', function (Blueprint $table) {
+        //     $table->smallInteger('sort_order')->nullable()->change();
+        // });
+        Schema::table('modules', function (Blueprint $table) {
+            $table->string('key',10)->nullable()->after('uuid');
         });
-
         /*// One layout_type per module (create / edit / detail / list)
         Schema::table('module_layouts', function (Blueprint $table) {
             $table->unique(['module_id', 'layout_type'], 'uq_module_layouts_module_type');

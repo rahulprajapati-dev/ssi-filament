@@ -36,7 +36,8 @@ final class MigrationGenerator
 
     public static function generate(Module $module): bool
     {
-        $table = Str::snake(Str::plural((string) $module->name));
+        $table = strtolower($module->fullname);
+
 
         // Idempotency: if any migration for this table already exists, skip.
         $existing = glob(database_path("migrations/*_create_{$table}_table.php"));
@@ -113,7 +114,7 @@ final class MigrationGenerator
 
     public static function remove(Module $module): bool
     {
-        $table = Str::snake(Str::plural((string) $module->name));
+        $table = strtolower($module->fullname);
 
         $files = glob(database_path("migrations/*_create_{$table}_table.php"));
 

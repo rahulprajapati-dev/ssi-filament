@@ -6,6 +6,11 @@
             "required": true,
             "default": null
         },
+        "key": {
+            "type": "string",
+            "label": "Key",
+            "default": null
+        },
         "name": {
             "type": "string",
             "label": "Name",

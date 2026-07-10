@@ -12,8 +12,28 @@
             "schema": [
                 {
                     "component": "textEntry",
+                    "name": "key",
+                    "label": "Key",
+                    "columnSpan": 1,
+                    "size": "lg",
+                    "weight": "bold",
+                    "color": "primary",
+                    "copyable": true
+                },
+                {
+                    "component": "textEntry",
                     "name": "name",
                     "label": "Module Name",
+                    "columnSpan": 1,
+                    "size": "lg",
+                    "weight": "bold",
+                    "color": "primary",
+                    "copyable": true
+                },
+                {
+                    "component": "textEntry",
+                    "name": "fullname",
+                    "label": "Module FullName",
                     "columnSpan": 1,
                     "size": "lg",
                     "weight": "bold",
