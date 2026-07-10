@@ -131,4 +131,39 @@ class ModuleHooks
 
         return ['success' => $result->success];
     }
+    public function ValidateModuleName($attribute, $value, $fail, $record, $get)
+    {
+        $key = trim($get('key') ?? '');
+        $name = trim($value ?? '');
+        $pluralName = trim($get('plural_label'));
+        $singularName = trim($get('singular_label'));
+
+        $fullnameExists = Module::query()
+            ->when($record, fn($q) => $q->where('id', '!=', $record->getKey()))
+            ->where(function ($q) use ($key) {
+                $key === '' ? $q->whereNull('key')->orWhere('key', '')
+                    : $q->whereRaw('LOWER(`key`) = ?', [strtolower($key)]);
+            })
+            ->where(function ($q) use ($name, $singularName, $pluralName) {
+                $q->whereRaw('LOWER(`name`) = ?', [strtolower($name)])
+                    ->orWhereRaw('LOWER(`name`) = ?', [strtolower($singularName)])
+                    ->orWhereRaw('LOWER(`name`) = ?', [strtolower($pluralName)]);
+            })
+            ->exists();
+
+        if ($fullnameExists) {
+            $fail($key !== ''
+                ? "A module with Key \"{$key}\" and Name \"{$name}\" (or its singular/plural form) already exists."
+                : "A module with Name \"{$name}\" (or its singular/plural form) already exists."
+            );
+        }
+
+    }
+    public function revalidateNameOnKeyChange($state, $get, $set, $component, $livewire, $statePath)
+    {
+        $livewire->validateOnly($statePath);
+        $basePath = Str::contains($statePath, '.') ? Str::beforeLast($statePath, '.') : null;
+        $namePath = $basePath ? "{$basePath}.name" : 'name';
+        $livewire->validateOnly($namePath);
+    }
 }

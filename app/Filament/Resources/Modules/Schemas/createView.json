@@ -27,7 +27,8 @@
                     "messages": {
                         "max": "Key must not exceed 4 characters.",
                         "regex": "Key can contain only letters. Example: crm, Api, SSI."
-                    }
+                    },
+                    "after_state_updated": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@revalidateNameOnKeyChange"
                 },
                 {
                     "component": "textInput",
@@ -39,7 +40,6 @@
                     "helper_class": "App\\Helpers\\CommonHelper",
                     "helper_method": "populatemodulelabes",
                     "populate_mode": "create",
-                    "unique": true,
                     "helper_params": [
                         "name"
                     ],
@@ -58,7 +58,8 @@
                     "messages": {
                         "max": "Module name must not exceed 50 characters.",
                         "regex": "Module name must start with a letter and can contain only letters, numbers, and underscores. Example: CustomerOrder or customer_order."
-                    }
+                    },
+                    "custom_rule":  "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@ValidateModuleName" 
                 },
                 {
                     "component": "select",
