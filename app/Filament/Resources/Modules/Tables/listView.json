@@ -9,7 +9,7 @@
     "columns": [
         {
             "type": "text",
-            "name": "plural_label",
+            "name": "fullnamelable",
             "label": "Module Name",
             "sortable": true,
             "wrap": false

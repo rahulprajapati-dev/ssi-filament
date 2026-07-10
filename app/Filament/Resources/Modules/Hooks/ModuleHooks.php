@@ -16,6 +16,9 @@ class ModuleHooks
     {
         $record->update(['is_enable' => ! $record->is_enable]);
         $record->refresh();
+        if ($record->is_enable) { 
+            $this->repairRebuild($record);
+        }
 
         $status = $record->is_enable ? 'Enabled' : 'Disabled';
 

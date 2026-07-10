@@ -66,4 +66,13 @@ class Module extends Model
             }
         );
     }
+    protected function fullnamelable(): Attribute
+    {
+         return Attribute::make(
+        get: fn () => filled($this->key)
+            ? Str::studly($this->key) . ' ' . $this->plural_label
+            : $this->plural_label
+        );
+    }
+    
 }
