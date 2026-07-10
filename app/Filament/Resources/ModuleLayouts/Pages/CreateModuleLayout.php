@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ModuleLayouts\Pages;
 
+use App\Filament\Resources\ModuleLayouts\Hooks\ModuleLayoutHooks;
 use App\Filament\Resources\ModuleLayouts\ModuleLayoutResource;
 use App\Models\ModuleField;
 use App\Models\ModuleLayout;
@@ -11,8 +12,8 @@ use Illuminate\Validation\ValidationException;
 class CreateModuleLayout extends CreateRecord
 {
     protected static string $resource = ModuleLayoutResource::class;
-    
-    public function getTitle(): string 
+
+    public function getTitle(): string
     {
         return 'Create Layout';
     }
@@ -24,7 +25,7 @@ class CreateModuleLayout extends CreateRecord
             layoutType: (string) $data['layout_type'],
         );
 
-        return $data;
+        return app(ModuleLayoutHooks::class)->applyLayoutInheritance($data);
     }
 
     private function ensureLayoutTypeIsUnique(int $moduleId, string $layoutType): void

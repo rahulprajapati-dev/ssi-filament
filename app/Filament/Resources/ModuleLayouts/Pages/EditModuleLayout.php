@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ModuleLayouts\Pages;
 
+use App\Filament\Resources\ModuleLayouts\Hooks\ModuleLayoutHooks;
 use App\Filament\Resources\ModuleLayouts\ModuleLayoutResource;
 use App\Models\ModuleField;
 use App\Models\ModuleLayout;
@@ -13,8 +14,8 @@ use Illuminate\Validation\ValidationException;
 class EditModuleLayout extends EditRecord
 {
     protected static string $resource = ModuleLayoutResource::class;
-    
-    public function getTitle(): string 
+
+    public function getTitle(): string
     {
         return 'Edit Layout';
     }
@@ -35,7 +36,7 @@ class EditModuleLayout extends EditRecord
             ignoreId:   (int) $this->record->id,
         );
 
-        return $data;
+        return app(ModuleLayoutHooks::class)->applyLayoutInheritance($data, $this->record);
     }
 
     private function ensureLayoutTypeIsUnique(int $moduleId, string $layoutType, int $ignoreId): void

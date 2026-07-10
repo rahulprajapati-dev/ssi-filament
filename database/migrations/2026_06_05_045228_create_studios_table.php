@@ -64,6 +64,8 @@ return new class extends Migration
             $table->enum('layout_type', ['create', 'edit', 'detail', 'list']);
             $table->json('layout_json');
             $table->json('filters_json')->nullable();
+            $table->boolean('inherit_edit_layout')->default(false);
+            $table->boolean('inherit_detail_layout')->default(false);
             $table->string('created_by', 36)->nullable();
             $table->string('updated_by', 36)->nullable();
             $table->timestamps();

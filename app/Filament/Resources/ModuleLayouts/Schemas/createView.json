@@ -4,8 +4,35 @@
     "components": [
         {
             "component": "section",
-            "label": "Module & View Type",
-            "description": "Choose which module this layout belongs to and what type of view you are designing.",
+            "label": "Layout Inheritance",
+            "description": "Reuse an existing view layout structure to quickly create this layout. Enable an option to copy the configuration from another view type.",
+            "icon": "heroicon-o-document-duplicate",
+            "columnSpan": "full",
+            "collapsible": false,
+            "compact": true,
+            "columns": 2,
+            "visible_when": { "field": "layout_type", "value": "create" },
+            "schema": [
+                {
+                    "component": "toggle",
+                    "name": "inherit_edit_layout",
+                    "label": "Use Edit View Layout",
+                    "columnSpan": 1,
+                    "hint": "Copy the field structure and layout configuration from the Edit View."
+                },
+                {
+                    "component": "toggle",
+                    "name": "inherit_detail_layout",
+                    "label": "Use Detail View Layout",
+                    "columnSpan": 1,
+                    "hint": "Copy the field structure and layout configuration from the Detail View."
+                }
+            ]
+        },
+        {
+            "component": "section",
+            "label": "Module & View Configuration",
+            "description": "Select the module and define the type of view layout you want to create. Each module can have only one layout configuration per view type.",
             "icon": "heroicon-o-cog-6-tooth",
             "columnSpan": "full",
             "collapsible": false,
@@ -25,6 +52,8 @@
                     "dehydrated": true,
                     "preload": true,
                     "live": true,
+                    "custom_after_state_updated": "\\App\\Filament\\Resources\\ModuleLayouts\\Hooks\\ModuleLayoutHooks@validateUniqueModuleLayout",
+                    "custom_after_state_updated_related": ["layout_type"],
                     "hint": "Select the module this layout belongs to"
                 },
                 {
@@ -38,8 +67,10 @@
                     "helper_params": [
                         "layout_type_dom"
                     ],
+                    "custom_after_state_updated": "\\App\\Filament\\Resources\\ModuleLayouts\\Hooks\\ModuleLayoutHooks@validateUniqueModuleLayout",
+                    "custom_after_state_updated_related": ["module_id"],
                     "required": true,
-                    "reactive":true,
+                    "reactive": true,
                     "hint": "Create / Edit / Detail / List"
                 }
             ]
