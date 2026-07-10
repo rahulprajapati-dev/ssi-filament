@@ -18,7 +18,7 @@ class CommonHelper
     public static function getformatelabel(?string $label = null): array
     {
         return [
-            'singular_label' => Str::studly($label) ?: null,
+            'singular_label' => Str::studly(Str::singular($label)) ?: null,
             'plural_label' => Str::studly(Str::plural($label)) ?: null,
         ];
 
