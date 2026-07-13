@@ -127,6 +127,40 @@
                                     ]
                                 }
                             ]
+                        },
+                        {
+                            "component": "section",
+                            "label": "Relate Configuration",
+                            "collapsible": true,
+                            "compact": true,
+                            "columns": 2,
+                            "visible_when": {
+                                "field": "type",
+                                "operator": "in",
+                                "value": ["relationship"]
+                            },
+                            "schema": [
+                                {
+                                    "component": "select",
+                                    "name": "relate_module",
+                                    "label": "Relate To Module",
+                                    "columnSpan": 1,
+                                    "options_source": "helper",
+                                    "helper_class": "App\\Helpers\\CommonHelper",
+                                    "helper_method": "getModulesForRelate",
+                                    "searchable": true,
+                                    "required": false,
+                                    "placeholder": "Select a module..."
+                                },
+                                {
+                                    "component": "textInput",
+                                    "name": "display_field",
+                                    "label": "Display Field",
+                                    "columnSpan": 1,
+                                    "placeholder": "name",
+                                    "required": false
+                                }
+                            ]
                         }
                     ]
                 },
@@ -161,7 +195,7 @@
                                     "name": "length",
                                     "label": "Length (Max)",
                                     "type": "numeric",
-                                    "max_value": 4,
+                                    "max_value": 9999,
                                     "columnSpan": 1,
                                     "required": false
                                 }

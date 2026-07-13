@@ -202,7 +202,6 @@ final class LayoutGenerator
                             }
                         }
                     }
-                    $modulename= Str::snake($model);
                     $dropdownName = "{$module->fullname}_{$field->field_name}_dom";
                     $component['options_source'] = 'helper';
                     $component['helper_class']   = 'App\\Helpers\\Studio\\DropdownHandler';
@@ -234,15 +233,18 @@ final class LayoutGenerator
                     $component['type'] = 'email';
                 }
 
-                // Relate (cross-module lookup) field
-                if (! $isDetail && $field->type === 'relationship') {
+                // Relate (cross-module lookup) field — always emit config so
+                // detail/list views can resolve the stored ID to a display label.
+                if ($field->type === 'relationship') {
                     $relateConfig = is_array($field->options) ? ($field->options[0] ?? []) : [];
                     $component['options_source'] = 'relate';
                     if (! empty($relateConfig['relate_module'])) {
                         $component['relate_module'] = $relateConfig['relate_module'];
                         $component['display_field'] = $relateConfig['display_field'] ?? 'name';
                     }
-                    $component['searchable'] = true;
+                    if (! $isDetail) {
+                        $component['searchable'] = true;
+                    }
                 }
 
                 // URL validation flag

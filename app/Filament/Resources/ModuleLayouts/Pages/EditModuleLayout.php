@@ -4,6 +4,7 @@ namespace App\Filament\Resources\ModuleLayouts\Pages;
 
 use App\Filament\Resources\ModuleLayouts\Hooks\ModuleLayoutHooks;
 use App\Filament\Resources\ModuleLayouts\ModuleLayoutResource;
+use App\Helpers\Studio\FieldTypeMap;
 use App\Models\ModuleField;
 use App\Models\ModuleLayout;
 use Filament\Actions\DeleteAction;
@@ -54,11 +55,17 @@ class EditModuleLayout extends EditRecord
     }
 
     // Helper used by the form when populating field lists.
-    public function getModuleFields(int $moduleId): array
+    public function getModuleFields(int $moduleId, ?string $layoutType = null): array
     {
-        return ModuleField::where('module_id', $moduleId)
-            ->orderBy('sort_order')
-            ->get(['field_name', 'label'])
+        $layoutType = $layoutType ?? $this->record?->layout_type;
+
+        $query = ModuleField::where('module_id', $moduleId)->orderBy('sort_order');
+
+        if (in_array($layoutType, ['create', 'edit'], true)) {
+            $query->whereNotIn('field_name', FieldTypeMap::SYSTEM_FIELD_NAMES);
+        }
+
+        return $query->get(['field_name', 'label'])
             ->map(fn ($f) => ['field_name' => $f->field_name, 'label' => $f->label ?: $f->field_name])
             ->toArray();
     }

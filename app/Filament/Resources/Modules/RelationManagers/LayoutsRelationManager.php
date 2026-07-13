@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Modules\RelationManagers;
 
 use App\Helpers\JsonStudioFormBuilder;
 use App\Helpers\JsonTableBuilder;
+use App\Helpers\Studio\FieldTypeMap;
 use App\Models\ModuleField;
 use App\Models\ModuleLayout;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -22,9 +23,19 @@ class LayoutsRelationManager extends RelationManager
         $config = json_decode(file_get_contents(__DIR__ . '/layouts_form.json'), true);
 
         $moduleId = $this->getOwnerRecord()->id;
-        $fields   = ModuleField::where('module_id', $moduleId)
-            ->orderBy('sort_order')
-            ->get(['field_name', 'label'])
+
+        // When editing an existing layout, the record's type is known. For create,
+        // type is unknown until the user selects it — include all fields initially;
+        // the blade re-fetches via getModuleFields() when layout_type changes.
+        $layoutType = $this->mountedTableActionRecord?->layout_type;
+
+        $query = ModuleField::where('module_id', $moduleId)->orderBy('sort_order');
+
+        if (in_array($layoutType, ['create', 'edit'], true)) {
+            $query->whereNotIn('field_name', FieldTypeMap::SYSTEM_FIELD_NAMES);
+        }
+
+        $fields = $query->get(['field_name', 'label'])
             ->map(fn ($f) => ['field_name' => $f->field_name, 'label' => $f->label ?: $f->field_name])
             ->toArray();
 
@@ -51,6 +62,20 @@ class LayoutsRelationManager extends RelationManager
             }
         }
         return $components;
+    }
+
+    // Called by the drag-drop blade component via Livewire when layout_type changes.
+    public function getModuleFields(int $moduleId, ?string $layoutType = null): array
+    {
+        $query = ModuleField::where('module_id', $moduleId)->orderBy('sort_order');
+
+        if (in_array($layoutType, ['create', 'edit'], true)) {
+            $query->whereNotIn('field_name', FieldTypeMap::SYSTEM_FIELD_NAMES);
+        }
+
+        return $query->get(['field_name', 'label'])
+            ->map(fn ($f) => ['field_name' => $f->field_name, 'label' => $f->label ?: $f->field_name])
+            ->toArray();
     }
 
     public function table(Table $table): Table
