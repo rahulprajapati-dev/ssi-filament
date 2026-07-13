@@ -29,6 +29,13 @@ final class FieldTypeMap
     ];
 
     /**
+     * Columns that are always added explicitly by the schema builders (SchemaSyncService,
+     * Migration.stub). Module-field rows for these names must be skipped during column
+     * generation to prevent "Duplicate column" errors.
+     */
+    public const SYSTEM_FIELD_NAMES = ['created_by', 'updated_by', 'created_at', 'updated_at'];
+
+    /**
      * Address sub-field suffixes → DB column max length.
      * Each entry becomes one real module_fields row (type='text') and one DB column.
      *

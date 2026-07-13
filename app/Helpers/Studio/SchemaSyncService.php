@@ -119,6 +119,11 @@ final class SchemaSyncService
      */
     public static function addColumn(Blueprint $blueprint, ModuleField $field): void
     {
+        // System columns are always added explicitly by createTable() / the migration stub.
+        if (in_array($field->field_name, FieldTypeMap::SYSTEM_FIELD_NAMES, true)) {
+            return;
+        }
+
         // Address parent is virtual — its sub-fields hold the real DB columns.
         if (FieldTypeMap::isAddressType($field->type)) {
             return;
