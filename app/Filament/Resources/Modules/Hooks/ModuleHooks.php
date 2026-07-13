@@ -9,6 +9,7 @@ use App\Models\ModuleLayout;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class ModuleHooks
 {
@@ -141,16 +142,18 @@ class ModuleHooks
         $pluralName = trim($get('plural_label'));
         $singularName = trim($get('singular_label'));
 
+        $values = array_filter(array_unique(array_map('strtolower', [$name, $singularName, $pluralName])));
+
         $fullnameExists = Module::query()
             ->when($record, fn($q) => $q->where('id', '!=', $record->getKey()))
             ->where(function ($q) use ($key) {
                 $key === '' ? $q->whereNull('key')->orWhere('key', '')
                     : $q->whereRaw('LOWER(`key`) = ?', [strtolower($key)]);
             })
-            ->where(function ($q) use ($name, $singularName, $pluralName) {
-                $q->whereRaw('LOWER(`name`) = ?', [strtolower($name)])
-                    ->orWhereRaw('LOWER(`name`) = ?', [strtolower($singularName)])
-                    ->orWhereRaw('LOWER(`name`) = ?', [strtolower($pluralName)]);
+            ->where(function ($q) use ($values) {
+                $q->whereIn(DB::raw('LOWER(`name`)'), $values)
+                ->orWhereIn(DB::raw('LOWER(`singular_label`)'), $values)
+                ->orWhereIn(DB::raw('LOWER(`plural_label`)'), $values);
             })
             ->exists();
 
