@@ -106,7 +106,7 @@ final class StudioManager
             $module = $this->module;
             $fields = $module->fields;
             foreach ($fields as $field) {
-                if (in_array($field->type, ['select', 'radio', 'checkbox_list'], true)) {
+                if (in_array($field->type, ['select', 'radio', 'checkbox_list', 'checkboxlist'], true)) {
                     $this->step('create_dom', fn() => DropdownHandler::createGroup($module->fullname, $field->field_name, $field->options));
                 }
             }
@@ -156,8 +156,8 @@ final class StudioManager
             $module = $this->module;
             $fields = $module->fields;
             foreach ($fields as $field) {
-                if (in_array($field->type, ['select', 'radio', 'checkbox_list'], true)) {
-                    $group = $module->name . '_' . $field->field_name . '_dom';
+                if (in_array($field->type, ['select', 'radio', 'checkbox_list', 'checkboxlist'], true)) {
+                    $group = $module->fullname . '_' . $field->field_name . '_dom';
                     $options = is_array($field->options) ? $field->options : [];
                     foreach ($options as $option) {
                         if (isset($option['key'], $option['value'])) {
@@ -186,7 +186,7 @@ final class StudioManager
             $module = $this->module;
             $fields = $module->fields;
             foreach ($fields as $field) {
-                if (in_array($field->type, ['select', 'radio', 'checkbox_list'], true)) {
+                if (in_array($field->type, ['select', 'radio', 'checkbox_list', 'checkboxlist'], true)) {
                     $name = $module->fullname . '_' . $field->field_name . '_dom';
                     $this->step('remove_dom', fn() => DropdownHandler::deleteGroup($name));
                 }
