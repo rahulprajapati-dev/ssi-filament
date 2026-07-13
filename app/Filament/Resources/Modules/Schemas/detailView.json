@@ -78,34 +78,6 @@
                     "name": "use_uuid",
                     "label": "Use UUID in URLs",
                     "columnSpan": 1
-                },   
-                {
-                    "component": "toggle",
-                    "name": "is_relationships",
-                    "label": "Add Relationship",
-                    "columnSpan": 1
-                }
-            ]
-        },
-        {
-            "component": "section",
-            "label": "Module Relationships",
-            "icon": "heroicon-o-arrow-path-rounded-square",
-            "columnSpan": "full",
-            "compact": false,
-            "collapsible": true,
-            "visible_when": {
-                "field": "is_relationships",
-                "value": true
-            },
-            "columns": 1,
-            "schema": [
-                {
-                    "component": "placeholder",
-                    "name": "relationships_preview",
-                    "label": null,
-                    "columnSpan": 1,
-                    "content_hook": "App\\Helpers\\Studio\\ModuleRelationshipHelper@renderRelationships"
                 }
             ]
         },
