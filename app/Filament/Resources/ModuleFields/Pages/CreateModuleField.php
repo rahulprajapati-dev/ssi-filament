@@ -23,6 +23,14 @@ class CreateModuleField extends CreateRecord
             fieldName: (string) $data['field_name'],
         );
 
+        if (($data['type'] ?? '') === 'relationship') {
+            $data['options'] = [[
+                'relate_module' => $data['relate_module'] ?? '',
+                'display_field' => $data['display_field'] ?: 'name',
+            ]];
+        }
+        unset($data['relate_module'], $data['display_field']);
+
         return $data;
     }
 

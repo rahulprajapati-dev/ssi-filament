@@ -91,6 +91,16 @@ class CommonHelper
         return Module::orderBy('plural_label')->pluck('plural_label', 'name')->toArray();
     }
 
+    public static function getModulesForRelate(): array
+    {
+        // fullname is a computed attribute (key_name), so we must get() and map.
+        // applyRelateOptions() resolves the model via Str::studly(fullname).
+        return Module::orderBy('plural_label')
+            ->get(['key', 'name', 'plural_label'])
+            ->mapWithKeys(fn ($m) => [$m->fullname => $m->plural_label])
+            ->toArray();
+    }
+
     public static function getModulesOptionsExcluding(?string $selfName = ''): array
     {
         $query = Module::orderBy('plural_label');

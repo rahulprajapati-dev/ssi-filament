@@ -34,6 +34,16 @@ class FieldsRelationManager extends RelationManager
         return JsonTableBuilder::build($table, $config);
     }
 
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        if (($data['type'] ?? '') === 'relationship') {
+            $config = is_array($data['options']) ? ($data['options'][0] ?? []) : [];
+            $data['relate_module'] = $config['relate_module'] ?? '';
+            $data['display_field'] = $config['display_field'] ?? 'name';
+        }
+        return $data;
+    }
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $moduleId = $this->getOwnerRecord()->id;
@@ -47,6 +57,14 @@ class FieldsRelationManager extends RelationManager
         if (empty($data['sort_order'])) {
             $data['sort_order'] = (ModuleField::where('module_id', $moduleId)->max('sort_order') ?? 0) + 1;
         }
+
+        if (($data['type'] ?? '') === 'relationship') {
+            $data['options'] = [[
+                'relate_module' => $data['relate_module'] ?? '',
+                'display_field' => $data['display_field'] ?: 'name',
+            ]];
+        }
+        unset($data['relate_module'], $data['display_field']);
 
         $data['module_id'] = $moduleId;
         return $data;
@@ -66,6 +84,14 @@ class FieldsRelationManager extends RelationManager
                 'data.field_name' => 'A field with this name already exists in this module.',
             ]);
         }
+
+        if (($data['type'] ?? '') === 'relationship') {
+            $data['options'] = [[
+                'relate_module' => $data['relate_module'] ?? '',
+                'display_field' => $data['display_field'] ?: 'name',
+            ]];
+        }
+        unset($data['relate_module'], $data['display_field']);
 
         return $data;
     }

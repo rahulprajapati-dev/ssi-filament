@@ -26,6 +26,16 @@ class EditModuleField extends EditRecord
         ];
     }
 
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        if (($data['type'] ?? '') === 'relationship') {
+            $config = is_array($data['options']) ? ($data['options'][0] ?? []) : [];
+            $data['relate_module'] = $config['relate_module'] ?? '';
+            $data['display_field'] = $config['display_field'] ?? 'name';
+        }
+        return $data;
+    }
+
     protected function mutateFormDataBeforeSave(array $data): array
     {
         $this->ensureFieldNameIsUnique(
@@ -33,6 +43,14 @@ class EditModuleField extends EditRecord
             fieldName: (string) $data['field_name'],
             ignoreId:  (int) $this->record->id,
         );
+
+        if (($data['type'] ?? '') === 'relationship') {
+            $data['options'] = [[
+                'relate_module' => $data['relate_module'] ?? '',
+                'display_field' => $data['display_field'] ?: 'name',
+            ]];
+        }
+        unset($data['relate_module'], $data['display_field']);
 
         return $data;
     }
