@@ -97,6 +97,15 @@
                                     "columnSpan": 1,
                                     "columns": 2,
                                     "schema": [
+					                    {
+                                            "component": "textEntry",
+                                            "name": "default",
+                                            "label": "Default",
+                                            "columnSpan": 1,
+                                            "size": "sm",
+                                            "weight": "semibold",
+                                            "color": "gray"
+                                        },
                                         {
                                             "component": "textEntry",
                                             "name": "key",
@@ -122,7 +131,7 @@
                     ]
                 },
                 {
-                    "label": "Validation",
+                    "label": "Properties",
                     "schema": [
                         {
                             "component": "section",
@@ -141,6 +150,16 @@
                                     "name": "unique_field",
                                     "label": "Unique Field",
                                     "columnSpan": 1
+                                },
+                                {
+                                    "component": "textEntry",
+                                    "name": "default_value",
+                                    "label": "Default Value",
+                                    "columnSpan": 1,
+				                    "size": "md",
+                                    "weight": "bold",
+                                    "suffix": " chars",
+                                    "color": "warning"
                                 },
                                 {
                                     "component": "textEntry",
@@ -270,13 +289,13 @@
                                 {
                                     "component": "toggle",
                                     "name": "searchable",
-                                    "label": "Searchable",
+                                    "label": "Searchable Field",
                                     "columnSpan": 1
                                 },
                                 {
                                     "component": "toggle",
                                     "name": "sortable",
-                                    "label": "Sortable",
+                                    "label": "Sortable Field",
                                     "columnSpan": 1
                                 }
                             ]

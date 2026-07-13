@@ -78,13 +78,6 @@
                                     "required": true
                                 },
                                 {
-                                    "component": "textInput",
-                                    "name": "default_value",
-                                    "label": "Default Value",
-                                    "columnSpan": 1,
-                                    "required": false
-                                },
-                                {
                                     "component": "toggle",
                                     "name": "is_multiple",
                                     "label": "Allow Multiple",
@@ -125,7 +118,7 @@
                                     "columns": 3,
                                     "schema": [
                                         {
-                                            "component": "toggle",
+                                            "component": "checkbox",
                                             "name": "default",
                                             "label": "Default",
                                             "columnSpan": 1
@@ -151,7 +144,7 @@
                     ]
                 },
                 {
-                    "label": "Validation",
+                    "label": "Properties",
                     "schema": [
                         {
                             "component": "grid",
@@ -216,11 +209,12 @@
                                     "name": "condition_logic",
                                     "label": "Condition Logic",
                                     "columnSpan": 1,
-                                    "options_source": "static",
-                                    "options": {
-                                        "and": "All conditions must be met (AND)",
-                                        "or": "Any condition must be met (OR)"
-                                    },
+                                    "options_source": "helper",
+                                    "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
+                                    "helper_method": "get",
+                                    "helper_params": [
+                                        "condition_logic_dom"
+                                    ],
                                     "required": true,
                                     "default": "and",
                                     "visible_when": {
@@ -275,6 +269,7 @@
                                             ],
                                             "required": true,
                                             "reactive": true,
+                                            "searchable": true,
                                             "after_state_updated": "App\\Helpers\\CommonHelper@updateConditionFieldType",
                                             "clear_on_update": [
                                                 "operator",
@@ -309,7 +304,7 @@
                                             "visible_when": {
                                                 "field": "field_type",
                                                 "operator": "!=",
-                                                "value": "dropdown"
+                                                "value": "select"
                                             }
                                         },
                                         {
@@ -333,7 +328,7 @@
                                                     {
                                                         "field": "field_type",
                                                         "operator": "=",
-                                                        "value": "dropdown"
+                                                        "value": "select"
                                                     },
                                                     {
                                                         "field": "operator",
@@ -367,7 +362,7 @@
                                                     {
                                                         "field": "field_type",
                                                         "operator": "=",
-                                                        "value": "dropdown"
+                                                        "value": "select"
                                                     },
                                                     {
                                                         "field": "operator",
