@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ModuleFields\Pages;
 
 use App\Filament\Resources\ModuleFields\ModuleFieldResource;
+use App\Helpers\Studio\FieldTypeMap;
 use App\Models\ModuleField;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
@@ -38,6 +39,12 @@ class EditModuleField extends EditRecord
 
     private function ensureFieldNameIsUnique(int $moduleId, string $fieldName, int $ignoreId): void
     {
+        if (in_array(strtolower($fieldName), FieldTypeMap::SYSTEM_FIELD_NAMES, true)) {
+            throw ValidationException::withMessages([
+                'data.field_name' => "\"{$fieldName}\" is a reserved system field and cannot be added manually.",
+            ]);
+        }
+
         $exists = ModuleField::where('module_id', $moduleId)
             ->whereRaw('LOWER(field_name) = ?', [strtolower($fieldName)])
             ->where('id', '!=', $ignoreId)
