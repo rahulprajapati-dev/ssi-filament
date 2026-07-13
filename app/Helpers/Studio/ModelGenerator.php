@@ -22,7 +22,7 @@ final class ModelGenerator
     {
         $name  = (string) $module->fullname;
         $model = Str::studly($name);
-        $table =strtolower($module->fullname);
+        $table =strtolower($module->table);
         $path  = app_path("Models/{$model}.php");
 
         if (File::exists($path)) {

@@ -71,5 +71,9 @@ class Module extends Model
             : $this->plural_label
         );
     }
+    protected function table(): Attribute
+    {
+        return Attribute::make(get: fn () => ( implode('_', array_filter([ $this->key,$this->plural_label,]))));
+    }
     
 }

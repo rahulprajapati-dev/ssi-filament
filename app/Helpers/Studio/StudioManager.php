@@ -277,7 +277,7 @@ final class StudioManager
 
     private function dropTable(): bool
     {
-        $table = Str::snake(Str::plural($this->module->name));
+        $table = strtolower($this->module->table);
         if (!Schema::hasTable($table)) {
             return false;
         }
