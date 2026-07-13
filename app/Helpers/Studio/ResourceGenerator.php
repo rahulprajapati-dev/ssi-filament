@@ -36,7 +36,8 @@ final class ResourceGenerator
             'MODEL'             => $model,
             'MODEL_LOWER'       => Str::lower($module->name),
             'RESOURCE'          => $resource,
-            'RESOURCE_SINGULAR' => Str::singular($resource),
+            'RESOURCE_SINGULAR' => trim( ($module->key ? $module->key . ' ' : '') . Str::headline(Str::singular($module->name))),
+            'RESOURCE_PLURAL' => trim(($module->key ? $module->key . ' ' : '') . Str::headline(Str::plural($module->name))),
             'ICON'              => $icon,
         ];
 

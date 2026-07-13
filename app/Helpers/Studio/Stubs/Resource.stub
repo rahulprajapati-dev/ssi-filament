@@ -15,6 +15,10 @@ class {{MODEL}}Resource extends Resource
 {
     protected static ?string $model = {{MODEL}}::class;
 
+    protected static ?string $modelLabel = '{{RESOURCE_SINGULAR}}';
+
+    protected static ?string $pluralModelLabel = '{{RESOURCE_PLURAL}}';
+
     protected static string|\BackedEnum|null $navigationIcon = '{{ICON}}';
 
     public static function form(Schema $schema): Schema
