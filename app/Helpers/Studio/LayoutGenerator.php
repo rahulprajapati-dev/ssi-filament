@@ -190,7 +190,7 @@ final class LayoutGenerator
                 }
 
                 // Attach static options for select/radio/checkboxList fields
-                if (! $isDetail && in_array($field->type, ['select', 'dropdown', 'enum', 'radio', 'checkboxList', 'checkbox_list', 'relationship'], true)) {
+                if (! $isDetail && in_array($field->type, ['select', 'dropdown', 'enum', 'radio', 'checkboxList', 'checkbox_list'], true)) {
                     
                     $default = null;
 
@@ -232,6 +232,29 @@ final class LayoutGenerator
                 }
                 if ($field->type == 'email') {
                     $component['type'] = 'email';
+                }
+
+                // Relate (cross-module lookup) field
+                if (! $isDetail && $field->type === 'relationship') {
+                    $relateConfig = is_array($field->options) ? ($field->options[0] ?? []) : [];
+                    $component['options_source'] = 'relate';
+                    if (! empty($relateConfig['relate_module'])) {
+                        $component['relate_module'] = $relateConfig['relate_module'];
+                        $component['display_field'] = $relateConfig['display_field'] ?? 'name';
+                    }
+                    $component['searchable'] = true;
+                }
+
+                // URL validation flag
+                if ($field->type === 'url') {
+                    $component['type'] = 'url';
+                }
+
+                // Numeric input constraints
+                if (in_array($field->type, ['money', 'currency'], true)) {
+                    $component['money'] = true;
+                } elseif (in_array($field->type, ['decimal', 'float', 'integer', 'number', 'int', 'biginteger', 'bigint'], true)) {
+                    $component['numeric'] = true;
                 }
 
                 // Add visibility configuration for fields with visibility settings
