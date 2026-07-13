@@ -161,7 +161,7 @@
                                     "name": "length",
                                     "label": "Length (Max)",
                                     "type": "numeric",
-                                    "max_value": 4,
+                                    "max_value": 9999,
                                     "columnSpan": 1,
                                     "required": false
                                 }
