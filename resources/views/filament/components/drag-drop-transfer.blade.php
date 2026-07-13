@@ -34,8 +34,12 @@
                 this.isListView = (innerType === 'list');
             });
 
-            this.$watch('$wire.data.layout_type', (newType) => {
+            this.$watch('$wire.data.layout_type', async (newType) => {
                 this.isListView = (newType === 'list');
+                if (this.source === 'module_fields') {
+                    let mid = this.$wire.data?.[this.dependsOn] || this.ownerModuleId || null;
+                    if (mid) await this.syncFromModuleId(mid, true);
+                }
             });
 
             if (this.source === 'module_fields') {
@@ -81,17 +85,18 @@
             }
         },
 
-        async syncFromModuleId(moduleId) {
+        async syncFromModuleId(moduleId, forceWire = false) {
             if (!moduleId) {
                 this.available = [];
                 return;
             }
             try {
                 let allFields;
-                if (this.ownerModuleFields !== null && String(moduleId) === String(this.ownerModuleId)) {
+                const layoutType = this.$wire.data?.layout_type || null;
+                if (!forceWire && this.ownerModuleFields !== null && String(moduleId) === String(this.ownerModuleId)) {
                     allFields = this.ownerModuleFields;
                 } else {
-                    allFields = await this.$wire.call('getModuleFields', parseInt(moduleId));
+                    allFields = await this.$wire.call('getModuleFields', parseInt(moduleId), layoutType);
                 }
 
                 // Build label map — allFields may be string[] (legacy) or {field_name,label}[]
