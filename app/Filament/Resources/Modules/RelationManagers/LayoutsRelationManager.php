@@ -35,6 +35,10 @@ class LayoutsRelationManager extends RelationManager
     private function injectOwnerData(array $components, int $moduleId, array $fields): array
     {
         foreach ($components as &$item) {
+            if (($item['name'] ?? null) === 'module_id') {
+                $item['default'] = $moduleId;
+                $item['value'] = $moduleId;
+            }
             if (($item['component'] ?? null) === 'dragDrop') {
                 $item['owner_module_id']     = $moduleId;
                 $item['owner_module_fields'] = $fields;

@@ -4,8 +4,8 @@
     "components": [
         {
             "component": "section",
-            "label": "Module & View Type",
-            "description": "Choose which module this layout belongs to and what type of view you are designing.",
+            "label": "Module & View Configuration",
+            "description": "Select the module and define the type of view layout you want to create. Each module can have only one layout configuration per view type.",
             "icon": "heroicon-o-cog-6-tooth",
             "columnSpan": "full",
             "collapsible": false,
@@ -25,7 +25,10 @@
                     "dehydrated": true,
                     "preload": true,
                     "live": true,
-                    "hidden": true
+                    "hidden": true,
+                    "custom_after_state_updated": "\\App\\Filament\\Resources\\ModuleLayouts\\Hooks\\ModuleLayoutHooks@validateUniqueModuleLayout",
+                    "custom_after_state_updated_related": ["layout_type"],
+                    "hint": "Select the module this layout belongs to"
                 },
                 {
                     "component": "select",
@@ -38,8 +41,11 @@
                     "helper_params": [
                         "layout_type_dom"
                     ],
-                    "reactive":true,
-                    "required": true
+                    "custom_after_state_updated": "\\App\\Filament\\Resources\\ModuleLayouts\\Hooks\\ModuleLayoutHooks@validateUniqueModuleLayout",
+                    "custom_after_state_updated_related": ["module_id"],
+                    "required": true,
+                    "reactive": true,
+                    "hint": "Create / Edit / Detail / List"
                 }
             ]
         },
