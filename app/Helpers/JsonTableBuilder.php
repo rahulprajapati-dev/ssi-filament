@@ -197,7 +197,14 @@ class JsonTableBuilder
 
                 // apply other options
                 if (! empty($c['sortable'])) {
-                    $col->sortable();
+                    $fields = (array) ($c['sortable_field'] ?? []);
+                    $col->sortable(query: empty($fields) ? null :
+                        function ($query, $direction) use ($fields) {
+                            foreach ($fields as $field) {
+                                $query->orderBy($field, $direction);
+                            }
+                        }
+                    );
                 }
                 if (isset($c['rupee']) && $c['rupee']) {
                     $col->prefix('₹')
@@ -263,7 +270,21 @@ class JsonTableBuilder
                 // apply searchable with individual option where supported
                 if ($isSearchable) {
                     try {
-                        if (!empty($c['dropdown'])) {
+                        if (! empty($c['searchable_fields'])) {
+                             $searchFields = (array) $c['searchable_fields'];
+                             $col->searchable(
+                                isIndividual: (bool) $isIndividual,
+                                query: function ($query, $search) use ($searchFields) {
+                                    $query->where(function ($q) use ($searchFields, $search) {
+                                        foreach ($searchFields as $field) {
+                                            $q->orWhere( $field, 'like', "%{$search}%");
+                                            }
+                                        });
+                                        return $query;
+                                }
+                            );
+                        }
+                        elseif  (!empty($c['dropdown'])) {
                             $dropdownType = $c['dropdown'];
                             $col->searchable(isIndividual: (bool) $isIndividual, query: function ($query, $search) use ($name, $dropdownType) {
                                 $options = DropdownHandler::get($dropdownType);
@@ -300,7 +321,14 @@ class JsonTableBuilder
 
             'badge' => tap(TextColumn::make($name)->label($label ?? Str::headline($name))->badge(), function ($col) use ($c, $name) {
                 if (! empty($c['sortable'])) {
-                    $col->sortable();
+                    $fields = (array) ($c['sortable_field'] ?? []);
+                    $col->sortable(query: empty($fields) ? null :
+                        function ($query, $direction) use ($fields) {
+                            foreach ($fields as $field) {
+                                $query->orderBy($field, $direction);
+                            }
+                        }
+                    );
                 }
                 $isSearchable = false;
                 $isIndividual = false;
@@ -333,7 +361,22 @@ class JsonTableBuilder
                 // apply searchable with individual option where supported
                 if ($isSearchable) {
                     try {
-                        if (!empty($c['dropdown'])) {
+                        if (! empty($c['searchable_fields'])) {
+                             $searchFields = (array) $c['searchable_fields'];
+                            
+                             $col->searchable(
+                                isIndividual: (bool) $isIndividual,
+                                query: function ($query, $search) use ($searchFields) {
+                                    $query->where(function ($q) use ($searchFields, $search) {
+                                        foreach ($searchFields as $field) {
+                                            return $q->orWhere( $field, 'like', "%{$search}%");
+                                            }
+                                        });
+                                        return $query;
+                                }
+                            );
+                        }
+                        elseif  (!empty($c['dropdown'])) {
                             $dropdownType = $c['dropdown'];
                             $col->searchable(isIndividual: (bool) $isIndividual, query: function ($query, $search) use ($name, $dropdownType) {
                                 $options = getDropdownValue($dropdownType);

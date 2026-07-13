@@ -63,4 +63,13 @@ class Module extends Model
             get: fn () => implode('_', array_filter([$this->key, $this->name,])),
         );
     }
+    protected function fullnamelable(): Attribute
+    {
+         return Attribute::make(
+        get: fn () => filled($this->key)
+            ? Str::studly($this->key) . ' ' . $this->plural_label
+            : $this->plural_label
+        );
+    }
+    
 }
