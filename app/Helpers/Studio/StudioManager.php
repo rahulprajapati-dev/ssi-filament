@@ -7,6 +7,7 @@ namespace App\Helpers\Studio;
 use App\Helpers\Studio\DropdownHandler;
 use App\Helpers\Studio\SchemaSyncService;
 use App\Models\Module;
+use App\Models\ModuleField;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -130,6 +131,20 @@ final class StudioManager
             // the goal is to bring the table in sync instantly, not re-run migrations.
             $this->step('schema_sync', function () {
                 SchemaSyncService::sync($this->module);
+                return true;
+            });
+
+            // Ensure system fields (created_by, updated_by, created_at, updated_at) exist.
+            $this->step('system_fields', function () {
+                ModuleField::seedSystemFields($this->module);
+                return true;
+            });
+
+            // Ensure address sub-fields exist for any address-type fields.
+            $this->step('address_sub_fields', function () {
+                $this->module->fields()
+                    ->where('type', 'address')
+                    ->each(fn ($f) => ModuleField::seedAddressSubFields($f));
                 return true;
             });
 

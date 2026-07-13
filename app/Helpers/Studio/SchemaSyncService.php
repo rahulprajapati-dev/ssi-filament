@@ -119,6 +119,11 @@ final class SchemaSyncService
      */
     public static function addColumn(Blueprint $blueprint, ModuleField $field): void
     {
+        // Address parent is virtual — its sub-fields hold the real DB columns.
+        if (FieldTypeMap::isAddressType($field->type)) {
+            return;
+        }
+
         $name   = $field->field_name;
         $isBool = FieldTypeMap::isBooleanType($field->type);
 

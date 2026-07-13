@@ -77,6 +77,11 @@ final class MigrationGenerator
 
         return $fields->map(function (ModuleField $field) {
 
+            // Address parent is virtual — skip it.
+            if ($field->type === 'address') {
+                return '';
+            }
+
             $name = $field->field_name;
             $pad  = self::INDENT;
 
@@ -84,7 +89,7 @@ final class MigrationGenerator
                 . "\n{$pad}    " . self::columnLineRaw($field)
                 . "\n{$pad}}";
 
-        })->implode("\n") . "\n";
+        })->filter()->implode("\n") . "\n";
     }
 
     private static function columnLineRaw(ModuleField $field): string
@@ -92,6 +97,11 @@ final class MigrationGenerator
         $name   = $field->field_name;
         $null   = $field->required ? '' : '->nullable()';
         $unique = $field->unique_field ? '->unique()' : '';
+
+        // Address parent is virtual — no own column.
+        if ($field->type === 'address') {
+            return '';
+        }
 
         // Multi-value fields store arrays → json column
         if (! empty($field->is_multiple) && in_array($field->type, ['select', 'dropdown', 'enum', 'file', 'image', 'fileupload'], true)) {
@@ -157,6 +167,11 @@ final class MigrationGenerator
         $null   = $field->required   ? ''         : '->nullable()';
         $unique = $field->unique_field ? '->unique()' : '';
         $pad    = self::INDENT;
+
+        // Address parent is virtual — its sub-fields hold the real DB columns.
+        if ($field->type === 'address') {
+            return '';
+        }
 
         // Multi-value fields store arrays → json column
         if (! empty($field->is_multiple) && in_array($field->type, ['select', 'dropdown', 'enum', 'file', 'image', 'fileupload'], true)) {
