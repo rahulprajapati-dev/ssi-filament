@@ -75,7 +75,7 @@ final class LayoutGenerator
 
             $content = $layout->layout_type === 'list'
                 ? self::buildListJson($model, $resource, $fieldNames, $fieldMap, $layout->filters_json ?? [])
-                : self::buildFormJson($model, $layout->layout_type, $sections, $fieldMap);
+                : self::buildFormJson( $module, $model, $layout->layout_type, $sections, $fieldMap);
 
             File::ensureDirectoryExists(dirname($filePath));
             File::put($filePath, json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -127,7 +127,7 @@ final class LayoutGenerator
      * @param  array<int, array{title: string, columns: int, fields: string[]}>  $sections
      * @param  Collection<string, ModuleField>  $fieldMap
      */
-    private static function buildFormJson(
+    private static function buildFormJson(module $module,
         string $model,
         string $layoutType,
         array $sections,
@@ -203,7 +203,7 @@ final class LayoutGenerator
                         }
                     }
                     $modulename= Str::snake($model);
-                    $dropdownName = "{$modulename}_{$field->field_name}_dom";
+                    $dropdownName = "{$module->fullname}_{$field->field_name}_dom";
                     $component['options_source'] = 'helper';
                     $component['helper_class']   = 'App\\Helpers\\Studio\\DropdownHandler';
                     $component['helper_method']  = 'get';
