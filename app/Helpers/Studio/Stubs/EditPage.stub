@@ -12,7 +12,7 @@ class Edit{{MODEL}} extends EditRecord
 
     public function getTitle(): string 
     {
-        return 'Edit {{MODEL}}';
+        return 'Edit {{RESOURCE_SINGULAR}}';
     }
 
     protected function getHeaderActions(): array

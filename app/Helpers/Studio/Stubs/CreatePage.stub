@@ -11,6 +11,6 @@ class Create{{MODEL}} extends CreateRecord
 
     public function getTitle(): string 
     {
-        return 'Create {{MODEL}}';
+        return 'Create {{RESOURCE_SINGULAR}}';
     }
 }
