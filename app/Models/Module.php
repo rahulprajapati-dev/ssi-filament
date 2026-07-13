@@ -56,14 +56,11 @@ class Module extends Model
     {
         return $this->hasMany(ModuleLayout::class);
     }
+
     protected function fullname(): Attribute
     {
         return Attribute::make(
-            get: function () {
-                $key = trim($this->key ?? '');
-                $name = trim($this->name ?? '');
-                return !empty($key) ? $key . '_' . $name : $name;
-            }
+            get: fn () => implode('_', array_filter([$this->key, $this->name,])),
         );
     }
 }
