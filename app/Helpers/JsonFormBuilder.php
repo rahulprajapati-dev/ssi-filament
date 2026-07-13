@@ -889,9 +889,7 @@ class JsonFormBuilder
             });
         }
 
-        if (! empty($item['options'])) {
-            $field->options($item['options']);
-        }
+        $field->options(self::resolveStaticOptions($item));
 
         return self::applyCommonFieldOptions($field, $item);
     }
@@ -968,14 +966,7 @@ class JsonFormBuilder
             $field->validationMessages($item['messages']);
         }
 
-        // options
-        if (empty($item['options'])) {
-            $field->options([]);
-
-            return self::applyCommonFieldOptions($field, $item);
-        } else {
-            $field->options($item['options']);
-        }
+        $field->options(self::resolveStaticOptions($item));
         if (! empty($item['clear_on_update']) && is_array($item['clear_on_update'])) {
             $targets = $item['clear_on_update'];
 
@@ -1179,6 +1170,23 @@ class JsonFormBuilder
 
             return $query->pluck($labelColumn, $valueColumn)->toArray();
         });
+    }
+
+    // Resolves options for non-Select components (Radio, CheckboxList) that
+    // support options_source: 'helper' but can't use applyHelperOptions() directly.
+    protected static function resolveStaticOptions(array $item): array
+    {
+        if (($item['options_source'] ?? 'static') === 'helper') {
+            $class  = $item['helper_class'] ?? null;
+            $method = $item['helper_method'] ?? null;
+            $params = $item['helper_params'] ?? [];
+            if ($class && $method && class_exists($class) && method_exists($class, $method)) {
+                $opts = $class::$method(...$params);
+                return is_array($opts) ? $opts : [];
+            }
+            return [];
+        }
+        return is_array($item['options'] ?? null) ? $item['options'] : [];
     }
 
     protected static function applyHelperOptions(Forms\Components\Select $field, array $item): void
