@@ -58,7 +58,8 @@ class EditModuleLayout extends EditRecord
     {
         return ModuleField::where('module_id', $moduleId)
             ->orderBy('sort_order')
-            ->pluck('field_name')
+            ->get(['field_name', 'label'])
+            ->map(fn ($f) => ['field_name' => $f->field_name, 'label' => $f->label ?: $f->field_name])
             ->toArray();
     }
 }
