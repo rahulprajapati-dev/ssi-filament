@@ -7,6 +7,7 @@ namespace App\Helpers\Studio;
 use App\Models\Module;
 use App\Models\ModuleField;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use App\Helpers\Studio\FieldTypeMap;
 
@@ -39,10 +40,18 @@ final class MigrationGenerator
         $table = strtolower($module->fullname);
 
 
-        // Idempotency: if any migration for this table already exists, skip.
         $existing = glob(database_path("migrations/*_create_{$table}_table.php"));
+
         if (! empty($existing)) {
-            return false;
+            // If the table already exists the migration has been applied — don't touch it.
+            if (Schema::hasTable($table)) {
+                return false;
+            }
+            // Table doesn't exist yet: the old migration file is stale (e.g. a failed
+            // previous deploy). Safe to delete and regenerate with current field definitions.
+            foreach ($existing as $file) {
+                File::delete($file);
+            }
         }
 
         $createColumns = self::buildColumnBlock($module);
@@ -77,6 +86,11 @@ final class MigrationGenerator
 
         return $fields->map(function (ModuleField $field) {
 
+            // System columns are handled explicitly by the stub — skip to avoid duplicates.
+            if (in_array($field->field_name, FieldTypeMap::SYSTEM_FIELD_NAMES, true)) {
+                return '';
+            }
+
             // Address parent is virtual — skip it.
             if ($field->type === 'address') {
                 return '';
@@ -97,6 +111,11 @@ final class MigrationGenerator
         $name   = $field->field_name;
         $null   = $field->required ? '' : '->nullable()';
         $unique = $field->unique_field ? '->unique()' : '';
+
+        // System columns are handled explicitly by the stub — skip to avoid duplicates.
+        if (in_array($name, FieldTypeMap::SYSTEM_FIELD_NAMES, true)) {
+            return '';
+        }
 
         // Address parent is virtual — no own column.
         if ($field->type === 'address') {
@@ -169,6 +188,11 @@ final class MigrationGenerator
         $null   = $field->required   ? ''         : '->nullable()';
         $unique = $field->unique_field ? '->unique()' : '';
         $pad    = self::INDENT;
+
+        // System columns are added explicitly by the stub — skip to avoid duplicates.
+        if (in_array($name, FieldTypeMap::SYSTEM_FIELD_NAMES, true)) {
+            return '';
+        }
 
         // Address parent is virtual — its sub-fields hold the real DB columns.
         if ($field->type === 'address') {

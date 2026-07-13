@@ -17,16 +17,18 @@
                     "name": "key",
                     "label": "Key",
                     "columnSpan": 1,
+                    "required": true,
                     "validate_on_blur": true,
                     "validation": [
-                        "max:4",
-                        "string",
-                        "regex:/^[a-zA-Z]*$/"
+                        "required",
+                        "regex:/^[a-zA-Z]+$/",
+                        "max:4"
                     ],
                     "strict_messages": true,
                     "messages": {
-                        "max": "Key must not exceed 4 characters.",
-                        "regex": "Key can contain only letters. Example: crm, Api, SSI."
+                        "required": "Key is required.",
+                        "regex": "Key must contain letters only — no spaces, numbers, or symbols. Example: crm, SSI.",
+                        "max": "Key must not exceed 4 characters."
                     },
                     "after_state_updated": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@revalidateNameOnKeyChange"
                 },
@@ -57,7 +59,7 @@
                     "strict_messages": true,
                     "messages": {
                         "max": "Module name must not exceed 50 characters.",
-                        "regex": "Module name must start with a letter and can contain only letters, numbers, and underscores. Example: CustomerOrder or customer_order."
+                        "regex": "Module name must start with a letter and contain only letters, numbers, and underscores — no spaces allowed. Example: CustomerOrder or customer_order."
                     },
                     "custom_rule":  "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@ValidateModuleName" 
                 },
