@@ -3,6 +3,7 @@
      data-owner-module-fields="{{ json_encode($ownerModuleFields ?? null) }}"
      x-data="{
         available: [],
+        fieldLabels: {},
         selected: @entangle($getStatePath()) ?? [],
         searchQuery: '',
         isDraggingOverAvailable: false,
@@ -93,6 +94,17 @@
                     allFields = await this.$wire.call('getModuleFields', parseInt(moduleId));
                 }
 
+                // Build label map — allFields may be string[] (legacy) or {field_name,label}[]
+                const labels = {};
+                const names = (allFields || []).map(f => {
+                    if (typeof f === 'object' && f.field_name) {
+                        labels[f.field_name] = f.label || f.field_name;
+                        return f.field_name;
+                    }
+                    return f;
+                });
+                this.fieldLabels = Object.assign({}, this.fieldLabels, labels);
+
                 // Collect all currently selected fields in all sections
                 const selectedFieldsSet = new Set();
                 this.selected.forEach(sec => {
@@ -101,7 +113,7 @@
                     }
                 });
 
-                this.available = (allFields || []).filter(f => !selectedFieldsSet.has(f));
+                this.available = names.filter(f => !selectedFieldsSet.has(f));
             } catch (e) {
                 this.available = [];
             }
@@ -115,9 +127,15 @@
                 return;
             }
 
+            // Build label map from repeater item data
+            const labels = {};
             const allFields = repeaterItems
-                .map(item => item.field_name)
-                .filter(Boolean);
+                .filter(item => item.field_name)
+                .map(item => {
+                    labels[item.field_name] = item.label || item.field_name;
+                    return item.field_name;
+                });
+            this.fieldLabels = Object.assign({}, this.fieldLabels, labels);
 
             const selectedFieldsSet = new Set();
             this.selected.forEach(sec => {
@@ -132,7 +150,10 @@
         get filteredAvailable() {
             if (!this.searchQuery) return this.available;
             const query = this.searchQuery.toLowerCase();
-            return this.available.filter(item => item.toLowerCase().includes(query));
+            return this.available.filter(item => {
+                const label = this.fieldLabels[item] || item;
+                return label.toLowerCase().includes(query) || item.toLowerCase().includes(query);
+            });
         },
 
         addSection() {
@@ -401,7 +422,7 @@
                                 <svg style="width:14px;height:14px;color:#9ca3af;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                                 </svg>
-                                <span style="font-size:12px; font-weight:500; color:#374151; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" x-text="item"></span>
+                                <span style="font-size:12px; font-weight:500; color:#374151; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" x-text="fieldLabels[item] || item"></span>
                             </div>
                             <button type="button"
                                     @click.stop="moveToSection(item, 0)"
@@ -489,7 +510,7 @@
                                         <svg style="width: 14px; height: 14px; color: #d97706; flex-shrink: 0;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                                         </svg>
-                                        <span style="font-size: 11px; font-weight: 600; color: #451a03; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" x-text="item"></span>
+                                        <span style="font-size: 11px; font-weight: 600; color: #451a03; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" x-text="fieldLabels[item] || item"></span>
                                     </div>
                                     <button type="button" @click="moveToAvailable(item, secIdx)"
                                             style="padding: 2px; border: none; background: transparent; cursor: pointer; color: #ef4444;">
@@ -528,7 +549,7 @@
                                 <svg style="width: 14px; height: 14px; color: #d97706; flex-shrink: 0;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                                 </svg>
-                                <span style="font-size: 11px; font-weight: 600; color: #451a03; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" x-text="item"></span>
+                                <span style="font-size: 11px; font-weight: 600; color: #451a03; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" x-text="fieldLabels[item] || item"></span>
                             </div>
                             <button type="button" @click="moveToAvailable(item, 0)"
                                     style="padding: 2px; border: none; background: transparent; cursor: pointer; color: #ef4444;">
@@ -582,7 +603,7 @@
                              <thead>
                                  <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
                                      <template x-for="field in (selected[0] ? selected[0].fields : [])" :key="field">
-                                         <th style="padding: 10px 14px; font-weight: 600; color: #475569;" x-text="field.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())"></th>
+                                         <th style="padding: 10px 14px; font-weight: 600; color: #475569;" x-text="fieldLabels[field] || field.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())"></th>
                                      </template>
                                  </tr>
                              </thead>
@@ -622,7 +643,7 @@
                                             
                                             {{-- Mock Label --}}
                                             <label style="font-size: 11px; font-weight: 600; color: #475569; display: flex; align-items: center; gap: 3px;">
-                                                <span x-text="field.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())"></span>
+                                                <span x-text="fieldLabels[field] || field.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())"></span>
                                                 <span x-show="field.toLowerCase().includes('id') || field.toLowerCase().includes('name')" style="color: #ef4444;">*</span>
                                             </label>
         
@@ -657,7 +678,7 @@
                                                 {{-- Normal Input field --}}
                                                 <template x-if="!(field.toLowerCase().includes('is_') || field.toLowerCase().includes('active') || field.toLowerCase().includes('status') || field.toLowerCase().includes('enable')) && !(field.toLowerCase().includes('_id') || field.toLowerCase().includes('type') || field.toLowerCase().includes('category') || field.toLowerCase().includes('gender') || field.toLowerCase().includes('mode')) && !(field.toLowerCase().includes('desc') || field.toLowerCase().includes('note') || field.toLowerCase().includes('about') || field.toLowerCase().includes('address') || field.toLowerCase().includes('json') || field.toLowerCase().includes('custom_'))">
                                                     <div style="border: 1px solid #cbd5e1; border-radius: 8px; height: 32px; padding: 6px 10px; background: #fff; font-size: 11px; color: #cbd5e1; display: flex; align-items: center; box-sizing: border-box;">
-                                                        <span x-text="'Enter ' + field.replace(/_/g, ' ') + '...'"></span>
+                                                        <span x-text="'Enter ' + (fieldLabels[field] || field.replace(/_/g, ' ')) + '...'"></span>
                                                     </div>
                                                 </template>
                                             </div>

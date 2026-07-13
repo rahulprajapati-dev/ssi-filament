@@ -29,7 +29,27 @@ final class FieldTypeMap
         'file', 'image', 'fileupload', 'color', 'tags',
     ];
 
+    /**
+     * Address sub-field suffixes → DB column max length.
+     * Each entry becomes one real module_fields row (type='text') and one DB column.
+     *
+     * @var array<string, int>
+     */
+    public const ADDRESS_SUB_FIELDS = [
+        '_street1' => 150,
+        '_street2' => 150,
+        '_city'    => 50,
+        '_state'   => 50,
+        '_pincode' => 20,
+    ];
+
     // ── Type predicates ───────────────────────────────────────────────────────
+
+    /** Returns true for the parent 'address' field type (virtual — no own DB column). */
+    public static function isAddressType(string $type): bool
+    {
+        return strtolower($type) === 'address';
+    }
 
     public static function isBooleanType(string $type): bool
     {
@@ -111,6 +131,7 @@ final class FieldTypeMap
             'checkboxlist', 'checkbox_list'    => 'checkboxList',
             'fileupload', 'file', 'image'      => 'fileUpload',
             'json', 'array', 'repeater'        => 'textarea',
+            'address'                          => 'address',
             default                            => 'textInput',
         };
     }
@@ -121,6 +142,7 @@ final class FieldTypeMap
         return match (strtolower($type)) {
             'boolean', 'toggle', 'checkbox'    => 'toggle',
             'file', 'image', 'fileupload'      => 'imageEntry',
+            'address'                          => 'addressEntry',
             default                            => 'textEntry',
         };
     }
