@@ -229,6 +229,9 @@ class JsonFormBuilder
             'fileUpload' => self::buildFileUpload($item),
             'radio' => self::buildRadio($item),
             'checkboxList' => self::buildCheckboxList($item),
+            'colorPicker' => self::buildColorPicker($item),
+            'tagsInput' => self::buildTagsInput($item),
+            'timePicker' => self::buildTimePicker($item),
             'placeholder' => self::buildPlaceholder($item),
             'view' => self::buildView($item),
             'dragDrop' => self::buildDragDrop($item),
@@ -748,6 +751,10 @@ class JsonFormBuilder
             $field->email();
         }
 
+        if (($item['type'] ?? null) === 'url') {
+            $field->url();
+        }
+
          $messages = $item['messages'] ?? null;
 
         if (! empty($messages)) {
@@ -924,6 +931,7 @@ class JsonFormBuilder
         match ($source) {
             'static' => $field->options($item['options'] ?? []),
             'relationship' => self::applyRelationshipOptions($field, $item),
+            'relate' => self::applyRelateOptions($field, $item),
             'eloquent' => self::applyEloquentOptions($field, $item),
             'helper' => self::applyHelperOptions($field, $item),
             'enum' => self::applyEnumOptions($field, $item),
@@ -2233,6 +2241,78 @@ class JsonFormBuilder
         }
 
         return $field;
+    }
+
+    protected static function buildColorPicker(array $item): Forms\Components\ColorPicker
+    {
+        $field = Forms\Components\ColorPicker::make($item['name'])
+            ->label($item['label'] ?? null);
+
+        return self::applyCommonFieldOptions($field, $item);
+    }
+
+    protected static function buildTagsInput(array $item): Forms\Components\TagsInput
+    {
+        $field = Forms\Components\TagsInput::make($item['name'])
+            ->label($item['label'] ?? null);
+
+        if (! empty($item['suggestions'])) {
+            $field->suggestions($item['suggestions']);
+        }
+
+        return self::applyCommonFieldOptions($field, $item);
+    }
+
+    protected static function buildTimePicker(array $item): Forms\Components\TimePicker
+    {
+        $field = Forms\Components\TimePicker::make($item['name'])
+            ->label($item['label'] ?? null)
+            ->native($item['native'] ?? false);
+
+        return self::applyCommonFieldOptions($field, $item);
+    }
+
+    /**
+     * Populate a Select field with records from a related Studio module.
+     * The relate_module key must match the module's fullname (e.g. 'crm_contacts').
+     * display_field is the column whose value is shown as the option label.
+     * The field stores the related record's primary key as a plain string.
+     */
+    protected static function applyRelateOptions(Forms\Components\Select $field, array $item): void
+    {
+        $relateModule = $item['relate_module'] ?? null;
+        $displayField = $item['display_field'] ?? 'name';
+
+        if (! $relateModule) {
+            return;
+        }
+
+        // Studio model class is Studly-cased fullname, e.g. 'crm_contacts' → 'CrmContacts'
+        $modelClass = 'App\\Models\\' . Str::studly($relateModule);
+
+        if (! class_exists($modelClass)) {
+            // Fallback: try singular form in case user stored plain name
+            $modelClass = 'App\\Models\\' . Str::studly(Str::singular($relateModule));
+        }
+
+        if (! class_exists($modelClass)) {
+            $field->options([]);
+            return;
+        }
+
+        $field->options(function () use ($modelClass, $displayField) {
+            return $modelClass::query()
+                ->orderBy($displayField)
+                ->limit(1000)
+                ->pluck($displayField, 'id')
+                ->toArray();
+        });
+
+        $field->getOptionLabelUsing(function ($value) use ($modelClass, $displayField) {
+            return $modelClass::find($value)?->{$displayField} ?? $value;
+        });
+
+        $field->searchable();
     }
 
     /*protected static function applyPopulationOptions(Components\Component $field, array $item): void

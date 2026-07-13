@@ -18,15 +18,14 @@ final class FieldTypeMap
 
     private const BOOLEAN_TYPES = ['boolean', 'toggle', 'checkbox'];
 
-    private const JSON_TYPES = ['json', 'array', 'repeater'];
+    private const JSON_TYPES = ['json', 'array', 'repeater', 'checkbox_list', 'checkboxlist', 'tags'];
 
     private const TEXT_TYPES = ['textarea', 'longtext', 'richtext'];
 
     private const STRING_TYPES = [
         'text', 'string', 'email', 'url', 'phone', 'password',
-        'select', 'dropdown', 'enum', 'radio',
-        'checkboxlist', 'checkbox_list',
-        'file', 'image', 'fileupload', 'color', 'tags',
+        'select', 'dropdown', 'enum', 'radio', 'relationship',
+        'file', 'image', 'fileupload', 'color', 'currency',
     ];
 
     /**
@@ -104,12 +103,15 @@ final class FieldTypeMap
             'textarea', 'longtext', 'richtext' => 'text',
             'integer', 'number', 'int'         => 'integer',
             'biginteger', 'bigint'             => 'bigInteger',
-            'decimal', 'float', 'money'        => 'decimal',
+            'decimal', 'float', 'money',
+            'currency'                         => 'decimal',
             'boolean', 'toggle', 'checkbox'    => 'boolean',
             'date'                             => 'date',
             'datetime', 'timestamp'            => 'dateTime',
             'time'                             => 'time',
-            'json', 'array', 'repeater'        => 'json',
+            'json', 'array', 'repeater',
+            'checkbox_list', 'checkboxlist',
+            'tags'                             => 'json',
             default                            => 'string',
         };
     }
@@ -131,6 +133,9 @@ final class FieldTypeMap
             'checkboxlist', 'checkbox_list'    => 'checkboxList',
             'fileupload', 'file', 'image'      => 'fileUpload',
             'json', 'array', 'repeater'        => 'textarea',
+            'time'                             => 'timePicker',
+            'color'                            => 'colorPicker',
+            'tags'                             => 'tagsInput',
             'address'                          => 'address',
             default                            => 'textInput',
         };

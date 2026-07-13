@@ -112,12 +112,14 @@ final class MigrationGenerator
             'textarea', 'longtext', 'richtext'  => "\$table->text('{$name}'){$null};",
             'integer', 'number', 'int'          => "\$table->integer('{$name}'){$null}{$unique};",
             'biginteger', 'bigint'              => "\$table->bigInteger('{$name}'){$null}{$unique};",
-            'decimal', 'float', 'money'         => "\$table->decimal('{$name}', 15, 4){$null}{$unique};",
+            'decimal', 'float', 'money', 'currency' => "\$table->decimal('{$name}', 15, 4){$null}{$unique};",
             'boolean', 'toggle', 'checkbox'     => "\$table->boolean('{$name}')->default(false);",
             'date'                              => "\$table->date('{$name}'){$null};",
             'datetime', 'timestamp'             => "\$table->dateTime('{$name}'){$null};",
             'time'                              => "\$table->time('{$name}'){$null};",
-            'json', 'array', 'repeater'         => "\$table->json('{$name}'){$null};",
+            'json', 'array', 'repeater',
+            'checkbox_list', 'checkboxlist',
+            'tags'                              => "\$table->json('{$name}'){$null};",
             default                             => "\$table->string('{$name}', " . FieldTypeMap::resolveLength($field) . "){$null}{$unique};",
         };
     }
@@ -188,7 +190,7 @@ final class MigrationGenerator
             'biginteger', 'bigint'
                 => "{$pad}\$table->bigInteger('{$name}'){$null}{$unique}" . self::defaultNum($field) . ';',
 
-            'decimal', 'float', 'money'
+            'decimal', 'float', 'money', 'currency'
                 => "{$pad}\$table->decimal('{$name}', 15, 4){$null}{$unique}" . self::defaultNum($field) . ';',
 
             'boolean', 'toggle', 'checkbox'
@@ -203,7 +205,7 @@ final class MigrationGenerator
             'time'
                 => "{$pad}\$table->time('{$name}'){$null}" . self::defaultStr($field) . ';',
 
-            'json', 'array', 'repeater'
+            'json', 'array', 'repeater', 'checkbox_list', 'checkboxlist', 'tags'
                 => "{$pad}\$table->json('{$name}'){$null};",
 
             default // string, text, email, url, phone, password, select, radio, etc.

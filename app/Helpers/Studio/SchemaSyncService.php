@@ -140,12 +140,15 @@ final class SchemaSyncService
             'textarea', 'longtext', 'richtext'  => $blueprint->text($name),
             'integer', 'number', 'int'          => $blueprint->integer($name),
             'biginteger', 'bigint'              => $blueprint->bigInteger($name),
-            'decimal', 'float', 'money'         => $blueprint->decimal($name, 15, 4),
+            'decimal', 'float', 'money',
+            'currency'                          => $blueprint->decimal($name, 15, 4),
             'boolean', 'toggle', 'checkbox'     => $blueprint->boolean($name)->default(false),
             'date'                              => $blueprint->date($name),
             'datetime', 'timestamp'             => $blueprint->dateTime($name),
             'time'                              => $blueprint->time($name),
-            'json', 'array', 'repeater'         => $blueprint->json($name),
+            'json', 'array', 'repeater',
+            'checkbox_list', 'checkboxlist',
+            'tags'                              => $blueprint->json($name),
             default                             => $blueprint->string($name, FieldTypeMap::resolveLength($field)),
         };
 
