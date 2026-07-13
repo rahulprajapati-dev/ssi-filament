@@ -12,6 +12,18 @@
             "name": "fullnamelable",
             "label": "Module Name",
             "sortable": true,
+            "sortable_field": [
+                "key",
+                "plural_label"
+            ],
+            "searchable": {
+                "individual": true
+            },
+            "searchable_fields": [
+                "key",
+                "plural_label"
+            ],
+            
             "wrap": false
         },
         {
@@ -210,7 +222,10 @@
                                         "placeholder": "e.g. lead_copy",
                                         "hint": "Lowercase letters, numbers and underscores only",
                                         "required": true,
-                                        "validation": ["max:50", "regex:/^[a-z][a-z0-9_]*$/"]
+                                        "validation": [
+                                            "max:50",
+                                            "regex:/^[a-z][a-z0-9_]*$/"
+                                        ]
                                     }
                                 ]
                             }
