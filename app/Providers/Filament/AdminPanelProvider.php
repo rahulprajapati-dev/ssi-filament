@@ -18,6 +18,7 @@ use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Filament\View\PanelsRenderHook;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -54,6 +55,20 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn (): string => <<<'HTML'
+                <script>
+                    function disableBrowserValidation() {
+                        document.querySelectorAll('form').forEach(function (f) {
+                            f.noValidate = true;
+                        });
+                    }
+                    document.addEventListener('DOMContentLoaded', disableBrowserValidation);
+                    document.addEventListener('livewire:navigated', disableBrowserValidation);
+                </script>
+                HTML
+            );
     }
 }
