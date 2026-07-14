@@ -30,7 +30,7 @@ final class LayoutGenerator
      */
     public static function generate(Module $module, bool $force = false): bool
     {
-        $model = Str::studly($module->name);
+        $model = Str::studly((string) $module->fullname);
         $resource = Str::studly(Str::plural($module->fullname));
         $basePath = app_path("Filament/Resources/{$resource}");
 
@@ -133,11 +133,12 @@ final class LayoutGenerator
         array $sections,
         Collection $fieldMap,
     ): array {
+        $label = $module->singular_label ?: $model;
         $title = match ($layoutType) {
-            'create' => "Create {$model}",
-            'edit'   => "Edit {$model}",
-            'detail' => "View {$model}",
-            default  => $model,
+            'create' => "Create {$label}",
+            'edit'   => "Edit {$label}",
+            'detail' => "View {$label}",
+            default  => $label,
         };
 
         $isDetail = $layoutType === 'detail';

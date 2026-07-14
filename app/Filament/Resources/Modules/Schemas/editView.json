@@ -31,7 +31,7 @@
                     "strict_messages": true,
                     "messages": {
                         "required": "Key is required.",
-                        "regex": "Key must contain letters only — no spaces, numbers, or symbols. Example: crm, SSI.",
+                        "regex": "Key must contain letters only — no spaces, numbers, or symbols. Example: crm, ssi.",
                         "max": "Key must not exceed 4 characters."
                     }
                 },
@@ -67,7 +67,8 @@
                     "messages": {
                         "max": "Module name must not exceed 50 characters.",
                         "regex": "Module name must start with a letter and contain only letters, numbers, and underscores — no spaces allowed. Example: CustomerOrder or customer_order."
-                    }
+                    },
+                    "custom_rule": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@ValidateModuleName"
                 },
                 {
                     "component": "select",

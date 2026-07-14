@@ -87,6 +87,7 @@ class ModuleHooks
         }
 
         $clone = Module::create([
+            'key'                => $record->key,
             'name'               => $newName,
             'singular_label'     => ($data['singular_label'] ?? $record->singular_label) . ' (Copy)',
             'plural_label'       => ($data['plural_label'] ?? $record->plural_label) . ' (Copy)',

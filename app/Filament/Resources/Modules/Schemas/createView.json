@@ -27,7 +27,7 @@
                     "strict_messages": true,
                     "messages": {
                         "required": "Key is required.",
-                        "regex": "Key must contain letters only — no spaces, numbers, or symbols. Example: crm, SSI.",
+                        "regex": "Key must contain letters only — no spaces, numbers, or symbols. Example: crm, ssi.",
                         "max": "Key must not exceed 4 characters."
                     },
                     "after_state_updated": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@revalidateNameOnKeyChange"

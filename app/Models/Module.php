@@ -73,7 +73,7 @@ class Module extends Model
     }
     protected function table(): Attribute
     {
-        return Attribute::make(get: fn () => ( implode('_', array_filter([ $this->key,$this->plural_label,]))));
+        return Attribute::make(get: fn () => strtolower(str_replace(' ', '_', implode('_', array_filter([$this->key, $this->plural_label])))));
     }
     
 }

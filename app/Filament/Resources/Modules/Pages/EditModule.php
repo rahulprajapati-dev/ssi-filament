@@ -12,6 +12,13 @@ class EditModule extends EditRecord
 {
     protected static string $resource = ModuleResource::class;
 
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        $data['key']  = strtolower(trim($data['key'] ?? ''));
+        $data['name'] = strtolower(trim($data['name'] ?? ''));
+        return $data;
+    }
+
     protected function getHeaderActions(): array
     {
         return [
