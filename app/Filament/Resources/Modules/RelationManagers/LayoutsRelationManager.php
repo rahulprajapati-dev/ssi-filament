@@ -24,11 +24,6 @@ class LayoutsRelationManager extends RelationManager
 
         $moduleId = $this->getOwnerRecord()->id;
 
-        // When editing an existing layout, the record's type is known. For create,
-        // type is unknown until the user selects it — include all fields initially;
-        // the blade re-fetches via getModuleFields() when layout_type changes.
-        $layoutType = $this->mountedTableActionRecord?->layout_type;
-
         $fields = ModuleField::where('module_id', $moduleId)
             ->whereNotIn('field_name', FieldTypeMap::SYSTEM_FIELD_NAMES)
             ->orderBy('sort_order')

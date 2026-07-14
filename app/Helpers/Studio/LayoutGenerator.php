@@ -456,21 +456,28 @@ final class LayoutGenerator
 
         // ── Pincode: exactly 6 digits ─────────────────────────────────────────
         if ($field->field_name === 'pincode' || str_ends_with($field->field_name, '_pincode')) {
-            $component['field_rules']    = ['nullable', 'regex:/^\d{6}$/'];
-            $component['field_messages'] = ['regex' => 'Pincode must be exactly 6 digits.'];
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'regex:/^\d{6}$/'];
+            $component['strict_messages']  = true;
+            $component['messages']         = ['regex' => 'Pincode must be exactly 6 digits.'];
             return;
         }
 
         // ── JSON / array / repeater: valid JSON string ────────────────────────
         if (in_array($type, ['json', 'array', 'repeater'], true)) {
-            $component['validate_json'] = true;
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'json'];
+            $component['strict_messages']  = true;
+            $component['messages']         = ['json' => 'This field must contain valid JSON.'];
             return;
         }
 
         // ── Phone: digits only, 7–15 characters ──────────────────────────────
         if ($type === 'phone') {
-            $component['field_rules']    = ['nullable', 'regex:/^[0-9]+$/', 'min:7', 'max:15'];
-            $component['field_messages'] = [
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'regex:/^[0-9]+$/', 'min:7', 'max:15'];
+            $component['strict_messages']  = true;
+            $component['messages']         = [
                 'regex' => 'Phone number must contain digits only.',
                 'min'   => 'Phone number must be at least 7 digits.',
                 'max'   => 'Phone number must not exceed 15 digits.',
@@ -481,8 +488,10 @@ final class LayoutGenerator
         // ── Currency / decimal: format + DB range decimal(15,4) ──────────────
         // DB allows max 15 total digits with 4 decimal places → integer part max 11 digits.
         if (in_array($type, ['currency', 'money', 'decimal', 'float'], true)) {
-            $component['field_rules']    = ['nullable', 'regex:/^\d{1,11}(\.\d{1,4})?$/'];
-            $component['field_messages'] = [
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'regex:/^\d{1,11}(\.\d{1,4})?$/'];
+            $component['strict_messages']  = true;
+            $component['messages']         = [
                 'regex' => 'Enter a valid amount (max 11 integer digits, up to 4 decimal places).',
             ];
             return;

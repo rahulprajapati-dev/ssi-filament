@@ -771,6 +771,11 @@ class JsonFormBuilder
                     $field->rules([
                         fn (): \Closure => function (string $attribute, $value, \Closure $fail) use ($rules, $customMessages) {
                             foreach ($rules as $rule) {
+                                // nullable: empty value passes all remaining rules
+                                if ($rule === 'nullable' && ($value === null || $value === '')) {
+                                    return;
+                                }
+
                                 [$ruleName, $ruleParam] = array_pad(explode(':', $rule, 2), 2, null);
 
                                 $failed = match ($ruleName) {
@@ -779,6 +784,11 @@ class JsonFormBuilder
                                     'regex'    => $value !== null && $value !== '' && ! preg_match($ruleParam, (string) $value),
                                     'required' => $value === null || $value === '',
                                     'string'   => ! is_string($value),
+                                    'json'     => $value !== null && $value !== '' && (static function () use ($value): bool {
+                                        json_decode($value);
+                                        return json_last_error() !== JSON_ERROR_NONE;
+                                    })(),
+                                    'nullable' => false,
                                     default    => false,
                                 };
 
@@ -901,6 +911,48 @@ class JsonFormBuilder
 
         if ($rows = $item['rows'] ?? null) {
             $field->rows($rows);
+        }
+
+        $messages        = $item['messages'] ?? [];
+        $validationRules = $item['validation'] ?? [];
+
+        if (! empty($validationRules)) {
+            if (! empty($item['strict_messages'])) {
+                $rules          = $validationRules;
+                $customMessages = $messages;
+
+                $field->rules([
+                    fn (): \Closure => function (string $attribute, $value, \Closure $fail) use ($rules, $customMessages) {
+                        foreach ($rules as $rule) {
+                            if ($rule === 'nullable' && ($value === null || $value === '')) {
+                                return;
+                            }
+
+                            [$ruleName, $ruleParam] = array_pad(explode(':', $rule, 2), 2, null);
+
+                            $failed = match ($ruleName) {
+                                'max'      => mb_strlen((string) $value) > (int) $ruleParam,
+                                'min'      => mb_strlen((string) $value) < (int) $ruleParam,
+                                'regex'    => $value !== null && $value !== '' && ! preg_match($ruleParam, (string) $value),
+                                'required' => $value === null || $value === '',
+                                'json'     => $value !== null && $value !== '' && (static function () use ($value): bool {
+                                    json_decode($value);
+                                    return json_last_error() !== JSON_ERROR_NONE;
+                                })(),
+                                'nullable' => false,
+                                default    => false,
+                            };
+
+                            if ($failed) {
+                                $fail($customMessages[$ruleName] ?? "The {$attribute} is invalid.");
+                                return;
+                            }
+                        }
+                    },
+                ]);
+            } else {
+                $field->rules($validationRules);
+            }
         }
 
         return self::applyCommonFieldOptions($field, $item);
@@ -2247,31 +2299,7 @@ class JsonFormBuilder
                 }
             });
         }
-
-        // ── Type-specific validation injected by LayoutGenerator ──────────────
-
-        // JSON field: validate that the value is valid JSON
-        if (! empty($item['validate_json']) && method_exists($field, 'rule')) {
-            $field->rule(fn () => function (string $attribute, $value, \Closure $fail) {
-                if ($value !== null && $value !== '') {
-                    json_decode($value);
-                    if (json_last_error() !== JSON_ERROR_NONE) {
-                        $fail('This field must contain valid JSON.');
-                    }
-                }
-            });
-        }
-
-        // Generic rule array (phone digits, pincode, currency format)
-        if (! empty($item['field_rules']) && method_exists($field, 'rules')) {
-            $field->rules($item['field_rules']);
-        }
-
-        // Custom messages for the above rules
-        if (! empty($item['field_messages']) && method_exists($field, 'validationMessages')) {
-            $field->validationMessages($item['field_messages']);
-        }
-
+        
         return $field;
     }
 
