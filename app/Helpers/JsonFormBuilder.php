@@ -2248,6 +2248,30 @@ class JsonFormBuilder
             });
         }
 
+        // ── Type-specific validation injected by LayoutGenerator ──────────────
+
+        // JSON field: validate that the value is valid JSON
+        if (! empty($item['validate_json']) && method_exists($field, 'rule')) {
+            $field->rule(fn () => function (string $attribute, $value, \Closure $fail) {
+                if ($value !== null && $value !== '') {
+                    json_decode($value);
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        $fail('This field must contain valid JSON.');
+                    }
+                }
+            });
+        }
+
+        // Generic rule array (phone digits, pincode, currency format)
+        if (! empty($item['field_rules']) && method_exists($field, 'rules')) {
+            $field->rules($item['field_rules']);
+        }
+
+        // Custom messages for the above rules
+        if (! empty($item['field_messages']) && method_exists($field, 'validationMessages')) {
+            $field->validationMessages($item['field_messages']);
+        }
+
         return $field;
     }
 

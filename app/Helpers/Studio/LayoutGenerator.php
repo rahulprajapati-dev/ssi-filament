@@ -260,6 +260,11 @@ final class LayoutGenerator
                     $component['numeric'] = true;
                 }
 
+                // Type-specific UI validation rules (create/edit only, not detail)
+                if (! $isDetail) {
+                    self::applyFieldValidations($component, $field);
+                }
+
                 // Add visibility configuration for fields with visibility settings
                 if (! empty($field->visibility_mode) && $field->visibility_mode !== 'always_visible') {
                     $key = $field->visibility_mode; // e.g., 'visible_when' or 'hidden_when'
@@ -439,6 +444,50 @@ final class LayoutGenerator
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Inject type-specific validation rules into a form component config array.
+     * Rules are written to `field_rules` / `field_messages` (picked up by
+     * JsonFormBuilder::applyCommonFieldOptions) or `validate_json` (textarea only).
+     */
+    private static function applyFieldValidations(array &$component, ModuleField $field): void
+    {
+        $type = strtolower($field->type);
+
+        // ── Pincode: exactly 6 digits ─────────────────────────────────────────
+        if ($field->field_name === 'pincode' || str_ends_with($field->field_name, '_pincode')) {
+            $component['field_rules']    = ['nullable', 'regex:/^\d{6}$/'];
+            $component['field_messages'] = ['regex' => 'Pincode must be exactly 6 digits.'];
+            return;
+        }
+
+        // ── JSON / array / repeater: valid JSON string ────────────────────────
+        if (in_array($type, ['json', 'array', 'repeater'], true)) {
+            $component['validate_json'] = true;
+            return;
+        }
+
+        // ── Phone: digits only, 7–15 characters ──────────────────────────────
+        if ($type === 'phone') {
+            $component['field_rules']    = ['nullable', 'regex:/^[0-9]+$/', 'min:7', 'max:15'];
+            $component['field_messages'] = [
+                'regex' => 'Phone number must contain digits only.',
+                'min'   => 'Phone number must be at least 7 digits.',
+                'max'   => 'Phone number must not exceed 15 digits.',
+            ];
+            return;
+        }
+
+        // ── Currency / decimal: format + DB range decimal(15,4) ──────────────
+        // DB allows max 15 total digits with 4 decimal places → integer part max 11 digits.
+        if (in_array($type, ['currency', 'money', 'decimal', 'float'], true)) {
+            $component['field_rules']    = ['nullable', 'regex:/^\d{1,11}(\.\d{1,4})?$/'];
+            $component['field_messages'] = [
+                'regex' => 'Enter a valid amount (max 11 integer digits, up to 4 decimal places).',
+            ];
+            return;
+        }
+    }
 
     /** Returns true when the JSON file already has a non-empty components/columns array. */
     private static function fileHasContent(string $path): bool
