@@ -75,6 +75,15 @@
                                     "columnSpan": 1,
                                     "size": "sm",
                                     "color": "gray",
+                                    "hidden_when": {
+                                        "field": "type",
+                                        "operator": "in",
+                                        "value": [
+                                            "select",
+                                            "radio",
+                                            "checkbox_list"
+                                        ]
+                                    },
                                     "prefix": "Default: "
                                 }
                             ]

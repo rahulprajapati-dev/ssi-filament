@@ -201,6 +201,15 @@
                                     "name": "default_value",
                                     "label": "Default Value",
                                     "columnSpan": 1,
+                                    "hidden_when": {
+                                        "field": "type",
+                                        "operator": "in",
+                                        "value": [
+                                            "select",
+                                            "radio",
+                                            "checkbox_list"
+                                        ]
+                                    },
                                     "required": false
                                 },
                                 {
