@@ -7,6 +7,7 @@ namespace App\Helpers\Studio;
 use App\Helpers\Studio\DropdownHandler;
 use App\Helpers\Studio\SchemaSyncService;
 use App\Models\Module;
+use App\Models\ModuleField;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -105,8 +106,8 @@ final class StudioManager
             $module = $this->module;
             $fields = $module->fields;
             foreach ($fields as $field) {
-                if ($field->type == 'select') {
-                    $this->step('create_dom', fn() => DropdownHandler::createGroup($module->name, $field->field_name, $field->options));
+                if (in_array($field->type, ['select', 'radio', 'checkbox_list', 'checkboxlist'], true)) {
+                    $this->step('create_dom', fn() => DropdownHandler::createGroup($module->fullname, $field->field_name, $field->options));
                 }
             }
 
@@ -133,13 +134,30 @@ final class StudioManager
                 return true;
             });
 
+            // Ensure system fields (created_by, updated_by, created_at, updated_at) exist.
+            $this->step('system_fields', function () {
+                ModuleField::seedSystemFields($this->module);
+                return true;
+            });
+
+            // Ensure address sub-fields exist for any address-type fields.
+            $this->step('address_sub_fields', function () {
+                $this->module->fields()
+                    ->where('type', 'address')
+                    ->each(fn ($f) => ModuleField::seedAddressSubFields($f));
+                return true;
+            });
+
+            // Sync relationship methods in the existing model file.
+            $this->step('model_relationships', fn() => ModelGenerator::sync($this->module));
+
             // Regenerate JSON schema files from the current ModuleLayout records.
             $this->step('layouts', fn() => LayoutGenerator::generate($this->module, force: true));
             $module = $this->module;
             $fields = $module->fields;
             foreach ($fields as $field) {
-                if ($field->type == 'select') {
-                    $group = $module->name . '_' . $field->field_name . '_dom';
+                if (in_array($field->type, ['select', 'radio', 'checkbox_list', 'checkboxlist'], true)) {
+                    $group = $module->fullname . '_' . $field->field_name . '_dom';
                     $options = is_array($field->options) ? $field->options : [];
                     foreach ($options as $option) {
                         if (isset($option['key'], $option['value'])) {
@@ -168,8 +186,8 @@ final class StudioManager
             $module = $this->module;
             $fields = $module->fields;
             foreach ($fields as $field) {
-                if ($field->type == 'select') {
-                    $name = $module->name . '_' . $field->field_name . '_dom';
+                if (in_array($field->type, ['select', 'radio', 'checkbox_list', 'checkboxlist'], true)) {
+                    $name = $module->fullname . '_' . $field->field_name . '_dom';
                     $this->step('remove_dom', fn() => DropdownHandler::deleteGroup($name));
                 }
             }
@@ -259,7 +277,7 @@ final class StudioManager
 
     private function dropTable(): bool
     {
-        $table = Str::snake(Str::plural($this->module->name));
+        $table = strtolower($this->module->table);
         if (!Schema::hasTable($table)) {
             return false;
         }

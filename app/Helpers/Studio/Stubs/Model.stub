@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\HasCreatedBy;
 use App\Traits\ModuleHookTrait;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 /**
  * {{MODEL}}
@@ -25,5 +26,23 @@ class {{MODEL}} extends Model
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        // region:studio-casts — managed by Studio, do not edit manually
+{{FIELD_CASTS}}        // endregion:studio-casts
     ];
+
+    protected static function boot(): void
+    {
+        parent::boot();
+        static::creating(function ($model) {
+            if (empty($model->uuid)) {
+                $model->uuid = (string) Str::uuid();
+            }
+        });
+    }
+
+    // region:studio-route-key — managed by Studio, do not edit manually
+{{UUID_ROUTE_KEY}}    // endregion:studio-route-key
+
+    // region:studio-relationships — managed by Studio, do not edit manually
+{{RELATIONSHIPS}}    // endregion:studio-relationships
 }

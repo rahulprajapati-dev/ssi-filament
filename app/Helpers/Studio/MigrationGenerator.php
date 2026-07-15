@@ -7,7 +7,9 @@ namespace App\Helpers\Studio;
 use App\Models\Module;
 use App\Models\ModuleField;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use App\Helpers\Studio\FieldTypeMap;
 
 /**
  * Generates a database migration file from a module's field definitions.
@@ -35,12 +37,21 @@ final class MigrationGenerator
 
     public static function generate(Module $module): bool
     {
-        $table = Str::snake(Str::plural((string) $module->name));
+        $table = strtolower($module->table);
 
-        // Idempotency: if any migration for this table already exists, skip.
+
         $existing = glob(database_path("migrations/*_create_{$table}_table.php"));
+
         if (! empty($existing)) {
-            return false;
+            // If the table already exists the migration has been applied — don't touch it.
+            if (Schema::hasTable($table)) {
+                return false;
+            }
+            // Table doesn't exist yet: the old migration file is stale (e.g. a failed
+            // previous deploy). Safe to delete and regenerate with current field definitions.
+            foreach ($existing as $file) {
+                File::delete($file);
+            }
         }
 
         $createColumns = self::buildColumnBlock($module);
@@ -75,6 +86,16 @@ final class MigrationGenerator
 
         return $fields->map(function (ModuleField $field) {
 
+            // System columns are handled explicitly by the stub — skip to avoid duplicates.
+            if (in_array($field->field_name, FieldTypeMap::SYSTEM_FIELD_NAMES, true)) {
+                return '';
+            }
+
+            // Address parent is virtual — skip it.
+            if ($field->type === 'address') {
+                return '';
+            }
+
             $name = $field->field_name;
             $pad  = self::INDENT;
 
@@ -82,7 +103,7 @@ final class MigrationGenerator
                 . "\n{$pad}    " . self::columnLineRaw($field)
                 . "\n{$pad}}";
 
-        })->implode("\n") . "\n";
+        })->filter()->implode("\n") . "\n";
     }
 
     private static function columnLineRaw(ModuleField $field): string
@@ -91,23 +112,40 @@ final class MigrationGenerator
         $null   = $field->required ? '' : '->nullable()';
         $unique = $field->unique_field ? '->unique()' : '';
 
+        // System columns are handled explicitly by the stub — skip to avoid duplicates.
+        if (in_array($name, FieldTypeMap::SYSTEM_FIELD_NAMES, true)) {
+            return '';
+        }
+
+        // Address parent is virtual — no own column.
+        if ($field->type === 'address') {
+            return '';
+        }
+
+        // Multi-value fields store arrays → json column
+        if (! empty($field->is_multiple) && in_array($field->type, ['select', 'dropdown', 'enum', 'file', 'image', 'fileupload'], true)) {
+            return "\$table->json('{$name}'){$null};";
+        }
+
         return match ($field->type) {
             'textarea', 'longtext', 'richtext'  => "\$table->text('{$name}'){$null};",
             'integer', 'number', 'int'          => "\$table->integer('{$name}'){$null}{$unique};",
             'biginteger', 'bigint'              => "\$table->bigInteger('{$name}'){$null}{$unique};",
-            'decimal', 'float', 'money'         => "\$table->decimal('{$name}', 15, 4){$null}{$unique};",
+            'decimal', 'float', 'money', 'currency' => "\$table->decimal('{$name}', 15, 4){$null}{$unique};",
             'boolean', 'toggle', 'checkbox'     => "\$table->boolean('{$name}')->default(false);",
             'date'                              => "\$table->date('{$name}'){$null};",
             'datetime', 'timestamp'             => "\$table->dateTime('{$name}'){$null};",
             'time'                              => "\$table->time('{$name}'){$null};",
-            'json', 'array', 'repeater'         => "\$table->json('{$name}'){$null};",
-            default                             => "\$table->string('{$name}', " . self::length($field) . "){$null}{$unique};",
+            'json', 'array', 'repeater',
+            'checkbox_list', 'checkboxlist',
+            'tags'                              => "\$table->json('{$name}'){$null};",
+            default                             => "\$table->string('{$name}', " . FieldTypeMap::resolveLength($field) . "){$null}{$unique};",
         };
     }
 
     public static function remove(Module $module): bool
     {
-        $table = Str::snake(Str::plural((string) $module->name));
+        $table = strtolower($module->table);
 
         $files = glob(database_path("migrations/*_create_{$table}_table.php"));
 
@@ -151,6 +189,21 @@ final class MigrationGenerator
         $unique = $field->unique_field ? '->unique()' : '';
         $pad    = self::INDENT;
 
+        // System columns are added explicitly by the stub — skip to avoid duplicates.
+        if (in_array($name, FieldTypeMap::SYSTEM_FIELD_NAMES, true)) {
+            return '';
+        }
+
+        // Address parent is virtual — its sub-fields hold the real DB columns.
+        if ($field->type === 'address') {
+            return '';
+        }
+
+        // Multi-value fields store arrays → json column
+        if (! empty($field->is_multiple) && in_array($field->type, ['select', 'dropdown', 'enum', 'file', 'image', 'fileupload'], true)) {
+            return "{$pad}\$table->json('{$name}'){$null};";
+        }
+
         return match ($field->type) {
             'textarea', 'longtext', 'richtext'
                 => "{$pad}\$table->text('{$name}'){$null}" . self::defaultStr($field) . ';',
@@ -161,7 +214,7 @@ final class MigrationGenerator
             'biginteger', 'bigint'
                 => "{$pad}\$table->bigInteger('{$name}'){$null}{$unique}" . self::defaultNum($field) . ';',
 
-            'decimal', 'float', 'money'
+            'decimal', 'float', 'money', 'currency'
                 => "{$pad}\$table->decimal('{$name}', 15, 4){$null}{$unique}" . self::defaultNum($field) . ';',
 
             'boolean', 'toggle', 'checkbox'
@@ -176,22 +229,15 @@ final class MigrationGenerator
             'time'
                 => "{$pad}\$table->time('{$name}'){$null}" . self::defaultStr($field) . ';',
 
-            'json', 'array', 'repeater'
+            'json', 'array', 'repeater', 'checkbox_list', 'checkboxlist', 'tags'
                 => "{$pad}\$table->json('{$name}'){$null};",
 
             default // string, text, email, url, phone, password, select, radio, etc.
-                => "{$pad}\$table->string('{$name}', " . self::length($field) . "){$null}{$unique}" . self::defaultStr($field) . ';',
+                => "{$pad}\$table->string('{$name}', " . FieldTypeMap::resolveLength($field) . "){$null}{$unique}" . self::defaultStr($field) . ';',
         };
     }
 
-    // --------------------------------------------------------------------------
-    // Helpers
-    // --------------------------------------------------------------------------
 
-    private static function length(ModuleField $field): int
-    {
-        return ($field->length > 0) ? (int) $field->length : 255;
-    }
 
     private static function hasDefault(ModuleField $field): bool
     {

@@ -90,12 +90,6 @@
             "boolean": true
         },
         {
-            "type": "icon",
-            "name": "sort_order",
-            "label": "Sort Order",
-            "boolean": true
-        },
-        {
             "type": "text",
             "name": "createdBy.name",
             "label": "Created By",

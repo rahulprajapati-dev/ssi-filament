@@ -1,0 +1,361 @@
+{
+    "form_name": "module_field_panel_form_detail_view",
+    "model": "App\\Models\\ModuleField",
+    "components": [
+        {
+            "component": "tabs",
+            "columnSpan": "full",
+            "tabs": [
+                {
+                    "label": "General",
+                    "schema": [
+                        {
+                            "component": "section",
+                            "label": "Field Identity",
+                            "compact": true,
+                            "columns": 3,
+                            "schema": [
+                                {
+                                    "component": "textEntry",
+                                    "name": "field_name",
+                                    "label": "Field Name",
+                                    "columnSpan": 1,
+                                    "size": "lg",
+                                    "weight": "bold",
+                                    "copyable": true,
+                                    "color": "primary"
+                                },
+                                {
+                                    "component": "textEntry",
+                                    "name": "label",
+                                    "label": "Display Label",
+                                    "columnSpan": 1,
+                                    "size": "lg",
+                                    "weight": "semibold"
+                                },
+                                {
+                                    "component": "textEntry",
+                                    "name": "type",
+                                    "label": "Field Type",
+                                    "columnSpan": 1,
+                                    "badge": true,
+                                    "color": "info",
+                                    "size": "md",
+                                    "dropdown": "field_type_dom"
+                                },
+                                {
+                                    "component": "toggle",
+                                    "name": "is_multiple",
+                                    "label": "Allow Multiple",
+                                    "visible_when": {
+                                        "field": "type",
+                                        "operator": "in",
+                                        "value": [
+                                            "file",
+                                            "image",
+                                            "select"
+                                        ]
+                                    },
+                                    "columnSpan": 1
+                                }
+                            ]
+                        },
+                        {
+                            "component": "grid",
+                            "columns": 2,
+                            "schema": [
+                                {
+                                    "component": "textEntry",
+                                    "name": "module.plural_label",
+                                    "label": "Module",
+                                    "columnSpan": 1,
+                                    "weight": "medium",
+                                    "color": "gray"
+                                },
+                                {
+                                    "component": "textEntry",
+                                    "name": "default_value",
+                                    "label": "Default Value",
+                                    "columnSpan": 1,
+                                    "size": "sm",
+                                    "color": "gray",
+                                    "prefix": "Default: "
+                                }
+                            ]
+                        },
+                        {
+                            "component": "section",
+                            "label": "Options (for Select / Radio)",
+                            "collapsible": true,
+                            "compact": true,
+                            "columns": 1,
+                            "visible_when": {
+                                "field": "type",
+                                "value": "select"
+                            },
+                            "schema": [
+                                {
+                                    "component": "repeater",
+                                    "name": "options",
+                                    "label": "Options List",
+                                    "columnSpan": 1,
+                                    "columns": 2,
+                                    "schema": [
+					                    {
+                                            "component": "textEntry",
+                                            "name": "default",
+                                            "label": "Default",
+                                            "columnSpan": 1,
+                                            "size": "sm",
+                                            "weight": "semibold",
+                                            "color": "gray"
+                                        },
+                                        {
+                                            "component": "textEntry",
+                                            "name": "key",
+                                            "label": "Key",
+                                            "columnSpan": 1,
+                                            "size": "sm",
+                                            "weight": "semibold",
+                                            "color": "gray",
+                                            "copyable": true
+                                        },
+                                        {
+                                            "component": "textEntry",
+                                            "name": "value",
+                                            "label": "Display Label",
+                                            "columnSpan": 1,
+                                            "size": "sm",
+                                            "weight": "bold"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "label": "Properties",
+                    "schema": [
+                        {
+                            "component": "section",
+                            "label": "Validation Rules",
+                            "compact": true,
+                            "columns": 3,
+                            "schema": [
+                                {
+                                    "component": "toggle",
+                                    "name": "required",
+                                    "label": "Required Field",
+                                    "columnSpan": 1
+                                },
+                                {
+                                    "component": "toggle",
+                                    "name": "unique_field",
+                                    "label": "Unique Field",
+                                    "columnSpan": 1
+                                },
+                                {
+                                    "component": "textEntry",
+                                    "name": "default_value",
+                                    "label": "Default Value",
+                                    "columnSpan": 1,
+				                    "size": "md",
+                                    "weight": "bold",
+                                    "suffix": " chars",
+                                    "color": "warning"
+                                },
+                                {
+                                    "component": "textEntry",
+                                    "name": "length",
+                                    "label": "Max Length",
+                                    "columnSpan": 1,
+                                    "size": "md",
+                                    "weight": "bold",
+                                    "suffix": " chars",
+                                    "color": "warning"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "label": "Visibility",
+                    "schema": [
+                        {
+                            "component": "section",
+                            "label": "Visibility Settings",
+                            "compact": true,
+                            "columns": 2,
+                            "schema": [
+                                {
+                                    "component": "textEntry",
+                                    "name": "visibility_mode",
+                                    "label": "Visibility Mode",
+                                    "columnSpan": 1,
+                                    "badge": true,
+                                    "color": "success",
+                                    "size": "md",
+                                    "dropdown": "visibility_mode_dom"
+                                },
+                                {
+                                    "component": "textEntry",
+                                    "name": "condition_logic",
+                                    "label": "Condition Logic",
+                                    "columnSpan": 1,
+                                    "badge": true,
+                                    "color": "warning",
+                                    "size": "md",
+                                    "dropdown": "condition_logic_dom",
+                                    "visible_when": {
+                                        "field": "visibility_mode",
+                                        "operator": "in",
+                                        "value": [
+                                            "visible_when",
+                                            "hidden_when"
+                                        ]
+                                    }
+                                },
+                                {
+                                    "component": "toggle",
+                                    "name": "always_save_value",
+                                    "label": "Always Save Value (even when hidden)",
+                                    "columnSpan": 2,
+                                    "visible_when": {
+                                        "field": "visibility_mode",
+                                        "operator": "in",
+                                        "value": [
+                                            "visible_when",
+                                            "hidden_when"
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "component": "section",
+                            "label": "Visibility Conditions",
+                            "compact": true,
+                            "columns": 1,
+                            "visible_when": {
+                                "field": "visibility_mode",
+                                "operator": "in",
+                                "value": [
+                                    "visible_when",
+                                    "hidden_when"
+                                ]
+                            },
+                            "schema": [
+                                {
+                                    "component": "repeater",
+                                    "name": "visibility_conditions",
+                                    "label": "Conditions",
+                                    "columnSpan": 1,
+                                    "columns": 3,
+                                    "schema": [
+                                        {
+                                            "component": "textEntry",
+                                            "name": "field",
+                                            "label": "Field",
+                                            "columnSpan": 1,
+                                            "size": "sm",
+                                            "weight": "semibold",
+                                            "color": "primary"
+                                        },
+                                        {
+                                            "component": "textEntry",
+                                            "name": "operator",
+                                            "label": "Operator",
+                                            "columnSpan": 1,
+                                            "badge": true,
+                                            "color": "gray",
+                                            "size": "sm"
+                                        },
+                                        {
+                                            "component": "textEntry",
+                                            "name": "value",
+                                            "label": "Value",
+                                            "columnSpan": 1,
+                                            "size": "sm",
+                                            "weight": "bold"
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "component": "section",
+                            "label": "Listing & Search Settings",
+                            "collapsible": true,
+                            "compact": true,
+                            "columns": 2,
+                            "schema": [
+                                {
+                                    "component": "toggle",
+                                    "name": "searchable",
+                                    "label": "Searchable Field",
+                                    "columnSpan": 1
+                                },
+                                {
+                                    "component": "toggle",
+                                    "name": "sortable",
+                                    "label": "Sortable Field",
+                                    "columnSpan": 1
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "label": "System",
+                    "schema": [
+                        {
+                            "component": "section",
+                            "label": "System Info",
+                            "columnSpan": "full",
+                            "columns": 2,
+                            "schema": [
+                                {
+                                    "component": "textEntry",
+                                    "name": "created_at",
+                                    "label": "Created At",
+                                    "dateTime": true,
+                                    "size": "sm",
+                                    "color": "gray",
+                                    "inlineLabel": true
+                                },
+                                {
+                                    "component": "textEntry",
+                                    "name": "updated_at",
+                                    "label": "Updated At",
+                                    "dateTime": true,
+                                    "size": "sm",
+                                    "color": "gray",
+                                    "inlineLabel": true
+                                },
+                                {
+                                    "component": "textEntry",
+                                    "name": "createdBy.name",
+                                    "label": "Created By",
+                                    "size": "sm",
+                                    "weight": "medium",
+                                    "color": "gray",
+                                    "inlineLabel": true
+                                },
+                                {
+                                    "component": "textEntry",
+                                    "name": "updatedBy.name",
+                                    "label": "Updated By",
+                                    "size": "sm",
+                                    "weight": "medium",
+                                    "color": "gray",
+                                    "inlineLabel": true
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

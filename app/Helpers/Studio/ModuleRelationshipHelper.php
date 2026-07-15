@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Helpers\Studio;
 
 use Illuminate\Support\HtmlString;
@@ -75,6 +77,26 @@ class ModuleRelationshipHelper
         $html .= '</div>';
 
         return new HtmlString($html);
+    }
+
+    public static function formatRelationshipSummary($state, $record): string
+    {
+        $relationships = $record?->relationships_json;
+
+        if (is_string($relationships)) {
+            $relationships = json_decode($relationships, true);
+        }
+
+        if (empty($relationships) || ! is_array($relationships)) {
+            return '—';
+        }
+
+        $count = count($relationships);
+
+        $types = array_unique(array_column($relationships, 'type'));
+        $typeParts = array_map(fn ($t) => self::$typeLabels[$t] ?? $t, $types);
+
+        return $count . ' ' . ($count === 1 ? 'relation' : 'relations') . ' (' . implode(', ', $typeParts) . ')';
     }
 
     private static function guessMethodName(string $type, string $relatedModule): string

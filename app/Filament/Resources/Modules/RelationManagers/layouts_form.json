@@ -1,0 +1,117 @@
+{
+    "form_name": "module_layout_panel_form",
+    "model": "App\\Models\\ModuleLayout",
+    "components": [
+        {
+            "component": "section",
+            "label": "Module & View Configuration",
+            "description": "Select the module and define the type of view layout you want to create. Each module can have only one layout configuration per view type.",
+            "icon": "heroicon-o-cog-6-tooth",
+            "columnSpan": "full",
+            "collapsible": false,
+            "compact": true,
+            "columns": 2,
+            "schema": [
+                {
+                    "component": "select",
+                    "name": "module_id",
+                    "label": "Module",
+                    "columnSpan": 1,
+                    "options_source": "relationship",
+                    "relationship": "module",
+                    "title_column": "plural_label",
+                    "required": true,
+                    "searchable": true,
+                    "dehydrated": true,
+                    "preload": true,
+                    "live": true,
+                    "hidden": true,
+                    "custom_after_state_updated": "\\App\\Filament\\Resources\\ModuleLayouts\\Hooks\\ModuleLayoutHooks@validateUniqueModuleLayout",
+                    "custom_after_state_updated_related": ["layout_type"],
+                    "hint": "Select the module this layout belongs to"
+                },
+                {
+                    "component": "select",
+                    "name": "layout_type",
+                    "label": "View Type",
+                    "columnSpan": 2,
+                    "options_source": "helper",
+                    "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
+                    "helper_method": "get",
+                    "helper_params": [
+                        "layout_type_dom"
+                    ],
+                    "custom_after_state_updated": "\\App\\Filament\\Resources\\ModuleLayouts\\Hooks\\ModuleLayoutHooks@validateUniqueModuleLayout",
+                    "custom_after_state_updated_related": ["module_id"],
+                    "required": true,
+                    "reactive": true,
+                    "hint": "Create / Edit / Detail / List"
+                }
+            ]
+        },
+        {
+            "component": "section",
+            "label": "Design Your Layout",
+            "description": "Drag fields from the available pool on the left into sections to build your form layout. Double-click a field to move it quickly.",
+            "icon": "heroicon-o-view-columns",
+            "columnSpan": "full",
+            "collapsible": false,
+            "compact": false,
+            "columns": 1,
+            "schema": [
+                {
+                    "component": "dragDrop",
+                    "name": "layout_json",
+                    "label": null,
+                    "source": "module_fields",
+                    "depends_on": "module_id",
+                    "columnSpan": 1
+                }
+            ]
+        },
+        {
+            "component": "section",
+            "label": "List Filters",
+            "description": "Define which fields appear as filters in this list view. Repair & Rebuild after saving.",
+            "icon": "heroicon-o-funnel",
+            "columnSpan": "full",
+            "collapsible": true,
+            "compact": false,
+            "columns": 1,
+            "visible_when": { "field": "layout_type", "value": "list" },
+            "schema": [
+                {
+                    "component": "repeater",
+                    "name": "filters_json",
+                    "default" :[],
+                    "label": null,
+                    "columnSpan": 1,
+                    "columns": 2,
+                    "schema": [
+                        {
+                            "component": "select",
+                            "name": "field_name",
+                            "label": "Field",
+                            "columnSpan": 1,
+                            "options_source": "helper",
+                            "helper_type": "dynamic",
+                            "helper_class": "App\\Helpers\\CommonHelper",
+                            "helper_method": "getModuleFieldsById",
+                            "helper_params": ["../../module_id"],
+                            "required": true,
+                            "searchable": true
+                        },
+                        {
+                            "component": "textInput",
+                            "name": "label",
+                            "label": "Filter Label",
+                            "columnSpan": 1,
+                            "placeholder": "Leave blank to use field label",
+                            "required": false
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

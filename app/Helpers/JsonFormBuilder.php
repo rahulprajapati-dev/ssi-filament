@@ -8,6 +8,7 @@ use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Pages\EditRecord;
@@ -26,11 +27,13 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Livewire\Component;
 use Livewire\Form;
 use App\Helpers\Studio\DropdownHandler;
+use Illuminate\Validation\ValidationException;
 
 class JsonFormBuilder
 {
@@ -216,6 +219,7 @@ class JsonFormBuilder
 
             'textInput' => self::buildTextInput($item),
             'textEntry' => self::buildTextEntry($item),
+            'imageEntry' => self::buildImageEntry($item),
             'textarea' => self::buildTextarea($item),
             'select' => self::buildSelect($item),
             'toggle' => self::buildToggle($item),
@@ -225,6 +229,9 @@ class JsonFormBuilder
             'fileUpload' => self::buildFileUpload($item),
             'radio' => self::buildRadio($item),
             'checkboxList' => self::buildCheckboxList($item),
+            'colorPicker' => self::buildColorPicker($item),
+            'tagsInput' => self::buildTagsInput($item),
+            'timePicker' => self::buildTimePicker($item),
             'placeholder' => self::buildPlaceholder($item),
             'view' => self::buildView($item),
             'dragDrop' => self::buildDragDrop($item),
@@ -547,9 +554,11 @@ class JsonFormBuilder
             ->label($item['label'] ?? null);
 
         $viewData = [
-            'repeaterName' => $item['repeater_name'] ?? null,
-            'source' => $item['source'] ?? 'repeater',   // 'repeater' | 'module_fields'
-            'dependsOn' => $item['depends_on'] ?? null,      // e.g. 'module_id'
+            'repeaterName'      => $item['repeater_name']       ?? null,
+            'source'            => $item['source']              ?? 'repeater',
+            'dependsOn'         => $item['depends_on']          ?? null,
+            'ownerModuleId'     => $item['owner_module_id']     ?? null,
+            'ownerModuleFields' => $item['owner_module_fields'] ?? null,
         ];
 
         $field->viewData($viewData);
@@ -652,7 +661,50 @@ class JsonFormBuilder
             });
         }
 
+        // Relate: resolve stored ID to the related record's display label
+        if (($item['options_source'] ?? null) === 'relate' && ! empty($item['relate_module'])) {
+            $relateModule = $item['relate_module'];
+            $modelClass   = 'App\\Models\\' . Str::studly($relateModule);
+            if (! class_exists($modelClass)) {
+                $modelClass = 'App\\Models\\' . Str::studly(Str::singular($relateModule));
+            }
+            if (class_exists($modelClass)) {
+                $displayField = self::resolveRelateDisplayColumn($modelClass, $item['display_field'] ?? 'name');
+                $field->formatStateUsing(function ($state) use ($modelClass, $displayField) {
+                    if ($state === null || $state === '') {
+                        return '—';
+                    }
+                    $record = $modelClass::find($state);
+                    if (! $record) {
+                        return (string) $state;
+                    }
+                    if ($displayField === '__full_name__') {
+                        return trim(($record->first_name ?? '') . ' ' . ($record->last_name ?? '')) ?: (string) $state;
+                    }
+                    return (string) ($record->{$displayField} ?? $state);
+                });
+            }
+        }
+
         return self::applyCommonFieldOptions($field, $item);
+    }
+
+    protected static function buildImageEntry(array $item): ImageEntry
+    {
+        $field = ImageEntry::make($item['name'])
+            ->label($item['label'] ?? null);
+
+        if (! empty($item['disk'])) {
+            $field->disk($item['disk']);
+        }
+        if (! empty($item['height'])) {
+            $field->height($item['height']);
+        }
+        if (! empty($item['circular'])) {
+            $field->circular();
+        }
+
+        return $field;
     }
 
     protected static function buildTextInput(array $item): TextInput
@@ -724,12 +776,58 @@ class JsonFormBuilder
             $field->email();
         }
 
-        if (! empty($item['messages'])) {
-            $field->validationMessages($item['messages']);
+        if (($item['type'] ?? null) === 'url') {
+            $field->url();
         }
 
-        if (! empty($item['validation'])) {
-            $field->rules($item['validation']);
+         $messages = $item['messages'] ?? null;
+
+        if (! empty($messages)) {
+            $field->validationMessages($messages);
+        }
+
+        $validationRules = $item['validation'] ?? [];
+
+        if (! empty($validationRules)) {
+            if (! empty($item['strict_messages'])) {
+                $rules = $validationRules;
+                $customMessages = $messages ?? [];
+
+                    $field->rules([
+                        fn (): \Closure => function (string $attribute, $value, \Closure $fail) use ($rules, $customMessages) {
+                            foreach ($rules as $rule) {
+                                // nullable: empty value passes all remaining rules
+                                if ($rule === 'nullable' && ($value === null || $value === '')) {
+                                    return;
+                                }
+
+                                [$ruleName, $ruleParam] = array_pad(explode(':', $rule, 2), 2, null);
+
+                                $failed = match ($ruleName) {
+                                    'max'      => mb_strlen((string) $value) > (int) $ruleParam,
+                                    'min'      => mb_strlen((string) $value) < (int) $ruleParam,
+                                    'regex'    => $value !== null && $value !== '' && ! preg_match($ruleParam, (string) $value),
+                                    'required' => $value === null || $value === '',
+                                    'string'   => ! is_string($value),
+                                    'json'     => $value !== null && $value !== '' && (static function () use ($value): bool {
+                                        json_decode($value);
+                                        return json_last_error() !== JSON_ERROR_NONE;
+                                    })(),
+                                    'nullable' => false,
+                                    default    => false,
+                                };
+
+                                if ($failed) {
+                                    $fail($customMessages[$ruleName] ?? "The {$attribute} is invalid.");
+                                    return;
+                                }
+                            }
+                        },
+                    ]);
+            } 
+            else {
+                    $field->rules($validationRules);
+                }
         }
 
         /*
@@ -826,9 +924,7 @@ class JsonFormBuilder
             });
         }
 
-        if (! empty($item['options'])) {
-            $field->options($item['options']);
-        }
+        $field->options(self::resolveStaticOptions($item));
 
         return self::applyCommonFieldOptions($field, $item);
     }
@@ -840,6 +936,48 @@ class JsonFormBuilder
 
         if ($rows = $item['rows'] ?? null) {
             $field->rows($rows);
+        }
+
+        $messages        = $item['messages'] ?? [];
+        $validationRules = $item['validation'] ?? [];
+
+        if (! empty($validationRules)) {
+            if (! empty($item['strict_messages'])) {
+                $rules          = $validationRules;
+                $customMessages = $messages;
+
+                $field->rules([
+                    fn (): \Closure => function (string $attribute, $value, \Closure $fail) use ($rules, $customMessages) {
+                        foreach ($rules as $rule) {
+                            if ($rule === 'nullable' && ($value === null || $value === '')) {
+                                return;
+                            }
+
+                            [$ruleName, $ruleParam] = array_pad(explode(':', $rule, 2), 2, null);
+
+                            $failed = match ($ruleName) {
+                                'max'      => mb_strlen((string) $value) > (int) $ruleParam,
+                                'min'      => mb_strlen((string) $value) < (int) $ruleParam,
+                                'regex'    => $value !== null && $value !== '' && ! preg_match($ruleParam, (string) $value),
+                                'required' => $value === null || $value === '',
+                                'json'     => $value !== null && $value !== '' && (static function () use ($value): bool {
+                                    json_decode($value);
+                                    return json_last_error() !== JSON_ERROR_NONE;
+                                })(),
+                                'nullable' => false,
+                                default    => false,
+                            };
+
+                            if ($failed) {
+                                $fail($customMessages[$ruleName] ?? "The {$attribute} is invalid.");
+                                return;
+                            }
+                        }
+                    },
+                ]);
+            } else {
+                $field->rules($validationRules);
+            }
         }
 
         return self::applyCommonFieldOptions($field, $item);
@@ -868,6 +1006,7 @@ class JsonFormBuilder
         match ($source) {
             'static' => $field->options($item['options'] ?? []),
             'relationship' => self::applyRelationshipOptions($field, $item),
+            'relate' => self::applyRelateOptions($field, $item),
             'eloquent' => self::applyEloquentOptions($field, $item),
             'helper' => self::applyHelperOptions($field, $item),
             'enum' => self::applyEnumOptions($field, $item),
@@ -904,14 +1043,7 @@ class JsonFormBuilder
             $field->validationMessages($item['messages']);
         }
 
-        // options
-        if (empty($item['options'])) {
-            $field->options([]);
-
-            return self::applyCommonFieldOptions($field, $item);
-        } else {
-            $field->options($item['options']);
-        }
+        $field->options(self::resolveStaticOptions($item));
         if (! empty($item['clear_on_update']) && is_array($item['clear_on_update'])) {
             $targets = $item['clear_on_update'];
 
@@ -1115,6 +1247,23 @@ class JsonFormBuilder
 
             return $query->pluck($labelColumn, $valueColumn)->toArray();
         });
+    }
+
+    // Resolves options for non-Select components (Radio, CheckboxList) that
+    // support options_source: 'helper' but can't use applyHelperOptions() directly.
+    protected static function resolveStaticOptions(array $item): array
+    {
+        if (($item['options_source'] ?? 'static') === 'helper') {
+            $class  = $item['helper_class'] ?? null;
+            $method = $item['helper_method'] ?? null;
+            $params = $item['helper_params'] ?? [];
+            if ($class && $method && class_exists($class) && method_exists($class, $method)) {
+                $opts = $class::$method(...$params);
+                return is_array($opts) ? $opts : [];
+            }
+            return [];
+        }
+        return is_array($item['options'] ?? null) ? $item['options'] : [];
     }
 
     protected static function applyHelperOptions(Forms\Components\Select $field, array $item): void
@@ -1427,6 +1576,28 @@ class JsonFormBuilder
                 $item['accepted_file_types'] = explode(',', $item['accepted_file_types']);
             }
             $field->acceptedFileTypes($item['accepted_file_types']);
+        } else {
+            // Runtime safe-type defaults for modules not yet rebuilt with the new config.
+            // Whitelist approach: only allow known-safe MIME types; executables and scripts are implicitly blocked.
+            if (! empty($item['image'])) {
+                $field->acceptedFileTypes(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp']);
+                $field->rules(['nullable', 'mimes:jpg,jpeg,png,gif,webp,svg,bmp']);
+            } else {
+                $field->acceptedFileTypes([
+                    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+                    'application/pdf',
+                    'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'application/vnd.ms-excel',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'application/vnd.ms-powerpoint',
+                    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                    'text/plain', 'text/csv',
+                    'application/zip', 'application/x-zip-compressed',
+                    'application/json',
+                ]);
+                $field->rules(['nullable', 'mimes:jpg,jpeg,png,gif,webp,svg,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip,json']);
+            }
         }
         $disk = isset($item['disk']) ? $item['disk'] : 's3';
 
@@ -1486,33 +1657,7 @@ class JsonFormBuilder
 
                 return $key; // stock_images/01KH.png
             });
-            $field->getUploadedFileUsing(function ($file, $state) use ($disk) {
-                $url = Storage::disk($disk)->url($state);
-                if (blank($state)) {
-                    return null;
-                }
-
-                // Strip full URL to relative key
-                if (filter_var($state, FILTER_VALIDATE_URL)) {
-                    $baseUrl = rtrim(config("filesystems.disks.{$disk}.url", ''), '/');
-                    $key = str_starts_with($state, $baseUrl)
-                        ? ltrim(str_replace($baseUrl, '', $state), '/')
-                        : ltrim(parse_url($state, PHP_URL_PATH), '/');
-
-                    $root = trim(config("filesystems.disks.{$disk}.root", ''), '/');
-                    if ($root && str_starts_with($key, $root.'/')) {
-                        $key = substr($key, strlen($root) + 1);
-                    }
-                } else {
-                    $key = $state; // already relative key
-                }
-
-                // Return array with explicit keys FilePond expects
-                return [
-                    'name' => basename($key),
-                    'url' => Storage::disk($disk)->url($key),
-                ];
-            });
+        
         }
         if (! empty($item['legacy_url_passthrough'])) {
             $visibility = $item['visibility'] ?? 'public';
@@ -1521,74 +1666,23 @@ class JsonFormBuilder
             // legacy absolute URLs (pointing at the old bucket) aren't
             // stripped from state before getUploadedFileUsing runs.
             // a martandedit image change
-            $field->fetchFileInformation(false);
 
-            $field->getUploadedFileUsing(function ($file, $state) use ($disk, $visibility) {
-                if (blank($state)) {
-                    return null;
-                }
-
-                $guessType = static function (string $path): ?string {
-                    $ext = strtolower(pathinfo(parse_url($path, PHP_URL_PATH) ?: $path, PATHINFO_EXTENSION));
-
-                    return match ($ext) {
-                        'jpg', 'jpeg' => 'image/jpeg',
-                        'png' => 'image/png',
-                        'gif' => 'image/gif',
-                        'webp' => 'image/webp',
-                        'svg' => 'image/svg+xml',
-                        'pdf' => 'application/pdf',
-                        default => null,
-                    };
-                };
-
-                if (filter_var($state, FILTER_VALIDATE_URL)) {
-                    // Legacy bucket has no CORS headers, so FilePond's XHR fetch
-                    // for image-preview thumbnails is blocked. Route through the
-                    // signed in-app proxy so it's same-origin.
-                    //
-                    // The path filename intentionally omits the image extension —
-                    // staging nginx intercepts `*.jpg/.jpeg/.png` paths as static
-                    // assets and returns 404 before PHP runs. FilePond detects the
-                    // mime from the proxy response Content-Type header instead.
-                    $filename = basename(parse_url($state, PHP_URL_PATH) ?: $state) ?: 'image';
-                    $filename = pathinfo($filename, PATHINFO_FILENAME);
-                    $filename = preg_replace('/[^A-Za-z0-9._-]/', '_', $filename) ?: 'image';
-
-                    $proxied = URL::temporarySignedRoute(
-                        'admin.legacy-image-proxy',
-                        now()->addHours(2),
-                        ['url' => $state, 'filename' => $filename],
-                    );
-
-                    return [
-                        'name' => $filename,
-                        'size' => 0,
-                        'type' => $guessType($state),
-                        'url' => $proxied,
-                    ];
-                }
-
-                $storage = Storage::disk($disk);
-                // try {
-                $url = $visibility === 'private'
-                    ? $storage->temporaryUrl($state, now()->addMinutes(5))
-                    : $storage->url($state);
-                /* } catch (\Throwable $e) {
-                     // Local-style disks don't implement temporaryUrl().
-                     $url = $storage->url($state);
-                 } */
-
-                return [
-                    'name' => basename($state),
-                    'size' => 0,
-                    'type' => $guessType($state),
-                    'url' => $url,
-                ];
-            });
+           
         }
         if (! empty($item['visibility'])) {
             $field->visibility($item['visibility']);
+        }
+
+        // For local/public disks with no special URL handling, give FilePond
+        // a concrete {name, size, url} so it doesn't hang on "Waiting for size".
+        $isLocalDisk = in_array(config("filesystems.disks.{$disk}.driver"), ['local'], true);
+        $hasSaveFullUrl = isset($item['save_full_url']) && $item['save_full_url'] === true;
+        $hasLegacyPassthrough = ! empty($item['legacy_url_passthrough']);
+
+        if ($isLocalDisk && ! $hasSaveFullUrl && ! $hasLegacyPassthrough) {
+            // Stop Filament's built-in file-existence check — we handle it ourselves below.
+            
+
         }
 
         if (isset($item['image_editor']) && $item['image_editor'] === true) {
@@ -1868,6 +1962,10 @@ class JsonFormBuilder
             $field->hint($item['hint']);
         }
 
+        if (! empty($item['hintIcon'])) {
+            $field->label(new HtmlString($item['label'].' <span title="' . e($item['hintIcon']) . '">🛈</span>'));
+        }
+
         if (! empty($item['columnSpan'])) {
             $field->columnSpan($item['columnSpan']);
         }
@@ -2128,6 +2226,41 @@ class JsonFormBuilder
             });
         }
 
+        if (isset($item['custom_after_state_updated'])) {
+            $callback = $item['custom_after_state_updated'];
+            // Sibling field names (relative to this field) that share the same check,
+            // so a stale error left on one of them gets cleared once this one passes.
+            $relatedFields = $item['custom_after_state_updated_related'] ?? [];
+
+            $field->afterStateUpdated(function ($state, Set $set, Get $get, $livewire, $record, $component) use ($callback, $relatedFields) {
+                $statePath = $component->getStatePath();
+                $basePath = Str::contains($statePath, '.') ? Str::beforeLast($statePath, '.') : null;
+
+                $relatedPaths = array_map(
+                    fn ($name) => $basePath ? "{$basePath}.{$name}" : $name,
+                    $relatedFields
+                );
+
+                $errorStatus = app()->call($callback, [
+                    'state' => $state,
+                    'set' => $set,
+                    'get' => $get,
+                    'livewire' => $livewire,
+                    'record' => $record,
+                    'component' => $component,
+                ]);
+
+                if (! empty($errorStatus) && ! empty($errorStatus['status'])) {
+                    throw ValidationException::withMessages([
+                        $statePath => $errorStatus['error'],
+                    ]);
+                }
+
+                // Passed: clear any stale error left on this field or its siblings
+                // by a previous run of this same check.
+                $livewire->resetErrorBag([$statePath, ...$relatedPaths]);
+            });
+        }
         // custom_rule
         if (isset($item['custom_rule'])) {
             $callbackString = $item['custom_rule'];
@@ -2213,8 +2346,137 @@ class JsonFormBuilder
                 }
             });
         }
-
+        
         return $field;
+    }
+
+    protected static function buildColorPicker(array $item): Forms\Components\ColorPicker
+    {
+        $field = Forms\Components\ColorPicker::make($item['name'])
+            ->label($item['label'] ?? null);
+
+        return self::applyCommonFieldOptions($field, $item);
+    }
+
+    protected static function buildTagsInput(array $item): Forms\Components\TagsInput
+    {
+        $field = Forms\Components\TagsInput::make($item['name'])
+            ->label($item['label'] ?? null);
+
+        if (! empty($item['suggestions'])) {
+            $field->suggestions($item['suggestions']);
+        }
+
+        return self::applyCommonFieldOptions($field, $item);
+    }
+
+    protected static function buildTimePicker(array $item): Forms\Components\TimePicker
+    {
+        $field = Forms\Components\TimePicker::make($item['name'])
+            ->label($item['label'] ?? null)
+            ->native($item['native'] ?? false);
+
+        return self::applyCommonFieldOptions($field, $item);
+    }
+
+    /**
+     * Populate a Select field with records from a related Studio module.
+     * The relate_module key must match the module's fullname (e.g. 'crm_contacts').
+     * display_field is the column whose value is shown as the option label.
+     * The field stores the related record's primary key as a plain string.
+     */
+    protected static function applyRelateOptions(Forms\Components\Select $field, array $item): void
+    {
+        $relateModule = $item['relate_module'] ?? null;
+        $configured   = $item['display_field'] ?? 'name';
+
+        if (! $relateModule) {
+            return;
+        }
+
+        // Studio model class is Studly-cased fullname, e.g. 'crm_contacts' → 'CrmContacts'
+        $modelClass = 'App\\Models\\' . Str::studly($relateModule);
+
+        if (! class_exists($modelClass)) {
+            // Fallback: try singular form in case user stored plain name
+            $modelClass = 'App\\Models\\' . Str::studly(Str::singular($relateModule));
+        }
+
+        if (! class_exists($modelClass)) {
+            $field->options([]);
+            return;
+        }
+
+        // Auto-detect the best label column the model actually has
+        $displayField = self::resolveRelateDisplayColumn($modelClass, $configured);
+
+        $field->options(function () use ($modelClass, $displayField) {
+            if ($displayField === '__full_name__') {
+                return $modelClass::query()
+                    ->select(['id', 'first_name', 'last_name'])
+                    ->orderBy('first_name')
+                    ->limit(1000)
+                    ->get()
+                    ->mapWithKeys(fn ($r) => [$r->id => trim(($r->first_name ?? '') . ' ' . ($r->last_name ?? ''))])
+                    ->toArray();
+            }
+
+            return $modelClass::query()
+                ->orderBy($displayField)
+                ->limit(1000)
+                ->pluck($displayField, 'id')
+                ->map(fn ($label) => (string) ($label ?? ''))
+                ->toArray();
+        });
+
+        $field->getOptionLabelUsing(function ($value) use ($modelClass, $displayField) {
+            $record = $modelClass::find($value);
+            if (! $record) {
+                return $value;
+            }
+            if ($displayField === '__full_name__') {
+                return trim("{$record->first_name} {$record->last_name}") ?: $value;
+            }
+            return $record->{$displayField} ?? $value;
+        });
+
+        $field->searchable();
+    }
+
+    /**
+     * Find the best column to use as the display label for a relate dropdown.
+     * Tries the user-configured column first, then falls back through common
+     * naming conventions. Returns '__full_name__' when first_name+last_name exist.
+     */
+    public static function resolveRelateDisplayColumn(string $modelClass, string $configured): string
+    {
+        $instance = new $modelClass;
+        $table    = $instance->getTable();
+
+        // Configured column takes priority if it actually exists
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, $configured)) {
+            return $configured;
+        }
+
+        // Common single-column labels
+        foreach (['name', 'title', 'label', 'full_name', 'display_name'] as $col) {
+            if (\Illuminate\Support\Facades\Schema::hasColumn($table, $col)) {
+                return $col;
+            }
+        }
+
+        // Combined first + last name
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'first_name')
+            && \Illuminate\Support\Facades\Schema::hasColumn($table, 'last_name')) {
+            return '__full_name__';
+        }
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'first_name')) {
+            return 'first_name';
+        }
+
+        // Last resort: primary key (IDs) — at least won't throw
+        return $instance->getKeyName();
     }
 
     /*protected static function applyPopulationOptions(Components\Component $field, array $item): void
@@ -2278,12 +2540,13 @@ class JsonFormBuilder
         $populateMode = $item['populate_mode'] ?? 'both';
         $helperParams = $item['helper_params'] ?? [];
         $helperType = $item['helper_type'] ?? 'static';
+        $populateParams = $item['populate_params'] ?? null;
 
         if (! class_exists($helperClass) || ! method_exists($helperClass, $helperMethod)) {
             return;
         }
 
-        $field->live()->afterStateUpdated(function ($state, Set $set, Get $get, $livewire, $component) use ($helperClass, $helperMethod, $populateFields, $populateMode, $helperParams, $helperType) {
+        $field->live()->afterStateUpdated(function ($state, Set $set, Get $get, $livewire, $component) use ($helperClass, $helperMethod, $populateFields, $populateMode, $helperParams, $helperType, $populateParams) {
             if ($state === null || $state === '') {
 
                   foreach ($populateFields as $targetField) {
@@ -2315,7 +2578,11 @@ class JsonFormBuilder
             // Build helper arguments
             $args = [];
 
-            if (! empty($helperParams)) {
+            if ($populateParams !== null) {
+                foreach ($populateParams as $param) {
+                    $args[] = ($param === '$state') ? $state : $get($param);
+                }
+            } elseif (! empty($helperParams)) {
                 foreach ($helperParams as $param) {
 
                     if ($helperType === 'hybrid') {

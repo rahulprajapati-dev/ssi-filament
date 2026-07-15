@@ -6,6 +6,8 @@ use App\Filament\Resources\Modules\Pages\CreateModule;
 use App\Filament\Resources\Modules\Pages\EditModule;
 use App\Filament\Resources\Modules\Pages\ListModules;
 use App\Filament\Resources\Modules\Pages\ViewModule;
+use App\Filament\Resources\Modules\RelationManagers\FieldsRelationManager;
+use App\Filament\Resources\Modules\RelationManagers\LayoutsRelationManager;
 use App\Filament\Resources\Modules\Schemas\ModuleForm;
 use App\Filament\Resources\Modules\Tables\ModulesTable;
 use App\Models\Module;
@@ -41,7 +43,8 @@ class ModuleResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            FieldsRelationManager::class,
+            LayoutsRelationManager::class,
         ];
     }
 

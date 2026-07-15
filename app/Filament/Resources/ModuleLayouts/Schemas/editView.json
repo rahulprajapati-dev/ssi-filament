@@ -4,6 +4,33 @@
     "components": [
         {
             "component": "section",
+            "label": "Layout Inheritance",
+            "description": "Reuse an existing view layout structure to quickly create this layout. Enable an option to copy the configuration from another view type.",
+            "icon": "heroicon-o-document-duplicate",
+            "columnSpan": "full",
+            "collapsible": false,
+            "compact": true,
+            "columns": 2,
+            "visible_when": { "field": "layout_type", "value": "create" },
+            "schema": [
+                {
+                    "component": "toggle",
+                    "name": "inherit_edit_layout",
+                    "label": "Use Edit View Layout",
+                    "columnSpan": 1,
+                    "hint": "Copy the field structure and layout configuration from the Edit View."
+                },
+                {
+                    "component": "toggle",
+                    "name": "inherit_detail_layout",
+                    "label": "Use Detail View Layout",
+                    "columnSpan": 1,
+                    "hint": "Copy the field structure and layout configuration from the Detail View."
+                }
+            ]
+        },
+        {
+            "component": "section",
             "label": "Module & View Type",
             "description": "The module is locked after creation. You can change the view type if needed.",
             "icon": "heroicon-o-cog-6-tooth",
@@ -26,6 +53,8 @@
                     "dehydrated": true,
                     "preload": true,
                     "live": true,
+                    "custom_after_state_updated": "\\App\\Filament\\Resources\\ModuleLayouts\\Hooks\\ModuleLayoutHooks@validateUniqueModuleLayout",
+                    "custom_after_state_updated_related": ["layout_type"],
                     "hint": "Module cannot be changed after creation"
                 },
                 {
@@ -39,7 +68,10 @@
                     "helper_params": [
                         "layout_type_dom"
                     ],
+                    "custom_after_state_updated": "\\App\\Filament\\Resources\\ModuleLayouts\\Hooks\\ModuleLayoutHooks@validateUniqueModuleLayout",
+                    "custom_after_state_updated_related": ["module_id"],
                     "required": true,
+                    "reactive":true,
                     "hint": "Create / Edit / Detail / List"
                 }
             ]
@@ -61,6 +93,49 @@
                     "source": "module_fields",
                     "depends_on": "module_id",
                     "columnSpan": 1
+                }
+            ]
+        },
+        {
+            "component": "section",
+            "label": "List Filters",
+            "description": "Define which fields appear as filters in this list view. Repair & Rebuild after saving.",
+            "icon": "heroicon-o-funnel",
+            "columnSpan": "full",
+            "collapsible": true,
+            "compact": false,
+            "columns": 1,
+            "visible_when": { "field": "layout_type", "value": "list" },
+            "schema": [
+                {
+                    "component": "repeater",
+                    "name": "filters_json",
+                    "label": null,
+                    "columnSpan": 1,
+                    "columns": 2,
+                    "schema": [
+                        {
+                            "component": "select",
+                            "name": "field_name",
+                            "label": "Field",
+                            "columnSpan": 1,
+                            "options_source": "helper",
+                            "helper_type": "dynamic",
+                            "helper_class": "App\\Helpers\\CommonHelper",
+                            "helper_method": "getModuleFieldsById",
+                            "helper_params": ["../../module_id"],
+                            "required": true,
+                            "searchable": true
+                        },
+                        {
+                            "component": "textInput",
+                            "name": "label",
+                            "label": "Filter Label",
+                            "columnSpan": 1,
+                            "placeholder": "Leave blank to use field label",
+                            "required": false
+                        }
+                    ]
                 }
             ]
         }

@@ -1,0 +1,397 @@
+{
+    "form_name": "module_field_panel_form",
+    "model": "App\\Models\\ModuleField",
+    "components": [
+        {
+            "component": "tabs",
+            "columnSpan": "full",
+            "tabs": [
+                {
+                    "label": "General",
+                    "schema": [
+                        {
+                            "component": "grid",
+                            "columns": 2,
+                            "schema": [
+                                {
+                                    "component": "textInput",
+                                    "name": "field_name",
+                                    "label": "Field Name",
+                                    "columnSpan": 1,
+                                    "required": true,
+                                    "custom_after_state_updated": "\\App\\Filament\\Resources\\ModuleFields\\Hooks\\ModuleFieldHooks@filedValidation",
+                                    "custom_after_state_updated_related": [
+                                        "field_name"
+                                    ],
+                                    "reactive": true,
+                                    "disabled_if_record": {
+                                        "relation": "module",
+                                        "field": "is_deploy",
+                                        "operator": "=",
+                                        "value": true
+                                    },
+                                    "dehydrated": true
+                                },
+                                {
+                                    "component": "textInput",
+                                    "name": "label",
+                                    "label": "Display Label",
+                                    "columnSpan": 1,
+                                    "required": true
+                                },
+                                {
+                                    "component": "select",
+                                    "name": "type",
+                                    "label": "Field Type",
+                                    "columnSpan": 1,
+                                    "options_source": "helper",
+                                    "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
+                                    "helper_method": "get",
+                                    "helper_params": ["field_type_dom"],
+                                    "searchable": true,
+                                    "reactive": true,
+                                    "required": true
+                                },
+                                {
+                                    "component": "toggle",
+                                    "name": "is_multiple",
+                                    "label": "Allow Multiple",
+                                    "visible_when": {
+                                        "field": "type",
+                                        "operator": "in",
+                                        "value": ["file", "image" , "select"]
+                                    },
+                                    "columnSpan": 1
+                                },
+                                {
+                                    "component": "select",
+                                    "name": "relate_module",
+                                    "label": "Relate To Module",
+                                    "columnSpan": 1,
+                                    "options_source": "helper",
+                                    "helper_class": "App\\Helpers\\CommonHelper",
+                                    "helper_method": "getModulesForRelate",
+                                    "searchable": true,
+                                    "required": false,
+                                    "placeholder": "Select a module...",
+                                    "dehydrated": true,
+                                    "visible_when": {
+                                        "field": "type",
+                                        "operator": "in",
+                                        "value": ["relationship"]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "component": "section",
+                            "label": "Options (for Select / Radio / Checkbox List)",
+                            "collapsible": true,
+                            "compact": true,
+                            "columns": 1,
+                            "visible_when": {
+                                "field": "type",
+                                "operator": "in",
+                                "value": [
+                                    "select",
+                                    "radio",
+                                    "checkbox_list"
+                                ]
+                            },
+                            "schema": [
+                                {
+                                    "component": "repeater",
+                                    "name": "options",
+                                    "label": "Options List",
+                                    "columnSpan": 1,
+                                    "columns": 3,
+                                    "schema": [
+                                        {
+                                            "component": "checkbox",
+                                            "name": "default",
+                                            "label": "Default",
+                                            "columnSpan": 1
+                                        },
+                                        {
+                                            "component": "textInput",
+                                            "name": "key",
+                                            "label": "Value",
+                                            "columnSpan": 1,
+                                            "required": true
+                                        },
+                                        {
+                                            "component": "textInput",
+                                            "name": "value",
+                                            "label": "Display Label",
+                                            "columnSpan": 1,
+                                            "required": true
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "label": "Properties",
+                    "schema": [
+                        {
+                            "component": "grid",
+                            "columns": 2,
+                            "schema": [
+                                {
+                                    "component": "toggle",
+                                    "name": "required",
+                                    "label": "Required Field",
+                                    "columnSpan": 1
+                                },
+                                {
+                                    "component": "toggle",
+                                    "name": "unique_field",
+                                    "label": "Unique Field",
+                                    "columnSpan": 1
+                                },
+                                {
+                                    "component": "textInput",
+                                    "name": "default_value",
+                                    "label": "Default Value",
+                                    "columnSpan": 1,
+                                    "required": false
+                                },
+                                {
+                                    "component": "textInput",
+                                    "name": "length",
+                                    "label": "Length (Max)",
+                                    "type": "numeric",
+                                    "max_value": 9999,
+                                    "columnSpan": 1,
+                                    "required": false
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "label": "Visibility",
+                    "schema": [
+                        {
+                            "component": "grid",
+                            "columns": 2,
+                            "schema": [
+                                {
+                                    "component": "select",
+                                    "name": "visibility_mode",
+                                    "label": "Visibility Mode",
+                                    "columnSpan": 1,
+                                    "options_source": "helper",
+                                    "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
+                                    "helper_method": "get",
+                                    "helper_params": [
+                                        "visibility_mode_dom"
+                                    ],
+                                    "required": true,
+                                    "reactive": true,
+                                    "default": "always_visible"
+                                },
+                                {
+                                    "component": "select",
+                                    "name": "condition_logic",
+                                    "label": "Condition Logic",
+                                    "columnSpan": 1,
+                                    "options_source": "helper",
+                                    "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
+                                    "helper_method": "get",
+                                    "helper_params": [
+                                        "condition_logic_dom"
+                                    ],
+                                    "required": true,
+                                    "default": "and",
+                                    "visible_when": {
+                                        "field": "visibility_mode",
+                                        "operator": "in",
+                                        "value": [
+                                            "visible_when",
+                                            "hidden_when"
+                                        ]
+                                    }
+                                },
+                                {
+                                    "component": "toggle",
+                                    "name": "always_save_value",
+                                    "label": "Always Save Value (Save field value even when hidden)",
+                                    "columnSpan": 2,
+                                    "visible_when": {
+                                        "field": "visibility_mode",
+                                        "operator": "in",
+                                        "value": [
+                                            "visible_when",
+                                            "hidden_when"
+                                        ]
+                                    }
+                                },
+                                {
+                                    "component": "repeater",
+                                    "name": "visibility_conditions",
+                                    "label": "Visibility Conditions",
+                                    "columnSpan": 2,
+                                    "columns": 3,
+                                    "visible_when": {
+                                        "field": "visibility_mode",
+                                        "operator": "in",
+                                        "value": [
+                                            "visible_when",
+                                            "hidden_when"
+                                        ]
+                                    },
+                                    "schema": [
+                                        {
+                                            "component": "select",
+                                            "name": "field",
+                                            "label": "Field",
+                                            "columnSpan": 1,
+                                            "helper_type": "dynamic",
+                                            "options_source": "helper",
+                                            "helper_class": "App\\Helpers\\CommonHelper",
+                                            "helper_method": "getModuleFieldsOptions",
+                                            "helper_params": [
+                                                "../../module_id"
+                                            ],
+                                            "required": true,
+                                            "reactive": true,
+                                            "searchable": true,
+                                            "after_state_updated": "App\\Helpers\\CommonHelper@updateConditionFieldType",
+                                            "clear_on_update": [
+                                                "operator",
+                                                "value"
+                                            ]
+                                        },
+                                        {
+                                            "component": "select",
+                                            "name": "operator",
+                                            "label": "Operator",
+                                            "columnSpan": 1,
+                                            "options_source": "helper",
+                                            "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
+                                            "helper_method": "get",
+                                            "helper_params": [
+                                                "operator_dom"
+                                            ],
+                                            "searchable": true,
+                                            "reactive": true,
+                                            "required": true,
+                                            "clear_on_update": [
+                                                "value"
+                                            ]
+                                        },
+                                        {
+                                            "component": "textInput",
+                                            "name": "value",
+                                            "label": "Value",
+                                            "placeholder": "Enter value (comma-separated for IN/NOT IN)",
+                                            "columnSpan": 1,
+                                            "required": true,
+                                            "visible_when": {
+                                                "field": "field_type",
+                                                "operator": "!=",
+                                                "value": "select"
+                                            }
+                                        },
+                                        {
+                                            "component": "select",
+                                            "name": "value",
+                                            "label": "Value",
+                                            "options_source": "helper",
+                                            "helper_class": "App\\Helpers\\CommonHelper",
+                                            "helper_method": "getSelectedFieldOptions",
+                                            "helper_type": "hybrid",
+                                            "helper_params": [
+                                                "@field",
+                                                "@../../module_id"
+                                            ],
+                                            "multiple": false,
+                                            "columnSpan": 1,
+                                            "required": true,
+                                            "visible_when": {
+                                                "logic": "and",
+                                                "conditions": [
+                                                    {
+                                                        "field": "field_type",
+                                                        "operator": "=",
+                                                        "value": "select"
+                                                    },
+                                                    {
+                                                        "field": "operator",
+                                                        "operator": "not_in",
+                                                        "value": [
+                                                            "in",
+                                                            "not_in"
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "component": "select",
+                                            "name": "value",
+                                            "label": "Value",
+                                            "options_source": "helper",
+                                            "helper_class": "App\\Helpers\\CommonHelper",
+                                            "helper_method": "getSelectedFieldOptions",
+                                            "helper_type": "hybrid",
+                                            "helper_params": [
+                                                "@field",
+                                                "@../../module_id"
+                                            ],
+                                            "multiple": true,
+                                            "columnSpan": 1,
+                                            "required": true,
+                                            "visible_when": {
+                                                "logic": "and",
+                                                "conditions": [
+                                                    {
+                                                        "field": "field_type",
+                                                        "operator": "=",
+                                                        "value": "select"
+                                                    },
+                                                    {
+                                                        "field": "operator",
+                                                        "operator": "in",
+                                                        "value": [
+                                                            "in",
+                                                            "not_in"
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "component": "section",
+                            "label": "Listing & Search Settings",
+                            "collapsible": true,
+                            "compact": true,
+                            "columns": 2,
+                            "schema": [
+                                {
+                                    "component": "toggle",
+                                    "name": "searchable",
+                                    "label": "Searchable Field",
+                                    "columnSpan": 1
+                                },
+                                {
+                                    "component": "toggle",
+                                    "name": "sortable",
+                                    "label": "Sortable Field",
+                                    "columnSpan": 1
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

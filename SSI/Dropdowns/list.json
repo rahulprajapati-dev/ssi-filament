@@ -9,26 +9,28 @@
         "other": "Other"
     },
     "field_type_dom": {
-        "text": "Text Input",
+        "text": "Text",
         "textarea": "Textarea",
         "number": "Number",
+        "decimal": "Decimal",
         "email": "Email",
         "url": "URL",
-        "phone": "Phone Number",
-        "select": "Select Dropdown",
+        "phone": "Phone",
+        "address": "Address",
+        "select": "Select\/Multiselect",
         "toggle": "Toggle",
         "checkbox": "Checkbox",
         "radio": "Radio Button",
         "checkbox_list": "Checkbox List",
-        "date": "Date Picker",
-        "time": "Time Picker",
-        "datetime": "Date Time Picker",
+        "date": "Date",
+        "time": "Time",
+        "datetime": "DateTime",
         "file": "File Upload",
         "image": "Image Upload",
         "currency": "Currency",
-        "color": "Color Picker",
-        "tags": "Tags Input",
-        "relationship": "Relationship",
+        "color": "Color",
+        "tags": "Tag",
+        "relationship": "Relate",
         "json": "JSON"
     },
     "layout_type_dom": {
@@ -97,8 +99,8 @@
     },
     "visibility_mode_dom": {
         "always_visible": "Always visible",
-        "show_when": "Show when conditions are met",
-        "hide_when": "Hide when conditions are met"
+        "visible_when": "Show when conditions are met",
+        "hidden_when": "Hide when conditions are met"
     },
     "condition_logic_dom": {
         "and": "All conditions must be met (AND)",
@@ -111,6 +113,11 @@
         "belongsToMany": "Belongs To Many",
         "hasOneThrough": "Has One Through",
         "hasManyThrough": "Has Many Through"
+    },
+    "filter_type_dom": {
+        "text": "Text Search",
+        "select": "Dropdown Select",
+        "boolean": "Yes \/ No"
     },
     "operator_dom": {
         "=": "Equals",

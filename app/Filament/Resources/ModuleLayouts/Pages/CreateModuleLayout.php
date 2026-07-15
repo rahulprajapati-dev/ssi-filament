@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\ModuleLayouts\Pages;
 
+use App\Filament\Resources\ModuleLayouts\Hooks\ModuleLayoutHooks;
 use App\Filament\Resources\ModuleLayouts\ModuleLayoutResource;
+use App\Helpers\Studio\FieldTypeMap;
 use App\Models\ModuleField;
 use App\Models\ModuleLayout;
 use Filament\Resources\Pages\CreateRecord;
@@ -11,8 +13,8 @@ use Illuminate\Validation\ValidationException;
 class CreateModuleLayout extends CreateRecord
 {
     protected static string $resource = ModuleLayoutResource::class;
-    
-    public function getTitle(): string 
+
+    public function getTitle(): string
     {
         return 'Create Layout';
     }
@@ -24,7 +26,7 @@ class CreateModuleLayout extends CreateRecord
             layoutType: (string) $data['layout_type'],
         );
 
-        return $data;
+        return app(ModuleLayoutHooks::class)->applyLayoutInheritance($data);
     }
 
     private function ensureLayoutTypeIsUnique(int $moduleId, string $layoutType): void
@@ -41,11 +43,20 @@ class CreateModuleLayout extends CreateRecord
     }
 
     // Helper used by the form when populating field lists.
-    public function getModuleFields(int $moduleId): array
+    public function getModuleFields(int $moduleId, ?string $layoutType = null): array
     {
-        return ModuleField::where('module_id', $moduleId)
-            ->orderBy('sort_order')
-            ->pluck('field_name')
+        $layoutType = $layoutType ?? ($this->data['layout_type'] ?? null);
+
+        $excludeSystem = in_array($layoutType, ['create', 'edit'], true);
+
+        $query = ModuleField::where('module_id', $moduleId)->orderBy('sort_order');
+
+        if ($excludeSystem) {
+            $query->whereNotIn('field_name', FieldTypeMap::SYSTEM_FIELD_NAMES);
+        }
+
+        return $query->get(['field_name', 'label'])
+            ->map(fn ($f) => ['field_name' => $f->field_name, 'label' => $f->label ?: $f->field_name])
             ->toArray();
     }
 }

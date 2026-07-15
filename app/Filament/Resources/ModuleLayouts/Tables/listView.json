@@ -71,6 +71,14 @@
             "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
             "helper_method": "get",
             "helper_params": ["layout_type_dom"]
+        },
+        {
+            "type": "select",
+            "name": "module_id",
+            "label": "Module",
+            "options_source": "relationship",
+            "relationship": "module",
+            "title_column": "plural_label"
         }
     ],
     "filters_layout": "modal",

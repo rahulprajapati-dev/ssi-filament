@@ -14,6 +14,29 @@
             "schema": [
                 {
                     "component": "textInput",
+                    "name": "key",
+                    "label": "Key",
+                    "columnSpan": 1,
+                    "required": true,
+                    "validate_on_blur": true,
+                    "validation": [
+                        "required",
+                        "regex:/^[a-zA-Z]+$/",
+                        "max:4"
+                    ],
+                    "disabled_when": {
+                        "field": "is_deploy",
+                        "value": true
+                    },
+                    "strict_messages": true,
+                    "messages": {
+                        "required": "Key is required.",
+                        "regex": "Key must contain letters only — no spaces, numbers, or symbols. Example: crm, ssi.",
+                        "max": "Key must not exceed 4 characters."
+                    }
+                },
+                {
+                    "component": "textInput",
                     "name": "name",
                     "label": "Module Name",
                     "columnSpan": 1,
@@ -31,15 +54,21 @@
                         "singular_label",
                         "plural_label"
                     ],
-                    "hint": "Locked after deployment — rename requires re-deploy",
                     "disabled_when": {
                         "field": "is_deploy",
                         "value": true
                     },
+                    "validate_on_blur": true,
                     "validation": [
                         "max:50",
-                        "regex:/^[a-z][a-z0-9_]*$/"
-                    ]
+                        "regex:/^[A-Za-z][A-Za-z0-9_]*$/"
+                    ],
+                    "strict_messages": true,
+                    "messages": {
+                        "max": "Module name must not exceed 50 characters.",
+                        "regex": "Module name must start with a letter and contain only letters, numbers, and underscores — no spaces allowed. Example: CustomerOrder or customer_order."
+                    },
+                    "custom_rule": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@ValidateModuleName"
                 },
                 {
                     "component": "select",
@@ -52,24 +81,21 @@
                         "moudle_icons_dom"
                     ],
                     "columnSpan": 1,
-                    "required": false,
-                    "hint": "Heroicon displayed in the sidebar navigation"
+                    "required": false
                 },
                 {
                     "component": "textInput",
                     "name": "singular_label",
                     "label": "Singular Label",
                     "columnSpan": 1,
-                    "required": true,
-                    "hint": "e.g. Customer Order"
+                    "required": true
                 },
                 {
                     "component": "textInput",
                     "name": "plural_label",
                     "label": "Plural Label",
                     "columnSpan": 1,
-                    "required": true,
-                    "hint": "e.g. Customer Orders"
+                    "required": true
                 },
                 {
                     "component": "textarea",
@@ -77,71 +103,14 @@
                     "label": "Description",
                     "columnSpan": 2,
                     "rows": 3,
-                    "required": false,
-                    "hint": "Optional — briefly describe what this module manages"
-                }
-            ]
-        },
-        {
-            "component": "section",
-            "label": "Module Relationships",
-            "description": "Define Eloquent relationships this module has with other modules. These are used when generating model code.",
-            "icon": "heroicon-o-arrow-path-rounded-square",
-            "columnSpan": "full",
-            "collapsible": true,
-            "compact": false,
-            "columns": 1,
-            "schema": [
+                    "required": false
+                },
                 {
-                    "component": "repeater",
-                    "name": "relationships_json",
-                    "label": null,
-                    "columnSpan": 1,
-                    "columns": 4,
-                    "schema": [
-                        {
-                            "component": "select",
-                            "name": "type",
-                            "label": "Relationship Type",
-                            "columnSpan": 1,
-                            "options_source": "helper",
-                            "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
-                            "helper_method": "get",
-                            "helper_params": [
-                                "relationship_type_dom"
-                            ],
-                            "required": true,
-                            "searchable": false
-                        },
-                        {
-                            "component": "select",
-                            "name": "related_module",
-                            "label": "Related Module",
-                            "columnSpan": 1,
-                            "options_source": "helper",
-                            "helper_class": "App\\Helpers\\CommonHelper",
-                            "helper_method": "getModulesOptions",
-                            "helper_params": [],
-                            "required": true,
-                            "searchable": true
-                        },
-                        {
-                            "component": "textInput",
-                            "name": "name",
-                            "label": "Method Name",
-                            "columnSpan": 1,
-                            "required": false,
-                            "hint": "e.g. orders — auto-suggested if left empty"
-                        },
-                        {
-                            "component": "textInput",
-                            "name": "foreign_key",
-                            "label": "Foreign Key",
-                            "columnSpan": 1,
-                            "required": false,
-                            "hint": "Leave empty for convention (e.g. module_id)"
-                        }
-                    ]
+                    "component": "toggle",
+                    "name": "use_uuid",
+                    "label": "Use UUID in URLs",
+                    "hintIcon": "When ON — record URLs show a UUID instead of the numeric ID. Takes effect on next Deploy or Repair & Rebuild.",
+                    "columnSpan": 1
                 }
             ]
         }

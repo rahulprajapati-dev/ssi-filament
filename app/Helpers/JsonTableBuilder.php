@@ -15,10 +15,14 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
+use Filament\Forms\Components\TextInput as FilterTextInput;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
@@ -141,6 +145,10 @@ class JsonTableBuilder
             }
         }
 
+        if (! empty($config['reorderable'])) {
+            $table->reorderable($config['reorderable']);
+        }
+
         return $table;
     }
 
@@ -189,7 +197,14 @@ class JsonTableBuilder
 
                 // apply other options
                 if (! empty($c['sortable'])) {
-                    $col->sortable();
+                    $fields = (array) ($c['sortable_field'] ?? []);
+                    $col->sortable(query: empty($fields) ? null :
+                        function ($query, $direction) use ($fields) {
+                            foreach ($fields as $field) {
+                                $query->orderBy($field, $direction);
+                            }
+                        }
+                    );
                 }
                 if (isset($c['rupee']) && $c['rupee']) {
                     $col->prefix('₹')
@@ -238,23 +253,63 @@ class JsonTableBuilder
                 }
 
                 // format_hook: "ClassName@method" — receives ($state, $record)
+                // Uses getStateUsing (not formatStateUsing) so Filament receives a string,
+                // preventing per-element iteration when the column attribute is an array (e.g. layout_json).
                 if (! empty($c['format_hook'])) {
                     $hookString = $c['format_hook'];
-                    $col->formatStateUsing(function ($state, $record) use ($hookString) {
-                        if (str_contains($hookString, '@')) {
-                            [$class, $method] = explode('@', $hookString);
+                    $columnName = $name;
+                    if (str_contains($hookString, '@')) {
+                        [$hookClass, $hookMethod] = explode('@', $hookString);
+                        $col->getStateUsing(function ($record) use ($hookClass, $hookMethod, $columnName) {
+                            $state = $record?->{$columnName} ?? null;
+                            return $hookClass::$hookMethod($state, $record);
+                        });
+                    }
+                }
 
-                            return $class::$method($state, $record);
-                        }
-
-                        return $state;
-                    });
+                // Relate: resolve stored ID to the related record's display label
+                if (($c['options_source'] ?? null) === 'relate' && ! empty($c['relate_module'])) {
+                    $relateModule = $c['relate_module'];
+                    $modelClass   = 'App\\Models\\' . \Illuminate\Support\Str::studly($relateModule);
+                    if (! class_exists($modelClass)) {
+                        $modelClass = 'App\\Models\\' . \Illuminate\Support\Str::studly(\Illuminate\Support\Str::singular($relateModule));
+                    }
+                    if (class_exists($modelClass)) {
+                        $displayField = \App\Helpers\JsonFormBuilder::resolveRelateDisplayColumn($modelClass, $c['display_field'] ?? 'name');
+                        $col->formatStateUsing(function ($state) use ($modelClass, $displayField) {
+                            if ($state === null || $state === '') {
+                                return '—';
+                            }
+                            $record = $modelClass::find($state);
+                            if (! $record) {
+                                return (string) $state;
+                            }
+                            if ($displayField === '__full_name__') {
+                                return trim(($record->first_name ?? '') . ' ' . ($record->last_name ?? '')) ?: (string) $state;
+                            }
+                            return (string) ($record->{$displayField} ?? $state);
+                        });
+                    }
                 }
 
                 // apply searchable with individual option where supported
                 if ($isSearchable) {
                     try {
-                        if (!empty($c['dropdown'])) {
+                        if (! empty($c['searchable_fields'])) {
+                             $searchFields = (array) $c['searchable_fields'];
+                             $col->searchable(
+                                isIndividual: (bool) $isIndividual,
+                                query: function ($query, $search) use ($searchFields) {
+                                    $query->where(function ($q) use ($searchFields, $search) {
+                                        foreach ($searchFields as $field) {
+                                            $q->orWhere( $field, 'like', "%{$search}%");
+                                            }
+                                        });
+                                        return $query;
+                                }
+                            );
+                        }
+                        elseif  (!empty($c['dropdown'])) {
                             $dropdownType = $c['dropdown'];
                             $col->searchable(isIndividual: (bool) $isIndividual, query: function ($query, $search) use ($name, $dropdownType) {
                                 $options = DropdownHandler::get($dropdownType);
@@ -291,7 +346,14 @@ class JsonTableBuilder
 
             'badge' => tap(TextColumn::make($name)->label($label ?? Str::headline($name))->badge(), function ($col) use ($c, $name) {
                 if (! empty($c['sortable'])) {
-                    $col->sortable();
+                    $fields = (array) ($c['sortable_field'] ?? []);
+                    $col->sortable(query: empty($fields) ? null :
+                        function ($query, $direction) use ($fields) {
+                            foreach ($fields as $field) {
+                                $query->orderBy($field, $direction);
+                            }
+                        }
+                    );
                 }
                 $isSearchable = false;
                 $isIndividual = false;
@@ -324,7 +386,22 @@ class JsonTableBuilder
                 // apply searchable with individual option where supported
                 if ($isSearchable) {
                     try {
-                        if (!empty($c['dropdown'])) {
+                        if (! empty($c['searchable_fields'])) {
+                             $searchFields = (array) $c['searchable_fields'];
+                            
+                             $col->searchable(
+                                isIndividual: (bool) $isIndividual,
+                                query: function ($query, $search) use ($searchFields) {
+                                    $query->where(function ($q) use ($searchFields, $search) {
+                                        foreach ($searchFields as $field) {
+                                            return $q->orWhere( $field, 'like', "%{$search}%");
+                                            }
+                                        });
+                                        return $query;
+                                }
+                            );
+                        }
+                        elseif  (!empty($c['dropdown'])) {
                             $dropdownType = $c['dropdown'];
                             $col->searchable(isIndividual: (bool) $isIndividual, query: function ($query, $search) use ($name, $dropdownType) {
                                 $options = getDropdownValue($dropdownType);
@@ -384,6 +461,21 @@ class JsonTableBuilder
 
                         return $options[$state] ?? $state;
                     });
+                }
+            }),
+
+            'image' => tap(ImageColumn::make($name)->label($label ?? Str::headline($name)), function ($col) use ($c) {
+                if (! empty($c['disk'])) {
+                    $col->disk($c['disk']);
+                }
+                if (! empty($c['height'])) {
+                    $col->height($c['height']);
+                }
+                if (! empty($c['width'])) {
+                    $col->width($c['width']);
+                }
+                if (! empty($c['circular'])) {
+                    $col->circular();
                 }
             }),
 
@@ -554,6 +646,22 @@ class JsonTableBuilder
             }
         }
 
+        if ($type === 'text') {
+            $fieldName = $name;
+
+            return Filter::make($name)
+                ->label($label)
+                ->form([FilterTextInput::make('value')->label($label)->placeholder("Search {$label}...")])
+                ->query(fn ($query, array $data) => $query->when(
+                    $data['value'] ?? null,
+                    fn ($q, $v) => $q->where($fieldName, 'like', "%{$v}%")
+                ));
+        }
+
+        if ($type === 'boolean') {
+            return TernaryFilter::make($name)->label($label);
+        }
+
         return null;
     }
 
@@ -574,6 +682,9 @@ class JsonTableBuilder
             'create' => tap(CreateAction::make()->label($label), function ($act) use ($icon, $h) {
                 if ($icon && method_exists($act, 'icon')) {
                     $act->icon($icon);
+                }
+                if (array_key_exists('createAnother', $h)) {
+                    $act->createAnother($h['createAnother']);
                 }
                 // UI customization (slideOver/modal) for header create action
                 self::applyUiOptionsToAction($act, $h['ui'] ?? []);
@@ -711,6 +822,7 @@ class JsonTableBuilder
             'edit' => EditAction::make()->label($label),
             'view' => ViewAction::make()->label($label),
             'delete' => DeleteAction::make()->label($label),
+            'navigate' => ActionClass::make($name)->label($label),
             'activity_log' => ActionClass::make($name)->label($label ?? 'Change Log')->modal(),
             'popup' => ActionClass::make($name)->label($label)->modal(),
             'custom' => ActionClass::make($name)->label($label), // Generic Action
@@ -733,7 +845,14 @@ class JsonTableBuilder
         // 2. Apply UI Options (Icon, Modal, Color)
         self::applyUiOptionsToAction($act, $ui);
 
-        if (!empty($a['url_route'])) {
+        if ($type === 'navigate' && !empty($a['resource'])) {
+            $resource = $a['resource'];
+            $method = $a['resource_method'] ?? 'view';
+            $act->url(fn ($record) => $resource::getUrl($method, ['record' => $record]));
+            if (!empty($a['open_new_tab'])) {
+                $act->openUrlInNewTab();
+            }
+        } elseif (!empty($a['url_route'])) {
             // Allows defining a route name in JSON: "url_route": "filament.admin.resources.stocks.delivery"
             $act->url(fn ($record) => route($a['url_route'], ['record' => $record]));
         } elseif (!empty($a['url'])) {

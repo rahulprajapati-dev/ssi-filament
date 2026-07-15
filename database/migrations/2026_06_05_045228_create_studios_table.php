@@ -1,0 +1,85 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('modules', function (Blueprint $table) {
+            $table->id();
+            $table->uuid('uuid');
+            $table->string('key',10)->nullable();
+            $table->string('name', 100)->unique();
+            $table->string('singular_label', 100);
+            $table->string('plural_label', 100);
+            $table->string('icon')->nullable();
+            $table->text('description')->nullable();
+            $table->json('relationships_json')->nullable();
+            $table->boolean('use_uuid')->default(false);
+            $table->boolean('is_relationships')->default(false);
+            $table->boolean('is_enable')->default(false)->index();
+            $table->boolean('is_deploy')->default(false)->index();
+            $table->timestamp('deployed_at')->nullable();
+            $table->string('created_by', 36)->nullable();
+            $table->string('updated_by', 36)->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('module_fields', function (Blueprint $table) {
+            $table->id();
+            $table->uuid('uuid');
+            $table->foreignId('module_id')->constrained()->cascadeOnDelete();
+            $table->string('field_name', 100);
+            $table->string('label', 100);
+            $table->string('type', 50);
+            $table->integer('length')->nullable();
+            $table->boolean('required')->default(false);
+            $table->boolean('searchable')->default(false);
+            $table->boolean('sortable')->default(false);
+            $table->boolean('unique_field')->default(false);
+            $table->text('default_value')->nullable();
+            $table->json('options')->nullable();
+            $table->boolean('is_multiple')->default(false);
+            $table->smallInteger('sort_order')->nullable();
+            $table->string('visibility_mode', 30)->default('always_visible');
+            $table->string('condition_logic', 10)->default('and');
+            $table->boolean('always_save_value')->default(false);
+            $table->json('visibility_conditions')->nullable();
+            $table->string('created_by', 36)->nullable();
+            $table->string('updated_by', 36)->nullable();
+            $table->timestamps();
+            $table->unique(['module_id', 'field_name'], 'uq_module_fields_module_field');
+        });
+
+        Schema::create('module_layouts', function (Blueprint $table) {
+            $table->id();
+            $table->uuid('uuid');
+            $table->foreignId('module_id')->constrained()->cascadeOnDelete();
+            $table->enum('layout_type', ['create', 'edit', 'detail', 'list']);
+            $table->json('layout_json');
+            $table->json('filters_json')->nullable();
+            $table->boolean('inherit_edit_layout')->default(false);
+            $table->boolean('inherit_detail_layout')->default(false);
+            $table->string('created_by', 36)->nullable();
+            $table->string('updated_by', 36)->nullable();
+            $table->timestamps();
+            $table->unique(['module_id', 'layout_type'], 'uq_module_layouts_module_type');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('module_fields');
+        Schema::dropIfExists('module_layouts');
+        Schema::dropIfExists('modules');
+    }
+};

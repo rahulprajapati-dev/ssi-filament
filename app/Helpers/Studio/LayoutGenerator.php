@@ -10,6 +10,7 @@ use App\Models\ModuleLayout;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use App\Helpers\Studio\FieldTypeMap;
 
 /**
  * Generates/overwrites JSON schema files from ModuleLayout records.
@@ -29,8 +30,8 @@ final class LayoutGenerator
      */
     public static function generate(Module $module, bool $force = false): bool
     {
-        $model = Str::studly($module->name);
-        $resource = Str::studly(Str::plural($module->name));
+        $model = Str::studly((string) $module->fullname);
+        $resource = Str::studly(Str::plural($module->fullname));
         $basePath = app_path("Filament/Resources/{$resource}");
 
         /** @var Collection<string, ModuleField> $fieldMap field_name → ModuleField */
@@ -73,8 +74,8 @@ final class LayoutGenerator
             }
 
             $content = $layout->layout_type === 'list'
-                ? self::buildListJson($model, $resource, $fieldNames, $fieldMap)
-                : self::buildFormJson($model, $layout->layout_type, $sections, $fieldMap);
+                ? self::buildListJson($model, $resource, $fieldNames, $fieldMap, $layout->filters_json ?? [])
+                : self::buildFormJson( $module, $model, $layout->layout_type, $sections, $fieldMap);
 
             File::ensureDirectoryExists(dirname($filePath));
             File::put($filePath, json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -89,7 +90,7 @@ final class LayoutGenerator
 
     public static function remove(Module $module): bool
     {
-        $resource = Str::studly(Str::plural($module->name));
+        $resource = Str::studly(Str::plural($module->fullname));
         $basePath = app_path("Filament/Resources/{$resource}");
 
         $files = [
@@ -126,22 +127,34 @@ final class LayoutGenerator
      * @param  array<int, array{title: string, columns: int, fields: string[]}>  $sections
      * @param  Collection<string, ModuleField>  $fieldMap
      */
-    private static function buildFormJson(
+    private static function buildFormJson(module $module,
         string $model,
         string $layoutType,
         array $sections,
         Collection $fieldMap,
     ): array {
+        $label = $module->singular_label ?: $model;
         $title = match ($layoutType) {
-            'create' => "Create {$model}",
-            'edit'   => "Edit {$model}",
-            'detail' => "View {$model}",
-            default  => $model,
+            'create' => "Create {$label}",
+            'edit'   => "Edit {$label}",
+            'detail' => "View {$label}",
+            default  => $label,
         };
 
         $isDetail = $layoutType === 'detail';
 
         $components = [];
+        // Collect field names that appear in any visibility condition across all fields
+        $reactiveFields = [];
+        foreach ($fieldMap as $f) {
+            $conds = $f->visibility_conditions ?? [];
+            foreach ($conds as $c) {
+                if (isset($c['field'])) {
+                    $reactiveFields[] = $c['field'];
+                }
+            }
+        }
+        $reactiveFields = array_unique($reactiveFields);
 
         foreach ($sections as $section) {
             $sectionTitle = $section['title'] ?? 'General';
@@ -156,29 +169,140 @@ final class LayoutGenerator
                 }
 
                 $componentType = $isDetail
-                    ? self::fieldTypeToDetailComponent($field->type)
-                    : self::fieldTypeToFormComponent($field->type);
+                    ? FieldTypeMap::toDetailComponent($field->type)
+                    : FieldTypeMap::toFormComponent($field->type);
 
                 $component = [
                     'component' => $componentType,
                     'name'      => $field->field_name,
                     'label'     => $field->label,
                 ];
+                // If this field is referenced in any visibility condition, make it reactive
+                if (in_array($field->field_name, $reactiveFields, true)) {
+                    $component['reactive'] = true;
+                }
 
                 if (! $isDetail && $field->required) {
                     $component['required'] = true;
                 }
 
+                if ($field->always_save_value) {
+                    $component['dehydrate'] = true;
+                }
+
                 // Attach static options for select/radio/checkboxList fields
                 if (! $isDetail && in_array($field->type, ['select', 'dropdown', 'enum', 'radio', 'checkboxList', 'checkbox_list'], true)) {
-                    $modulename= Str::snake($model);
-                    $dropdownName = "{$modulename}_{$field->field_name}_dom";
+                    
+                    $default = null;
+
+                    if (! empty($field->options) && is_array($field->options)) {
+                        foreach ($field->options as $option) {
+                            if (! empty($option['default'])) {
+                                $default = $option['key'];
+                                break; // Stop once the default option is found
+                            }
+                        }
+                    }
+                    $dropdownName = "{$module->fullname}_{$field->field_name}_dom";
                     $component['options_source'] = 'helper';
                     $component['helper_class']   = 'App\\Helpers\\Studio\\DropdownHandler';
                     $component['helper_method']  = 'get';
                     $component['helper_params']  = [
-                    $dropdownName
+                        $dropdownName
                     ];
+                    if ($default !== null) {
+                        $component['default'] = $default;
+                    }
+                }
+
+                // Use public disk for file/image fields (avoids S3 default in JsonFormBuilder)
+                if (in_array($field->type, ['file', 'image', 'fileupload'], true)) {
+                    $component['disk'] = 'public';
+                    if (! empty($field->is_multiple)) {
+                        $component['multiple'] = true;
+                    }
+                }
+
+                // Multi-select: inject multiple flag for select/dropdown types
+                if (in_array($field->type, ['select', 'dropdown', 'enum'], true) && ! empty($field->is_multiple)) {
+                    $component['multiple'] = true;
+                }
+                if (in_array($field->type, [ 'image'], true)) {
+                    $component['image'] = true;
+                }
+                if ($field->type == 'email') {
+                    $component['type'] = 'email';
+                }
+
+                // Relate (cross-module lookup) field — always emit config so
+                // detail/list views can resolve the stored ID to a display label.
+                if ($field->type === 'relationship') {
+                    $relateConfig = is_array($field->options) ? ($field->options[0] ?? []) : [];
+                    $component['options_source'] = 'relate';
+                    if (! empty($relateConfig['relate_module'])) {
+                        $component['relate_module'] = $relateConfig['relate_module'];
+                        $component['display_field'] = $relateConfig['display_field'] ?? 'name';
+                    }
+                    if (! $isDetail) {
+                        $component['searchable'] = true;
+                    }
+                }
+
+                // URL validation flag
+                if ($field->type === 'url') {
+                    $component['type'] = 'url';
+                }
+
+                // Numeric input constraints
+                if (in_array($field->type, ['money', 'currency'], true)) {
+                    $component['money'] = true;
+                } elseif (in_array($field->type, ['decimal', 'float', 'integer', 'number', 'int', 'biginteger', 'bigint'], true)) {
+                    $component['numeric'] = true;
+                }
+
+                // Type-specific UI validation rules (create/edit only, not detail)
+                if (! $isDetail) {
+                    self::applyFieldValidations($component, $field);
+                }
+
+                // Add visibility configuration for fields with visibility settings
+                if (! empty($field->visibility_mode) && $field->visibility_mode !== 'always_visible') {
+                    $key = $field->visibility_mode; // e.g., 'visible_when' or 'hidden_when'
+                    $conditions = $field->visibility_conditions ?? [];
+
+                    // Normalize condition values for "in", "not_in", and "user_guid" operators
+                    if (is_array($conditions)) {
+                        foreach ($conditions as &$cond) {
+                            if (isset($cond['operator']) && in_array($cond['operator'], ['in','not_in'], true)) {
+                                $raw = $cond['value'] ?? '';
+                                if (is_string($raw)) {
+                                    $cond['value'] = array_values(array_filter(array_map('trim', explode(',', $raw))));
+                                } elseif (is_array($raw)) {
+                                    $cond['value'] = array_values(array_filter(array_map(fn ($v) => is_string($v) ? trim($v) : $v, $raw)));
+                                }
+                            }
+                        }
+                        unset($cond);
+                    }
+                    if (! empty($field->condition_logic) && $field->condition_logic !== 'and') {
+                        $component[$key] = [
+                            'logic' => $field->condition_logic,
+                            'conditions' => $conditions,
+                        ];
+                    } else {
+                        $component[$key] = $conditions;
+                    }
+                }
+
+                // System fields in detail view: resolve user IDs to names, format timestamps.
+                if ($isDetail) {
+                    if ($field->field_name === 'created_by') {
+                        $component['name'] = 'createdBy.name';
+                    } elseif ($field->field_name === 'updated_by') {
+                        $component['name'] = 'updatedBy.name';
+                    } elseif (in_array($field->field_name, ['created_at', 'updated_at'], true)) {
+                        $component['dateTime'] = 'd M Y H:i';
+                    }
                 }
 
                 $sectionFields[] = $component;
@@ -247,9 +371,9 @@ final class LayoutGenerator
         string $resource,
         array $fieldNames,
         Collection $fieldMap,
+        array $filtersConfig = [],
     ): array {
-        $boolTypes = ['boolean', 'toggle', 'checkbox'];
-        $columns   = [];
+        $columns = [];
 
         foreach ($fieldNames as $fieldName) {
             $field = $fieldMap->get($fieldName);
@@ -257,16 +381,18 @@ final class LayoutGenerator
                 continue;
             }
 
-            $isBool = in_array(strtolower($field->type), $boolTypes, true);
-
             $column = [
-                'type'  => $isBool ? 'icon' : self::fieldTypeToColumnComponent($field->type),
+                'type'  => FieldTypeMap::toColumnComponent($field->type),
                 'name'  => $field->field_name,
                 'label' => $field->label,
             ];
 
-            if ($isBool) {
+            if (FieldTypeMap::isBooleanType($field->type)) {
                 $column['boolean'] = true;
+            }
+
+            if (in_array($field->type, ['image', 'file', 'fileupload'], true)) {
+                $column['disk'] = 'public';
             }
 
             if ($field->searchable) {
@@ -277,14 +403,60 @@ final class LayoutGenerator
                 $column['sortable'] = true;
             }
 
+            // Relationship fields: emit relate config so the table builder can resolve IDs to labels.
+            if ($field->type === 'relationship') {
+                $relateConfig = is_array($field->options) ? ($field->options[0] ?? []) : [];
+                if (! empty($relateConfig['relate_module'])) {
+                    $column['options_source'] = 'relate';
+                    $column['relate_module']  = $relateConfig['relate_module'];
+                }
+            }
+
+            // System fields: resolve user IDs to names and format timestamps.
+            if ($field->field_name === 'created_by') {
+                $column['name'] = 'createdBy.name';
+            } elseif ($field->field_name === 'updated_by') {
+                $column['name'] = 'updatedBy.name';
+            } elseif (in_array($field->field_name, ['created_at', 'updated_at'], true)) {
+                $column['date'] = true;
+                $column['format'] = 'd M Y H:i';
+            }
+
             $columns[] = $column;
+        }
+
+        $filters = [];
+        $moduleName = Str::snake($model);
+        foreach ($filtersConfig as $fc) {
+            $fieldName = $fc['field_name'] ?? null;
+            if (! $fieldName) {
+                continue;
+            }
+            $field      = $fieldMap->get($fieldName);
+            $filterType = match (true) {
+                $field !== null && FieldTypeMap::isBooleanType($field->type)                                          => 'boolean',
+                $field !== null && in_array($field->type, ['select', 'radio', 'dropdown', 'enum'], true) => 'select',
+                default                                                                                   => 'text',
+            };
+            $filterLabel = ! empty($fc['label']) ? $fc['label'] : ($field?->label ?? Str::headline($fieldName));
+
+            $entry = ['type' => $filterType, 'name' => $fieldName, 'label' => $filterLabel];
+
+            if ($filterType === 'select' && $field !== null) {
+                $entry['options_source'] = 'helper';
+                $entry['helper_class']   = 'App\\Helpers\\Studio\\DropdownHandler';
+                $entry['helper_method']  = 'get';
+                $entry['helper_params']  = ["{$moduleName}_{$fieldName}_dom"];
+            }
+
+            $filters[] = $entry;
         }
 
         return [
             'title'   => $resource,
             'model'   => "App\\Models\\{$model}",
             'columns' => $columns,
-            'filters' => [],
+            'filters' => $filters,
             'actions' => [
                 ['type' => 'edit',   'label' => 'Edit',    'ui' => ['icon' => 'heroicon-m-pencil-square', 'hiddenLabel' => true, 'iconButton' => true, 'tooltip' => 'Edit']],
                 ['type' => 'view',   'label' => 'Details', 'ui' => ['icon' => 'heroicon-o-eye',           'hiddenLabel' => true, 'iconButton' => true, 'tooltip' => 'Details']],
@@ -301,42 +473,181 @@ final class LayoutGenerator
         ];
     }
 
-    // ── Type maps ─────────────────────────────────────────────────────────────
-
-    /** Filament form component name for create/edit views. */
-    private static function fieldTypeToFormComponent(string $type): string
-    {
-        return match (strtolower($type)) {
-            'textarea', 'longtext', 'richtext'              => 'textarea',
-            'boolean', 'toggle'                             => 'toggle',
-            'checkbox'                                      => 'checkbox',
-            'date'                                          => 'datePicker',
-            'datetime', 'timestamp'                         => 'dateTimePicker',
-            'select', 'dropdown', 'enum'                    => 'select',
-            'radio'                                         => 'radio',
-            'checkboxList', 'checkbox_list'                 => 'checkboxList',
-            'fileUpload', 'file', 'image'                   => 'fileUpload',
-            'json', 'array', 'repeater'                     => 'textarea',
-            default                                         => 'textInput',
-        };
-    }
-
-    /** Filament infolist component name for detail/view. */
-    private static function fieldTypeToDetailComponent(string $type): string
-    {
-        return match (strtolower($type)) {
-            'boolean', 'toggle', 'checkbox'                 => 'toggle',
-            default                                         => 'textEntry',
-        };
-    }
-
-    /** JsonTableBuilder column type for list view (non-boolean columns). */
-    private static function fieldTypeToColumnComponent(string $type): string
-    {
-        return 'text';
-    }
-
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Inject type-specific validation rules into a form component config array.
+     * Rules are written to `field_rules` / `field_messages` (picked up by
+     * JsonFormBuilder::applyCommonFieldOptions) or `validate_json` (textarea only).
+     */
+    private static function applyFieldValidations(array &$component, ModuleField $field): void
+    {
+        $type = strtolower($field->type);
+
+        // ── Pincode: exactly 6 digits ─────────────────────────────────────────
+        if ($field->field_name === 'pincode' || str_ends_with($field->field_name, '_pincode')) {
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'regex:/^\d{6}$/'];
+            $component['strict_messages']  = true;
+            $component['messages']         = ['regex' => 'Pincode must be exactly 6 digits.'];
+            return;
+        }
+
+        // ── JSON / array / repeater: valid JSON string ────────────────────────
+        if (in_array($type, ['json', 'array', 'repeater'], true)) {
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'json'];
+            $component['strict_messages']  = true;
+            $component['messages']         = ['json' => 'This field must contain valid JSON.'];
+            return;
+        }
+
+        // ── Phone: digits only, 7–15 characters ──────────────────────────────
+        if ($type === 'phone') {
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'regex:/^[0-9]+$/', 'min:7', 'max:15'];
+            $component['strict_messages']  = true;
+            $component['messages']         = [
+                'regex' => 'Phone number must contain digits only.',
+                'min'   => 'Phone number must be at least 7 digits.',
+                'max'   => 'Phone number must not exceed 15 digits.',
+            ];
+            return;
+        }
+
+        // ── Currency / decimal: format + DB range decimal(15,4) ──────────────
+        // DB allows max 15 total digits with 4 decimal places → integer part max 11 digits.
+        if (in_array($type, ['currency', 'money', 'decimal', 'float'], true)) {
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'regex:/^\d{1,11}(\.\d{1,4})?$/'];
+            $component['strict_messages']  = true;
+            $component['messages']         = [
+                'regex' => 'Enter a valid amount (max 11 integer digits, up to 4 decimal places).',
+            ];
+            return;
+        }
+
+        // ── Email ────────────────────────────────────────────────────────────
+        if ($type === 'email') {
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'email'];
+            $component['strict_messages']  = true;
+            $component['messages']         = ['email' => 'Please enter a valid email address.'];
+            return;
+        }
+
+        // ── URL ───────────────────────────────────────────────────────────────
+        if ($type === 'url') {
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'url'];
+            $component['strict_messages']  = true;
+            $component['messages']         = ['url' => 'Please enter a valid URL (e.g. https://example.com).'];
+            return;
+        }
+
+        // ── Integer / Number ──────────────────────────────────────────────────
+        if (in_array($type, ['integer', 'number', 'int', 'biginteger', 'bigint'], true)) {
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'integer'];
+            $component['strict_messages']  = true;
+            $component['messages']         = ['integer' => 'This field must be a whole number.'];
+            return;
+        }
+
+        // ── Date ──────────────────────────────────────────────────────────────
+        if ($type === 'date') {
+            $component['validation']      = ['nullable', 'date'];
+            $component['strict_messages'] = true;
+            $component['messages']        = ['date' => 'Please enter a valid date.'];
+            return;
+        }
+
+        // ── Datetime / Timestamp ──────────────────────────────────────────────
+        if (in_array($type, ['datetime', 'timestamp'], true)) {
+            $component['validation']      = ['nullable', 'date'];
+            $component['strict_messages'] = true;
+            $component['messages']        = ['date' => 'Please enter a valid date and time.'];
+            return;
+        }
+
+        // ── Time ──────────────────────────────────────────────────────────────
+        if ($type === 'time') {
+            $component['validation']      = ['nullable', 'regex:/^\d{2}:\d{2}(:\d{2})?$/'];
+            $component['strict_messages'] = true;
+            $component['messages']        = ['regex' => 'Please enter a valid time (HH:MM or HH:MM:SS).'];
+            return;
+        }
+
+        // ── Color: hex value ──────────────────────────────────────────────────
+        if ($type === 'color') {
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'regex:/^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/'];
+            $component['strict_messages']  = true;
+            $component['messages']         = ['regex' => 'Please enter a valid hex color (e.g. #FF5733).'];
+            return;
+        }
+
+        // ── Password: minimum length ──────────────────────────────────────────
+        if ($type === 'password') {
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'string', 'min:8'];
+            $component['strict_messages']  = true;
+            $component['messages']         = ['min' => 'Password must be at least 8 characters.'];
+            return;
+        }
+
+        // ── Tags / Checkbox list: must be an array ────────────────────────────
+        if (in_array($type, ['tags', 'checkbox_list', 'checkboxlist'], true)) {
+            $component['validation'] = ['nullable', 'array'];
+            return;
+        }
+
+        // ── Textarea / Longtext / Richtext: string content ────────────────────
+        if (in_array($type, ['textarea', 'longtext', 'richtext'], true)) {
+            $component['validation'] = ['nullable', 'string'];
+            return;
+        }
+
+        // ── Text / String: enforce column max-length when explicitly set ──────
+        if (in_array($type, ['text', 'string'], true) && $field->length > 0) {
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'string', 'max:' . (int) $field->length];
+            $component['strict_messages']  = true;
+            $component['messages']         = ['max' => "This field cannot exceed {$field->length} characters."];
+            return;
+        }
+
+        // ── Image: restrict to safe image MIME types, block everything else ──
+        if ($type === 'image') {
+            $component['accepted_file_types'] = [
+                'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp',
+            ];
+            $component['validation'] = ['nullable', 'mimes:jpg,jpeg,png,gif,webp,svg,bmp'];
+            return;
+        }
+
+        // ── File / FileUpload: safe document + image types, block executables ─
+        if (in_array($type, ['file', 'fileupload'], true)) {
+            $component['accepted_file_types'] = [
+                'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-powerpoint',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                'text/plain', 'text/csv',
+                'application/zip', 'application/x-zip-compressed',
+                'application/json',
+            ];
+            $component['validation'] = [
+                'nullable',
+                'mimes:jpg,jpeg,png,gif,webp,svg,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip,json',
+            ];
+            return;
+        }
+    }
 
     /** Returns true when the JSON file already has a non-empty components/columns array. */
     private static function fileHasContent(string $path): bool

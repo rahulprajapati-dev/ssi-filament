@@ -12,8 +12,28 @@
             "schema": [
                 {
                     "component": "textEntry",
+                    "name": "key",
+                    "label": "Key",
+                    "columnSpan": 1,
+                    "size": "lg",
+                    "weight": "bold",
+                    "color": "primary",
+                    "copyable": true
+                },
+                {
+                    "component": "textEntry",
                     "name": "name",
                     "label": "Module Name",
+                    "columnSpan": 1,
+                    "size": "lg",
+                    "weight": "bold",
+                    "color": "primary",
+                    "copyable": true
+                },
+                {
+                    "component": "textEntry",
+                    "name": "fullname",
+                    "label": "Module FullName",
                     "columnSpan": 1,
                     "size": "lg",
                     "weight": "bold",
@@ -52,24 +72,12 @@
                     "columnSpan": 2,
                     "size": "sm",
                     "color": "gray"
-                }
-            ]
-        },
-        {
-            "component": "section",
-            "label": "Module Relationships",
-            "icon": "heroicon-o-arrow-path-rounded-square",
-            "columnSpan": "full",
-            "compact": false,
-            "collapsible": true,
-            "columns": 1,
-            "schema": [
+                },
                 {
-                    "component": "placeholder",
-                    "name": "relationships_preview",
-                    "label": null,
-                    "columnSpan": 1,
-                    "content_hook": "App\\Helpers\\Studio\\ModuleRelationshipHelper@renderRelationships"
+                    "component": "toggle",
+                    "name": "use_uuid",
+                    "label": "Use UUID in URLs",
+                    "columnSpan": 1
                 }
             ]
         },
@@ -111,7 +119,7 @@
             "columnSpan": "full",
             "collapsed": false,
             "compact": true,
-            "columns": 4,
+            "columns": 2,
             "schema": [
                 {
                     "component": "textEntry",
