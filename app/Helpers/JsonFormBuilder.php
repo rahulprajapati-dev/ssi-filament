@@ -1576,6 +1576,28 @@ class JsonFormBuilder
                 $item['accepted_file_types'] = explode(',', $item['accepted_file_types']);
             }
             $field->acceptedFileTypes($item['accepted_file_types']);
+        } else {
+            // Runtime safe-type defaults for modules not yet rebuilt with the new config.
+            // Whitelist approach: only allow known-safe MIME types; executables and scripts are implicitly blocked.
+            if (! empty($item['image'])) {
+                $field->acceptedFileTypes(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp']);
+                $field->rules(['nullable', 'mimes:jpg,jpeg,png,gif,webp,svg,bmp']);
+            } else {
+                $field->acceptedFileTypes([
+                    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+                    'application/pdf',
+                    'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'application/vnd.ms-excel',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'application/vnd.ms-powerpoint',
+                    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                    'text/plain', 'text/csv',
+                    'application/zip', 'application/x-zip-compressed',
+                    'application/json',
+                ]);
+                $field->rules(['nullable', 'mimes:jpg,jpeg,png,gif,webp,svg,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip,json']);
+            }
         }
         $disk = isset($item['disk']) ? $item['disk'] : 's3';
 
