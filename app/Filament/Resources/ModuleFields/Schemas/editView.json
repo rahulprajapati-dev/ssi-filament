@@ -42,6 +42,7 @@
                                     "label": "Field Name",
                                     "columnSpan": 1,
                                     "required": true,
+                                    "validate_on_blur": true,
                                     "custom_after_state_updated": "\\App\\Filament\\Resources\\ModuleFields\\Hooks\\ModuleFieldHooks@filedValidation",
                                     "custom_after_state_updated_related": [
                                         "field_name"
@@ -72,6 +73,9 @@
                                     "helper_method": "get",
                                     "helper_params": [
                                         "field_type_dom"
+                                    ],
+                                    "clear_on_update": [
+                                        "relate_module", "is_multiple"
                                     ],
                                     "searchable": true,
                                     "reactive": true,
