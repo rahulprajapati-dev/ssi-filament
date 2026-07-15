@@ -1571,17 +1571,16 @@ class JsonFormBuilder
         if (! empty($item['multiple'])) {
             $field->multiple();
         }
+        // ── Client-side FilePond MIME restriction ─────────────────────────────
         if (! empty($item['accepted_file_types'])) {
             if (! is_array($item['accepted_file_types'])) {
                 $item['accepted_file_types'] = explode(',', $item['accepted_file_types']);
             }
             $field->acceptedFileTypes($item['accepted_file_types']);
         } else {
-            // Runtime safe-type defaults for modules not yet rebuilt with the new config.
-            // Whitelist approach: only allow known-safe MIME types; executables and scripts are implicitly blocked.
+            // Runtime defaults for modules that pre-date the file-validation config.
             if (! empty($item['image'])) {
                 $field->acceptedFileTypes(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp']);
-                $field->rules(['nullable', 'mimes:jpg,jpeg,png,gif,webp,svg,bmp']);
             } else {
                 $field->acceptedFileTypes([
                     'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
@@ -1596,9 +1595,26 @@ class JsonFormBuilder
                     'application/zip', 'application/x-zip-compressed',
                     'application/json',
                 ]);
-                $field->rules(['nullable', 'mimes:jpg,jpeg,png,gif,webp,svg,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip,json']);
             }
         }
+
+        // ── Server-side validation (always enforced, bypasses client-side FilePond) ──
+        // Pull rules from the JSON config (set by LayoutGenerator::applyFieldValidations).
+        // Fall back to safe defaults for modules not yet rebuilt. Filter 'nullable' —
+        // that is handled by the required flag, not passed to Filament rules().
+        $serverRules = array_values(array_filter(
+            $item['validation'] ?? [],
+            fn ($r) => $r !== 'nullable'
+        ));
+
+        if (empty($serverRules)) {
+            // Default rules when no JSON config present yet.
+            $serverRules = ! empty($item['image'])
+                ? ['mimes:jpg,jpeg,png,gif,webp,svg,bmp']
+                : ['mimes:jpg,jpeg,png,gif,webp,svg,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip,json'];
+        }
+
+        $field->rules($serverRules);
         $disk = isset($item['disk']) ? $item['disk'] : 's3';
 
         /* Dev-only override: when STOCKS_PHOTO_DISK_OVERRIDE is set in .env,
