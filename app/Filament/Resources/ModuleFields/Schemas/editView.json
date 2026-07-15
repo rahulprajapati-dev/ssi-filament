@@ -77,6 +77,12 @@
                                     "clear_on_update": [
                                         "relate_module", "is_multiple"
                                     ],
+                                    "disabled_if_record": {
+                                        "relation": "module",
+                                        "field": "is_deploy",
+                                        "operator": "=",
+                                        "value": true
+                                    },
                                     "searchable": true,
                                     "reactive": true,
                                     "required": true
