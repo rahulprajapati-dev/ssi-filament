@@ -18,6 +18,11 @@ class CreateModuleField extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
+        if (($data['type'] ?? '') === 'relationship'
+            && ! str_ends_with($data['field_name'] ?? '', '_id')) {
+            $data['field_name'] .= '_id';
+        }
+
         $this->ensureFieldNameIsUnique(
             moduleId:  (int) $data['module_id'],
             fieldName: (string) $data['field_name'],
@@ -26,7 +31,6 @@ class CreateModuleField extends CreateRecord
         if (($data['type'] ?? '') === 'relationship') {
             $data['options'] = [[
                 'relate_module' => strtolower($data['relate_module'] ?? ''),
-                'display_field' => $data['display_field'] ?: 'name',
             ]];
         }
         unset($data['relate_module'], $data['display_field']);

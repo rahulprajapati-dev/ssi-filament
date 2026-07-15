@@ -267,6 +267,31 @@ class JsonTableBuilder
                     }
                 }
 
+                // Relate: resolve stored ID to the related record's display label
+                if (($c['options_source'] ?? null) === 'relate' && ! empty($c['relate_module'])) {
+                    $relateModule = $c['relate_module'];
+                    $modelClass   = 'App\\Models\\' . \Illuminate\Support\Str::studly($relateModule);
+                    if (! class_exists($modelClass)) {
+                        $modelClass = 'App\\Models\\' . \Illuminate\Support\Str::studly(\Illuminate\Support\Str::singular($relateModule));
+                    }
+                    if (class_exists($modelClass)) {
+                        $displayField = \App\Helpers\JsonFormBuilder::resolveRelateDisplayColumn($modelClass, $c['display_field'] ?? 'name');
+                        $col->formatStateUsing(function ($state) use ($modelClass, $displayField) {
+                            if ($state === null || $state === '') {
+                                return '—';
+                            }
+                            $record = $modelClass::find($state);
+                            if (! $record) {
+                                return (string) $state;
+                            }
+                            if ($displayField === '__full_name__') {
+                                return trim(($record->first_name ?? '') . ' ' . ($record->last_name ?? '')) ?: (string) $state;
+                            }
+                            return (string) ($record->{$displayField} ?? $state);
+                        });
+                    }
+                }
+
                 // apply searchable with individual option where supported
                 if ($isSearchable) {
                     try {

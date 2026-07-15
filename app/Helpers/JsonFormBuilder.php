@@ -661,6 +661,31 @@ class JsonFormBuilder
             });
         }
 
+        // Relate: resolve stored ID to the related record's display label
+        if (($item['options_source'] ?? null) === 'relate' && ! empty($item['relate_module'])) {
+            $relateModule = $item['relate_module'];
+            $modelClass   = 'App\\Models\\' . Str::studly($relateModule);
+            if (! class_exists($modelClass)) {
+                $modelClass = 'App\\Models\\' . Str::studly(Str::singular($relateModule));
+            }
+            if (class_exists($modelClass)) {
+                $displayField = self::resolveRelateDisplayColumn($modelClass, $item['display_field'] ?? 'name');
+                $field->formatStateUsing(function ($state) use ($modelClass, $displayField) {
+                    if ($state === null || $state === '') {
+                        return '—';
+                    }
+                    $record = $modelClass::find($state);
+                    if (! $record) {
+                        return (string) $state;
+                    }
+                    if ($displayField === '__full_name__') {
+                        return trim(($record->first_name ?? '') . ' ' . ($record->last_name ?? '')) ?: (string) $state;
+                    }
+                    return (string) ($record->{$displayField} ?? $state);
+                });
+            }
+        }
+
         return self::applyCommonFieldOptions($field, $item);
     }
 
@@ -2341,7 +2366,7 @@ class JsonFormBuilder
     protected static function applyRelateOptions(Forms\Components\Select $field, array $item): void
     {
         $relateModule = $item['relate_module'] ?? null;
-        $displayField = $item['display_field'] ?? 'name';
+        $configured   = $item['display_field'] ?? 'name';
 
         if (! $relateModule) {
             return;
@@ -2360,19 +2385,76 @@ class JsonFormBuilder
             return;
         }
 
+        // Auto-detect the best label column the model actually has
+        $displayField = self::resolveRelateDisplayColumn($modelClass, $configured);
+
         $field->options(function () use ($modelClass, $displayField) {
+            if ($displayField === '__full_name__') {
+                return $modelClass::query()
+                    ->select(['id', 'first_name', 'last_name'])
+                    ->orderBy('first_name')
+                    ->limit(1000)
+                    ->get()
+                    ->mapWithKeys(fn ($r) => [$r->id => trim(($r->first_name ?? '') . ' ' . ($r->last_name ?? ''))])
+                    ->toArray();
+            }
+
             return $modelClass::query()
                 ->orderBy($displayField)
                 ->limit(1000)
                 ->pluck($displayField, 'id')
+                ->map(fn ($label) => (string) ($label ?? ''))
                 ->toArray();
         });
 
         $field->getOptionLabelUsing(function ($value) use ($modelClass, $displayField) {
-            return $modelClass::find($value)?->{$displayField} ?? $value;
+            $record = $modelClass::find($value);
+            if (! $record) {
+                return $value;
+            }
+            if ($displayField === '__full_name__') {
+                return trim("{$record->first_name} {$record->last_name}") ?: $value;
+            }
+            return $record->{$displayField} ?? $value;
         });
 
         $field->searchable();
+    }
+
+    /**
+     * Find the best column to use as the display label for a relate dropdown.
+     * Tries the user-configured column first, then falls back through common
+     * naming conventions. Returns '__full_name__' when first_name+last_name exist.
+     */
+    public static function resolveRelateDisplayColumn(string $modelClass, string $configured): string
+    {
+        $instance = new $modelClass;
+        $table    = $instance->getTable();
+
+        // Configured column takes priority if it actually exists
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, $configured)) {
+            return $configured;
+        }
+
+        // Common single-column labels
+        foreach (['name', 'title', 'label', 'full_name', 'display_name'] as $col) {
+            if (\Illuminate\Support\Facades\Schema::hasColumn($table, $col)) {
+                return $col;
+            }
+        }
+
+        // Combined first + last name
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'first_name')
+            && \Illuminate\Support\Facades\Schema::hasColumn($table, 'last_name')) {
+            return '__full_name__';
+        }
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'first_name')) {
+            return 'first_name';
+        }
+
+        // Last resort: primary key (IDs) — at least won't throw
+        return $instance->getKeyName();
     }
 
     /*protected static function applyPopulationOptions(Components\Component $field, array $item): void

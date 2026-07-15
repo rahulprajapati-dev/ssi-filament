@@ -24,12 +24,7 @@ class LayoutsRelationManager extends RelationManager
 
         $moduleId = $this->getOwnerRecord()->id;
 
-        $fields = ModuleField::where('module_id', $moduleId)
-            ->whereNotIn('field_name', FieldTypeMap::SYSTEM_FIELD_NAMES)
-            ->orderBy('sort_order')
-            ->get(['field_name', 'label'])
-            ->map(fn ($f) => ['field_name' => $f->field_name, 'label' => $f->label ?: $f->field_name])
-            ->toArray();
+        $fields = self::loadFieldsForLayout($moduleId, null);
 
         $config['components'] = $this->injectOwnerData($config['components'], $moduleId, $fields);
 
@@ -59,10 +54,27 @@ class LayoutsRelationManager extends RelationManager
     // Called by the drag-drop blade component via Livewire when layout_type changes.
     public function getModuleFields(int $moduleId, ?string $layoutType = null): array
     {
-        return ModuleField::where('module_id', $moduleId)
-            ->whereNotIn('field_name', FieldTypeMap::SYSTEM_FIELD_NAMES)
-            ->orderBy('sort_order')
-            ->get(['field_name', 'label'])
+        return self::loadFieldsForLayout($moduleId, $layoutType);
+    }
+
+    /**
+     * Load module fields for the layout drag-drop pool.
+     * System fields (created_by, updated_by, created_at, updated_at) are included
+     * for list and detail views, excluded for create/edit forms.
+     * When $layoutType is null (initial form load, type not yet chosen) include all fields
+     * so the pool is ready for whichever type the user selects.
+     */
+    private static function loadFieldsForLayout(int $moduleId, ?string $layoutType): array
+    {
+        $excludeSystem = in_array($layoutType, ['create', 'edit'], true);
+
+        $query = ModuleField::where('module_id', $moduleId)->orderBy('sort_order');
+
+        if ($excludeSystem) {
+            $query->whereNotIn('field_name', FieldTypeMap::SYSTEM_FIELD_NAMES);
+        }
+
+        return $query->get(['field_name', 'label'])
             ->map(fn ($f) => ['field_name' => $f->field_name, 'label' => $f->label ?: $f->field_name])
             ->toArray();
     }

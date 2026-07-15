@@ -47,7 +47,6 @@ class EditModuleField extends EditRecord
         if (($data['type'] ?? '') === 'relationship') {
             $data['options'] = [[
                 'relate_module' => strtolower($data['relate_module'] ?? ''),
-                'display_field' => $data['display_field'] ?: 'name',
             ]];
         }
         unset($data['relate_module'], $data['display_field']);

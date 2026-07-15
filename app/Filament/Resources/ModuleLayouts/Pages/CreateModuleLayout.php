@@ -47,10 +47,15 @@ class CreateModuleLayout extends CreateRecord
     {
         $layoutType = $layoutType ?? ($this->data['layout_type'] ?? null);
 
-        return ModuleField::where('module_id', $moduleId)
-            ->whereNotIn('field_name', FieldTypeMap::SYSTEM_FIELD_NAMES)
-            ->orderBy('sort_order')
-            ->get(['field_name', 'label'])
+        $excludeSystem = in_array($layoutType, ['create', 'edit'], true);
+
+        $query = ModuleField::where('module_id', $moduleId)->orderBy('sort_order');
+
+        if ($excludeSystem) {
+            $query->whereNotIn('field_name', FieldTypeMap::SYSTEM_FIELD_NAMES);
+        }
+
+        return $query->get(['field_name', 'label'])
             ->map(fn ($f) => ['field_name' => $f->field_name, 'label' => $f->label ?: $f->field_name])
             ->toArray();
     }

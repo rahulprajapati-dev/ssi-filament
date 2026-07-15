@@ -294,6 +294,17 @@ final class LayoutGenerator
                     }
                 }
 
+                // System fields in detail view: resolve user IDs to names, format timestamps.
+                if ($isDetail) {
+                    if ($field->field_name === 'created_by') {
+                        $component['name'] = 'createdBy.name';
+                    } elseif ($field->field_name === 'updated_by') {
+                        $component['name'] = 'updatedBy.name';
+                    } elseif (in_array($field->field_name, ['created_at', 'updated_at'], true)) {
+                        $component['dateTime'] = 'd M Y H:i';
+                    }
+                }
+
                 $sectionFields[] = $component;
             }
 
@@ -390,6 +401,25 @@ final class LayoutGenerator
 
             if ($field->sortable) {
                 $column['sortable'] = true;
+            }
+
+            // Relationship fields: emit relate config so the table builder can resolve IDs to labels.
+            if ($field->type === 'relationship') {
+                $relateConfig = is_array($field->options) ? ($field->options[0] ?? []) : [];
+                if (! empty($relateConfig['relate_module'])) {
+                    $column['options_source'] = 'relate';
+                    $column['relate_module']  = $relateConfig['relate_module'];
+                }
+            }
+
+            // System fields: resolve user IDs to names and format timestamps.
+            if ($field->field_name === 'created_by') {
+                $column['name'] = 'createdBy.name';
+            } elseif ($field->field_name === 'updated_by') {
+                $column['name'] = 'updatedBy.name';
+            } elseif (in_array($field->field_name, ['created_at', 'updated_at'], true)) {
+                $column['date'] = true;
+                $column['format'] = 'd M Y H:i';
             }
 
             $columns[] = $column;
