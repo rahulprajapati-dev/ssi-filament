@@ -526,6 +526,127 @@ final class LayoutGenerator
             ];
             return;
         }
+
+        // ── Email ────────────────────────────────────────────────────────────
+        if ($type === 'email') {
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'email'];
+            $component['strict_messages']  = true;
+            $component['messages']         = ['email' => 'Please enter a valid email address.'];
+            return;
+        }
+
+        // ── URL ───────────────────────────────────────────────────────────────
+        if ($type === 'url') {
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'url'];
+            $component['strict_messages']  = true;
+            $component['messages']         = ['url' => 'Please enter a valid URL (e.g. https://example.com).'];
+            return;
+        }
+
+        // ── Integer / Number ──────────────────────────────────────────────────
+        if (in_array($type, ['integer', 'number', 'int', 'biginteger', 'bigint'], true)) {
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'integer'];
+            $component['strict_messages']  = true;
+            $component['messages']         = ['integer' => 'This field must be a whole number.'];
+            return;
+        }
+
+        // ── Date ──────────────────────────────────────────────────────────────
+        if ($type === 'date') {
+            $component['validation']      = ['nullable', 'date'];
+            $component['strict_messages'] = true;
+            $component['messages']        = ['date' => 'Please enter a valid date.'];
+            return;
+        }
+
+        // ── Datetime / Timestamp ──────────────────────────────────────────────
+        if (in_array($type, ['datetime', 'timestamp'], true)) {
+            $component['validation']      = ['nullable', 'date'];
+            $component['strict_messages'] = true;
+            $component['messages']        = ['date' => 'Please enter a valid date and time.'];
+            return;
+        }
+
+        // ── Time ──────────────────────────────────────────────────────────────
+        if ($type === 'time') {
+            $component['validation']      = ['nullable', 'regex:/^\d{2}:\d{2}(:\d{2})?$/'];
+            $component['strict_messages'] = true;
+            $component['messages']        = ['regex' => 'Please enter a valid time (HH:MM or HH:MM:SS).'];
+            return;
+        }
+
+        // ── Color: hex value ──────────────────────────────────────────────────
+        if ($type === 'color') {
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'regex:/^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/'];
+            $component['strict_messages']  = true;
+            $component['messages']         = ['regex' => 'Please enter a valid hex color (e.g. #FF5733).'];
+            return;
+        }
+
+        // ── Password: minimum length ──────────────────────────────────────────
+        if ($type === 'password') {
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'string', 'min:8'];
+            $component['strict_messages']  = true;
+            $component['messages']         = ['min' => 'Password must be at least 8 characters.'];
+            return;
+        }
+
+        // ── Tags / Checkbox list: must be an array ────────────────────────────
+        if (in_array($type, ['tags', 'checkbox_list', 'checkboxlist'], true)) {
+            $component['validation'] = ['nullable', 'array'];
+            return;
+        }
+
+        // ── Textarea / Longtext / Richtext: string content ────────────────────
+        if (in_array($type, ['textarea', 'longtext', 'richtext'], true)) {
+            $component['validation'] = ['nullable', 'string'];
+            return;
+        }
+
+        // ── Text / String: enforce column max-length when explicitly set ──────
+        if (in_array($type, ['text', 'string'], true) && $field->length > 0) {
+            $component['validate_on_blur'] = true;
+            $component['validation']       = ['nullable', 'string', 'max:' . (int) $field->length];
+            $component['strict_messages']  = true;
+            $component['messages']         = ['max' => "This field cannot exceed {$field->length} characters."];
+            return;
+        }
+
+        // ── Image: restrict to safe image MIME types, block everything else ──
+        if ($type === 'image') {
+            $component['accepted_file_types'] = [
+                'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp',
+            ];
+            $component['validation'] = ['nullable', 'mimes:jpg,jpeg,png,gif,webp,svg,bmp'];
+            return;
+        }
+
+        // ── File / FileUpload: safe document + image types, block executables ─
+        if (in_array($type, ['file', 'fileupload'], true)) {
+            $component['accepted_file_types'] = [
+                'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-powerpoint',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                'text/plain', 'text/csv',
+                'application/zip', 'application/x-zip-compressed',
+                'application/json',
+            ];
+            $component['validation'] = [
+                'nullable',
+                'mimes:jpg,jpeg,png,gif,webp,svg,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip,json',
+            ];
+            return;
+        }
     }
 
     /** Returns true when the JSON file already has a non-empty components/columns array. */
