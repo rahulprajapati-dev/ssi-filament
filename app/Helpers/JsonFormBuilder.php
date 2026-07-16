@@ -232,6 +232,8 @@ class JsonFormBuilder
             'colorPicker' => self::buildColorPicker($item),
             'tagsInput' => self::buildTagsInput($item),
             'timePicker' => self::buildTimePicker($item),
+            'address' => self::buildAddress($item),
+            'addressEntry' => self::buildAddressEntry($item),
             'placeholder' => self::buildPlaceholder($item),
             'view' => self::buildView($item),
             'dragDrop' => self::buildDragDrop($item),
@@ -483,6 +485,32 @@ class JsonFormBuilder
         }
 
         return self::applyCommonComponentOptions($field, $item);
+    }
+
+    protected static function buildAddress(array $item): Forms\Components\Placeholder
+    {
+        return Forms\Components\Placeholder::make($item['name'])
+            ->label($item['label'] ?? null);
+    }
+
+    protected static function buildAddressEntry(array $item): TextEntry
+    {
+        $fieldName = $item['name'];
+        return TextEntry::make($fieldName)
+            ->label($item['label'] ?? null)
+            ->formatStateUsing(function ($state, $record) use ($fieldName) {
+                if (! $record) {
+                    return '—';
+                }
+                $parts = array_filter([
+                    $record->{$fieldName . '_street1'} ?? null,
+                    $record->{$fieldName . '_street2'} ?? null,
+                    $record->{$fieldName . '_city'} ?? null,
+                    $record->{$fieldName . '_state'} ?? null,
+                    $record->{$fieldName . '_pincode'} ?? null,
+                ]);
+                return $parts ? implode(', ', $parts) : '—';
+            });
     }
 
     protected static function buildView(array $item)
@@ -2410,11 +2438,8 @@ class JsonFormBuilder
             return;
         }
 
-        // Studio model class is Studly-cased fullname, e.g. 'crm_contacts' → 'CrmContacts'
         $modelClass = 'App\\Models\\' . Str::studly($relateModule);
-
         if (! class_exists($modelClass)) {
-            // Fallback: try singular form in case user stored plain name
             $modelClass = 'App\\Models\\' . Str::studly(Str::singular($relateModule));
         }
 
@@ -2423,40 +2448,50 @@ class JsonFormBuilder
             return;
         }
 
-        // Auto-detect the best label column the model actually has
         $displayField = self::resolveRelateDisplayColumn($modelClass, $configured);
 
-        $field->options(function () use ($modelClass, $displayField) {
-            if ($displayField === '__full_name__') {
-                return $modelClass::query()
-                    ->select(['id', 'first_name', 'last_name'])
-                    ->orderBy('first_name')
-                    ->limit(1000)
-                    ->get()
-                    ->mapWithKeys(fn ($r) => [$r->id => trim(($r->first_name ?? '') . ' ' . ($r->last_name ?? ''))])
+        $field
+            ->searchable()
+            ->preload()
+            ->getSearchResultsUsing(function (string $search) use ($modelClass, $displayField) {
+                if ($displayField === '__full_name__') {
+                    $query = $modelClass::query()
+                        ->select(['id', 'first_name', 'last_name'])
+                        ->orderBy('first_name')
+                        ->limit(50);
+                    if ($search !== '') {
+                        $query->where(function ($q) use ($search) {
+                            $q->where('first_name', 'like', "%{$search}%")
+                              ->orWhere('last_name', 'like', "%{$search}%");
+                        });
+                    }
+                    return $query->get()
+                        ->mapWithKeys(fn ($r) => [
+                            $r->id => trim(($r->first_name ?? '') . ' ' . ($r->last_name ?? ''))
+                        ])
+                        ->toArray();
+                }
+
+                $query = $modelClass::query()
+                    ->orderBy($displayField)
+                    ->limit(50);
+                if ($search !== '') {
+                    $query->where($displayField, 'like', "%{$search}%");
+                }
+                return $query->pluck($displayField, 'id')
+                    ->map(fn ($label) => (string) ($label ?? ''))
                     ->toArray();
-            }
-
-            return $modelClass::query()
-                ->orderBy($displayField)
-                ->limit(1000)
-                ->pluck($displayField, 'id')
-                ->map(fn ($label) => (string) ($label ?? ''))
-                ->toArray();
-        });
-
-        $field->getOptionLabelUsing(function ($value) use ($modelClass, $displayField) {
-            $record = $modelClass::find($value);
-            if (! $record) {
-                return $value;
-            }
-            if ($displayField === '__full_name__') {
-                return trim("{$record->first_name} {$record->last_name}") ?: $value;
-            }
-            return $record->{$displayField} ?? $value;
-        });
-
-        $field->searchable();
+            })
+            ->getOptionLabelUsing(function ($value) use ($modelClass, $displayField) {
+                $record = $modelClass::find($value);
+                if (! $record) {
+                    return $value;
+                }
+                if ($displayField === '__full_name__') {
+                    return trim(($record->first_name ?? '') . ' ' . ($record->last_name ?? '')) ?: $value;
+                }
+                return $record->{$displayField} ?? $value;
+            });
     }
 
     /**
