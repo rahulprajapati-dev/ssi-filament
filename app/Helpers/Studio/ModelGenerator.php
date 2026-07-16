@@ -181,17 +181,47 @@ final class ModelGenerator
         return empty($lines) ? '' : implode("\n", $lines) . "\n";
     }
 
-    public static function remove(Module $module): bool
+    public static function remove(Module $module, bool $isCustom = false): bool
     {
-        $model = Str::studly((string) $module->fullname);
-        $path  = app_path("Models/{$model}.php");
+        $model   = Str::studly((string) $module->fullname);
+        $path    = app_path("Models/{$model}.php");
+        $deleted = false;
 
-        if (! File::exists($path)) {
-            return false;
+        if (File::exists($path)) {
+            File::delete($path);
+            $deleted = true;
         }
 
-        File::delete($path);
+        if ($isCustom) {
+            $customModel = app_path("Custom/Models/{$model}.php");
+            $customHook  = app_path("Custom/Models/Hooks/{$model}Hook.php");
 
-        return true;
+            if (File::exists($customModel)) {
+                File::delete($customModel);
+                $deleted = true;
+            }
+
+            if (File::exists($customHook)) {
+                File::delete($customHook);
+                $deleted = true;
+            }
+
+            foreach ([
+                app_path('Custom/Models/Hooks'),
+                app_path('Custom/Models'),
+                app_path('Custom'),
+            ] as $dir) {
+                if (is_dir($dir) && self::isEmptyDirectory($dir)) {
+                    rmdir($dir);
+                }
+            }
+        }
+
+        return $deleted;
+    }
+
+    private static function isEmptyDirectory(string $dir): bool
+    {
+        return count(array_diff(scandir($dir), ['.', '..'])) === 0;
     }
 }

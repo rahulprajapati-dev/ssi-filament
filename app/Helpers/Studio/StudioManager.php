@@ -193,7 +193,7 @@ final class StudioManager
             }
             $this->step('remove_layouts', fn() => LayoutGenerator::remove($this->module));
             $this->step('remove_resource', fn() => ResourceGenerator::remove($this->module,$this->data['is_custom']));
-            $this->step('remove_model', fn() => ModelGenerator::remove($this->module));
+            $this->step('remove_model', fn() => ModelGenerator::remove($this->module, $this->data['is_custom'] ?? false));
             $this->step('remove_views', fn() => ViewGenerator::remove($this->module));
             $this->step('remove_migration', fn() => MigrationGenerator::remove($this->module));
 
