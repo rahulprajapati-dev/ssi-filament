@@ -70,7 +70,7 @@ final class ResourceGenerator
         return $wrote;
     }
 
-    public static function remove(Module $module,$data=false): bool
+    public static function remove(Module $module, bool $isCustom = false): bool
     {
         $model    = Str::studly((string) $module->fullname);
         $resource = Str::pluralStudly($model);
@@ -91,7 +91,7 @@ final class ResourceGenerator
             "{$basePath}/Tables/listView.json",
         ];
 
-        if ($data === true) {
+        if ($isCustom) {
             $files = array_merge($files, [
                 "{$basePath}/CustomSchemas/default.json",
                 "{$basePath}/CustomSchemas/createView.json",
@@ -100,7 +100,6 @@ final class ResourceGenerator
                 "{$basePath}/CustomTables/listView.json",
             ]);
         }
-            
 
         $removed = false;
 
@@ -111,8 +110,11 @@ final class ResourceGenerator
             }
         }
 
-        foreach (["{$basePath}/Pages", "{$basePath}/Schemas", "{$basePath}/Tables","{$basePath}/CustomSchemas", "{$basePath}/CustomTables"] as $dir) {
-            if (File::isDirectory($dir) && empty(File::files($dir))) {
+        foreach (["{$basePath}/Pages", "{$basePath}/Schemas", "{$basePath}/Tables", "{$basePath}/CustomSchemas", "{$basePath}/CustomTables"] as $dir) {
+            if (File::isDirectory($dir)
+                && empty(File::files($dir))
+                && empty(File::directories($dir))
+            ) {
                 File::deleteDirectory($dir);
             }
         }
