@@ -622,7 +622,8 @@ final class LayoutGenerator
             $component['accepted_file_types'] = [
                 'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp',
             ];
-            $component['validation'] = ['nullable', 'mimes:jpg,jpeg,png,gif,webp,svg,bmp'];
+            // 'nullable' omitted — FileUpload required flag handles optionality server-side.
+            $component['validation'] = ['mimes:jpg,jpeg,png,gif,webp,svg,bmp'];
             return;
         }
 
@@ -642,7 +643,6 @@ final class LayoutGenerator
                 'application/json',
             ];
             $component['validation'] = [
-                'nullable',
                 'mimes:jpg,jpeg,png,gif,webp,svg,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip,json',
             ];
             return;

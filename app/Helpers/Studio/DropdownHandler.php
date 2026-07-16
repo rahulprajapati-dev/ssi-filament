@@ -100,7 +100,18 @@ class DropdownHandler
             return [];
         }
 
-        $json = file_get_contents($file);
+        $fp = fopen($file, 'r');
+        if ($fp === false) {
+            return [];
+        }
+        try {
+            flock($fp, LOCK_SH);
+            $json = stream_get_contents($fp);
+            flock($fp, LOCK_UN);
+        } finally {
+            fclose($fp);
+        }
+
         $data = json_decode($json, true);
 
         return is_array($data) ? $data : [];
@@ -113,10 +124,23 @@ class DropdownHandler
     {
         $file = base_path(self::$filePath);
 
-        return file_put_contents(
-            $file,
-            json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
-        ) !== false;
+        $fp = fopen($file, 'c');
+        if ($fp === false) {
+            return false;
+        }
+        try {
+            if (!flock($fp, LOCK_EX)) {
+                return false;
+            }
+            ftruncate($fp, 0);
+            rewind($fp);
+            $written = fwrite($fp, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            fflush($fp);
+            flock($fp, LOCK_UN);
+            return $written !== false;
+        } finally {
+            fclose($fp);
+        }
     }
 
     /**

@@ -232,6 +232,8 @@ class JsonFormBuilder
             'colorPicker' => self::buildColorPicker($item),
             'tagsInput' => self::buildTagsInput($item),
             'timePicker' => self::buildTimePicker($item),
+            'address' => self::buildAddress($item),
+            'addressEntry' => self::buildAddressEntry($item),
             'placeholder' => self::buildPlaceholder($item),
             'view' => self::buildView($item),
             'dragDrop' => self::buildDragDrop($item),
@@ -483,6 +485,32 @@ class JsonFormBuilder
         }
 
         return self::applyCommonComponentOptions($field, $item);
+    }
+
+    protected static function buildAddress(array $item): Forms\Components\Placeholder
+    {
+        return Forms\Components\Placeholder::make($item['name'])
+            ->label($item['label'] ?? null);
+    }
+
+    protected static function buildAddressEntry(array $item): TextEntry
+    {
+        $fieldName = $item['name'];
+        return TextEntry::make($fieldName)
+            ->label($item['label'] ?? null)
+            ->formatStateUsing(function ($state, $record) use ($fieldName) {
+                if (! $record) {
+                    return '—';
+                }
+                $parts = array_filter([
+                    $record->{$fieldName . '_street1'} ?? null,
+                    $record->{$fieldName . '_street2'} ?? null,
+                    $record->{$fieldName . '_city'} ?? null,
+                    $record->{$fieldName . '_state'} ?? null,
+                    $record->{$fieldName . '_pincode'} ?? null,
+                ]);
+                return $parts ? implode(', ', $parts) : '—';
+            });
     }
 
     protected static function buildView(array $item)
@@ -1571,17 +1599,16 @@ class JsonFormBuilder
         if (! empty($item['multiple'])) {
             $field->multiple();
         }
+        // ── Client-side FilePond MIME restriction ─────────────────────────────
         if (! empty($item['accepted_file_types'])) {
             if (! is_array($item['accepted_file_types'])) {
                 $item['accepted_file_types'] = explode(',', $item['accepted_file_types']);
             }
             $field->acceptedFileTypes($item['accepted_file_types']);
         } else {
-            // Runtime safe-type defaults for modules not yet rebuilt with the new config.
-            // Whitelist approach: only allow known-safe MIME types; executables and scripts are implicitly blocked.
+            // Runtime defaults for modules that pre-date the file-validation config.
             if (! empty($item['image'])) {
                 $field->acceptedFileTypes(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp']);
-                $field->rules(['nullable', 'mimes:jpg,jpeg,png,gif,webp,svg,bmp']);
             } else {
                 $field->acceptedFileTypes([
                     'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
@@ -1596,9 +1623,26 @@ class JsonFormBuilder
                     'application/zip', 'application/x-zip-compressed',
                     'application/json',
                 ]);
-                $field->rules(['nullable', 'mimes:jpg,jpeg,png,gif,webp,svg,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip,json']);
             }
         }
+
+        // ── Server-side validation (always enforced, bypasses client-side FilePond) ──
+        // Pull rules from the JSON config (set by LayoutGenerator::applyFieldValidations).
+        // Fall back to safe defaults for modules not yet rebuilt. Filter 'nullable' —
+        // that is handled by the required flag, not passed to Filament rules().
+        $serverRules = array_values(array_filter(
+            $item['validation'] ?? [],
+            fn ($r) => $r !== 'nullable'
+        ));
+
+        if (empty($serverRules)) {
+            // Default rules when no JSON config present yet.
+            $serverRules = ! empty($item['image'])
+                ? ['mimes:jpg,jpeg,png,gif,webp,svg,bmp']
+                : ['mimes:jpg,jpeg,png,gif,webp,svg,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip,json'];
+        }
+
+        $field->rules($serverRules);
         $disk = isset($item['disk']) ? $item['disk'] : 's3';
 
         /* Dev-only override: when STOCKS_PHOTO_DISK_OVERRIDE is set in .env,
@@ -2394,11 +2438,8 @@ class JsonFormBuilder
             return;
         }
 
-        // Studio model class is Studly-cased fullname, e.g. 'crm_contacts' → 'CrmContacts'
         $modelClass = 'App\\Models\\' . Str::studly($relateModule);
-
         if (! class_exists($modelClass)) {
-            // Fallback: try singular form in case user stored plain name
             $modelClass = 'App\\Models\\' . Str::studly(Str::singular($relateModule));
         }
 
@@ -2407,40 +2448,50 @@ class JsonFormBuilder
             return;
         }
 
-        // Auto-detect the best label column the model actually has
         $displayField = self::resolveRelateDisplayColumn($modelClass, $configured);
 
-        $field->options(function () use ($modelClass, $displayField) {
-            if ($displayField === '__full_name__') {
-                return $modelClass::query()
-                    ->select(['id', 'first_name', 'last_name'])
-                    ->orderBy('first_name')
-                    ->limit(1000)
-                    ->get()
-                    ->mapWithKeys(fn ($r) => [$r->id => trim(($r->first_name ?? '') . ' ' . ($r->last_name ?? ''))])
+        $field
+            ->searchable()
+            ->preload()
+            ->getSearchResultsUsing(function (string $search) use ($modelClass, $displayField) {
+                if ($displayField === '__full_name__') {
+                    $query = $modelClass::query()
+                        ->select(['id', 'first_name', 'last_name'])
+                        ->orderBy('first_name')
+                        ->limit(50);
+                    if ($search !== '') {
+                        $query->where(function ($q) use ($search) {
+                            $q->where('first_name', 'like', "%{$search}%")
+                              ->orWhere('last_name', 'like', "%{$search}%");
+                        });
+                    }
+                    return $query->get()
+                        ->mapWithKeys(fn ($r) => [
+                            $r->id => trim(($r->first_name ?? '') . ' ' . ($r->last_name ?? ''))
+                        ])
+                        ->toArray();
+                }
+
+                $query = $modelClass::query()
+                    ->orderBy($displayField)
+                    ->limit(50);
+                if ($search !== '') {
+                    $query->where($displayField, 'like', "%{$search}%");
+                }
+                return $query->pluck($displayField, 'id')
+                    ->map(fn ($label) => (string) ($label ?? ''))
                     ->toArray();
-            }
-
-            return $modelClass::query()
-                ->orderBy($displayField)
-                ->limit(1000)
-                ->pluck($displayField, 'id')
-                ->map(fn ($label) => (string) ($label ?? ''))
-                ->toArray();
-        });
-
-        $field->getOptionLabelUsing(function ($value) use ($modelClass, $displayField) {
-            $record = $modelClass::find($value);
-            if (! $record) {
-                return $value;
-            }
-            if ($displayField === '__full_name__') {
-                return trim("{$record->first_name} {$record->last_name}") ?: $value;
-            }
-            return $record->{$displayField} ?? $value;
-        });
-
-        $field->searchable();
+            })
+            ->getOptionLabelUsing(function ($value) use ($modelClass, $displayField) {
+                $record = $modelClass::find($value);
+                if (! $record) {
+                    return $value;
+                }
+                if ($displayField === '__full_name__') {
+                    return trim(($record->first_name ?? '') . ' ' . ($record->last_name ?? '')) ?: $value;
+                }
+                return $record->{$displayField} ?? $value;
+            });
     }
 
     /**

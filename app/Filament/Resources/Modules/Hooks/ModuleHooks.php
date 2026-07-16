@@ -33,7 +33,9 @@ class ModuleHooks
 
     public function deployModule(Module $record, array $_data = []): array
     {
-        $result = StudioManager::deploy($record);
+        $result = $record->is_deploy
+            ? StudioManager::rebuild($record)
+            : StudioManager::deploy($record);
 
         if ($result->success) {
             Notification::make()->success()->title($result->message)->send();
