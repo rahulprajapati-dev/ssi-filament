@@ -126,6 +126,16 @@ class ModuleHooks
         return ['success' => true];
     }
 
+      public function uninstallwarning($state, $set, $get, $livewire, $record, $component)
+      {
+         $iscustom = $get('is_custom') ?? false;
+         if ($iscustom) {
+             $set('custom_dummy', 'This will permanently delete all customizations for this resource. Continue?');
+         } else {
+             $set('custom_dummy', null);
+         }
+         return ['status' => false];
+      }
     public function uninstall(Module $record, array $_data = []): array
     {
         $result = StudioManager::uninstall($record, $_data);

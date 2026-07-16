@@ -17,10 +17,16 @@ class {{MODEL}}Form
             'edit'   => 'editView.json',
             'view'   => 'detailView.json',
             default  => 'default.json',
-        };
+        };    
 
         $configPath = base_path("app/Filament/Resources/{{RESOURCE}}/Schemas/{$configFile}");
+        $Custom = base_path("app/Filament/Resources/{{RESOURCE}}/Custom_Schemas/{$configFile}");
 
+        if(File::exists( $Custom))
+        {
+            $configPath =$Custom;
+        }
+        
         if (! File::exists($configPath)) {
             return $schema->components([]);
         }

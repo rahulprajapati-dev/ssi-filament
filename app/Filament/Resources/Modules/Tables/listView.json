@@ -23,7 +23,6 @@
                 "key",
                 "plural_label"
             ],
-            
             "wrap": false
         },
         {
@@ -158,17 +157,37 @@
                         "modalHeading": "Uninstall Module",
                         "modalDescription": "This action will remove all generated files, resources, and configurations for this module. You can optionally remove the database table as well. This action cannot be undone.",
                         "modalSubmitActionLabel": "Yes, Uninstall",
-                        "modalWidth": "Medium"
+                        "modalWidth": "xl"
                     },
                     "form": {
                         "components": [
                             {
                                 "component": "grid",
+                                "columnSpan": "full",
+                                "columns": 2,
                                 "schema": [
                                     {
                                         "component": "toggle",
                                         "name": "is_table",
-                                        "label": "Also drop the database table?"
+                                        "label": "Also drop the database table?",
+                                        "columnSpan": 1
+                                    },
+                                    {
+                                        "component": "toggle",
+                                        "name": "is_custom",
+                                        "label": "Also drop the custom directory?",
+                                        "columnSpan": 1,
+                                        "validate_on_blur": true,
+                                        "custom_after_state_updated": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@uninstallwarning",
+                                        "custom_after_state_updated_related": [
+                                            "custom_dummy"
+                                        ]
+                                    },
+                                    {
+                                        "component": "view",
+                                        "name": "custom_dummy",
+                                        "view": "filament.components.custom-dummy",
+                                        "columnSpan": "full"
                                     }
                                 ]
                             }
