@@ -93,11 +93,11 @@ final class ResourceGenerator
 
         if ($data === true) {
             $files = array_merge($files, [
-                "{$basePath}/Custom_Schemas/default.json",
-                "{$basePath}/Custom_Schemas/createView.json",
-                "{$basePath}/Custom_Schemas/editView.json",
-                "{$basePath}/Custom_Schemas/detailView.json",
-                "{$basePath}/Custom_Tables/listView.json",
+                "{$basePath}/CustomSchemas/default.json",
+                "{$basePath}/CustomSchemas/createView.json",
+                "{$basePath}/CustomSchemas/editView.json",
+                "{$basePath}/CustomSchemas/detailView.json",
+                "{$basePath}/CustomTables/listView.json",
             ]);
         }
             
@@ -111,7 +111,7 @@ final class ResourceGenerator
             }
         }
 
-        foreach (["{$basePath}/Pages", "{$basePath}/Schemas", "{$basePath}/Tables","{$basePath}/Custom_Schemas", "{$basePath}/Custom_Tables"] as $dir) {
+        foreach (["{$basePath}/Pages", "{$basePath}/Schemas", "{$basePath}/Tables","{$basePath}/CustomSchemas", "{$basePath}/CustomTables"] as $dir) {
             if (File::isDirectory($dir) && empty(File::files($dir))) {
                 File::deleteDirectory($dir);
             }

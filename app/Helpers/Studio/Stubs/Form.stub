@@ -20,11 +20,11 @@ class {{MODEL}}Form
         };    
 
         $configPath = base_path("app/Filament/Resources/{{RESOURCE}}/Schemas/{$configFile}");
-        $Custom = base_path("app/Filament/Resources/{{RESOURCE}}/Custom_Schemas/{$configFile}");
+        $Custom = base_path("app/Filament/Resources/{{RESOURCE}}/CustomSchemas/{$configFile}");
 
-        if(File::exists( $Custom))
+        if(File::exists($Custom))
         {
-            $configPath =$Custom;
+            $configPath = $Custom;
         }
         
         if (! File::exists($configPath)) {

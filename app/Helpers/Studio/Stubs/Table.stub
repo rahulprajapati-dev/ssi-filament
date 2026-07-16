@@ -12,11 +12,11 @@ class {{RESOURCE}}Table
     {
         $configPath = base_path('app/Filament/Resources/{{RESOURCE}}/Tables/listView.json');
 
-        $Custom = base_path("app/Filament/Resources/{{RESOURCE}}/Custom_Tables/listView.json");
+        $Custom = base_path("app/Filament/Resources/{{RESOURCE}}/CustomTables/listView.json");
 
-        if(File::exists( $Custom))
+        if(File::exists($Custom))
         {
-            $configPath =$Custom;
+            $configPath = $Custom;
         }
 
         $config = [];
