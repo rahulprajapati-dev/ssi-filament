@@ -23,8 +23,8 @@ class EditModule extends EditRecord
     {
         return [
             ViewAction::make(),
-            DeleteAction::make()->visible(fn () =>!$this->record->is_deploy),
-            ModuleHooks::repairRebuildAction()->visible(fn () => $this->record->is_deploy),
+            DeleteAction::make()->visible(fn () => !$this->record?->is_deploy),
+            ModuleHooks::repairRebuildAction()->visible(fn () => $this->record?->is_deploy),
         ];
     }
 }

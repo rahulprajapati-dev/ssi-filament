@@ -31,7 +31,11 @@ final class LayoutGenerator
     public static function generate(Module $module, bool $force = false): bool
     {
         $model = Str::studly((string) $module->fullname);
-        $resource = Str::studly(Str::plural($module->fullname));
+        // [L21] Use Str::pluralStudly($model) — identical formula to ResourceGenerator::generate()
+        // which does Str::pluralStudly($model).  Str::studly(Str::plural($module->fullname))
+        // can diverge for multi-word snake_case fullnames because pluralisation happens before
+        // studly-casing rather than on the already-studly-cased last word.
+        $resource = Str::pluralStudly($model);
         $basePath = app_path("Filament/Resources/{$resource}");
 
         /** @var Collection<string, ModuleField> $fieldMap field_name → ModuleField */
@@ -73,9 +77,21 @@ final class LayoutGenerator
                 continue;
             }
 
+            // When force-regenerating (rebuild), preserve manual edits that are newer
+            // than the last time this layout record was saved in the database.
+            if ($force && File::exists($filePath)) {
+                $layoutUpdatedAt = $layout->updated_at?->timestamp ?? 0;
+                // [M10] Guard with File::exists() before calling filemtime() so we never
+                // suppress a genuine error with @; File::exists() already confirmed above.
+                $fileModifiedAt  = \Illuminate\Support\Facades\File::exists($filePath) ? (int) filemtime($filePath) : 0;
+                if ($fileModifiedAt >= $layoutUpdatedAt) {
+                    continue;
+                }
+            }
+
             $content = $layout->layout_type === 'list'
-                ? self::buildListJson($model, $resource, $fieldNames, $fieldMap, $layout->filters_json ?? [])
-                : self::buildFormJson( $module, $model, $layout->layout_type, $sections, $fieldMap);
+                ? self::buildListJson($model, $resource, (string) $module->fullname, $fieldNames, $fieldMap, $layout->filters_json ?? [])
+                : self::buildFormJson($module, $model, $layout->layout_type, $sections, $fieldMap);
 
             File::ensureDirectoryExists(dirname($filePath));
             File::put($filePath, json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -90,7 +106,9 @@ final class LayoutGenerator
 
     public static function remove(Module $module): bool
     {
-        $resource = Str::studly(Str::plural($module->fullname));
+        // [L21] Match ResourceGenerator's formula: studly first, then pluralStudly.
+        $model    = Str::studly((string) $module->fullname);
+        $resource = Str::pluralStudly($model);
         $basePath = app_path("Filament/Resources/{$resource}");
 
         $files = [
@@ -112,11 +130,17 @@ final class LayoutGenerator
         $schemasPath = "{$basePath}/Schemas";
         $tablesPath  = "{$basePath}/Tables";
 
-        if (File::isDirectory($schemasPath) && empty(File::files($schemasPath))) {
+        if (File::isDirectory($schemasPath)
+            && empty(File::files($schemasPath))
+            && empty(File::directories($schemasPath))
+        ) {
             File::deleteDirectory($schemasPath);
         }
 
-        if (File::isDirectory($tablesPath) && empty(File::files($tablesPath))) {
+        if (File::isDirectory($tablesPath)
+            && empty(File::files($tablesPath))
+            && empty(File::directories($tablesPath))
+        ) {
             File::deleteDirectory($tablesPath);
         }
 
@@ -127,7 +151,7 @@ final class LayoutGenerator
      * @param  array<int, array{title: string, columns: int, fields: string[]}>  $sections
      * @param  Collection<string, ModuleField>  $fieldMap
      */
-    private static function buildFormJson(module $module,
+    private static function buildFormJson(Module $module,
         string $model,
         string $layoutType,
         array $sections,
@@ -187,6 +211,9 @@ final class LayoutGenerator
                 }
 
                 if ($field->always_save_value) {
+                    // [L23] JsonFormBuilder reads $item['dehydrate'] (applyCommonFieldOptions
+                    // line ~2064 and applyConditionalVisibility line ~1988) and calls
+                    // ->dehydrated($item['dehydrate']).  Key MUST stay 'dehydrate' here.
                     $component['dehydrate'] = true;
                 }
 
@@ -348,11 +375,24 @@ final class LayoutGenerator
 
         // Already sections format: first element is an associative array with a 'fields' key
         if (isset($raw[0]) && is_array($raw[0]) && array_key_exists('fields', $raw[0])) {
-            return array_map(fn ($s) => [
-                'title' => $s['title'] ?? 'Section',
-                'columns' => isset($s['columns']) ? (is_numeric($s['columns']) ? (int) $s['columns'] : $s['columns']) : 2,
-                'fields' => array_values(array_filter((array) ($s['fields'] ?? []), 'is_string')),
-            ], $raw);
+            return array_map(function ($s) {
+                $all    = (array) ($s['fields'] ?? []);
+                $fields = array_filter($all, 'is_string');
+                // [L20] Warn when non-string entries are silently dropped so layout
+                // authors can spot bad data in the layout_json column early.
+                if (count($fields) < count($all)) {
+                    \Illuminate\Support\Facades\Log::warning(
+                        'LayoutGenerator: dropped non-string field entries',
+                        ['section' => $s['title'] ?? '?']
+                    );
+                }
+
+                return [
+                    'title'   => $s['title'] ?? 'Section',
+                    'columns' => (isset($s['columns']) && is_numeric($s['columns'])) ? (int) $s['columns'] : 2,
+                    'fields'  => array_values($fields),
+                ];
+            }, $raw);
         }
 
         // Legacy flat array of strings
@@ -369,6 +409,7 @@ final class LayoutGenerator
     private static function buildListJson(
         string $model,
         string $resource,
+        string $fullname,
         array $fieldNames,
         Collection $fieldMap,
         array $filtersConfig = [],
@@ -426,7 +467,7 @@ final class LayoutGenerator
         }
 
         $filters = [];
-        $moduleName = Str::snake($model);
+        $moduleName = $fullname;
         foreach ($filtersConfig as $fc) {
             $fieldName = $fc['field_name'] ?? null;
             if (! $fieldName) {

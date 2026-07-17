@@ -33,6 +33,14 @@ class {{MODEL}}Form
 
         $config = json_decode(File::get($configPath), true) ?? [];
 
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            \Illuminate\Support\Facades\Log::error('Form: invalid JSON in schema file', [
+                'path'  => $configPath,
+                'error' => json_last_error_msg(),
+            ]);
+            return $schema->components([]);
+        }
+
         return JsonStudioFormBuilder::buildSchema($schema, $config);
     }
 }

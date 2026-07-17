@@ -6,6 +6,7 @@ use App\Helpers\Studio\StudioManager;
 use App\Models\Module;
 use App\Models\ModuleField;
 use App\Models\ModuleLayout;
+use App\Support\ModuleState;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Str;
@@ -16,9 +17,13 @@ class ModuleHooks
     public function toggleModule(Module $record, array $_data = []): array
     {
         $record->update(['is_enable' => ! $record->is_enable]);
+        ModuleState::clear($record->name);
         $record->refresh();
-        if ($record->is_enable) { 
-            $this->repairRebuild($record);
+        if ($record->is_enable) {
+            $result = $this->repairRebuild($record);
+            if (! ($result['success'] ?? false)) {
+                return ['success' => false];
+            }
         }
 
         $status = $record->is_enable ? 'Enabled' : 'Disabled';
@@ -83,7 +88,7 @@ class ModuleHooks
     {
         $newName = $data['name'] ?? ($record->name . '_copy');
 
-        if (Module::where('name', $newName)->exists()) {
+        if (Module::where('name', $newName)->where('key', $record->key)->exists()) {
             Notification::make()->danger()->title('Clone Failed')->body("A module named '{$newName}' already exists.")->send();
             return ['success' => false];
         }
@@ -91,11 +96,12 @@ class ModuleHooks
         $clone = Module::create([
             'key'                => $record->key,
             'name'               => $newName,
-            'singular_label'     => ($data['singular_label'] ?? $record->singular_label) . ' (Copy)',
-            'plural_label'       => ($data['plural_label'] ?? $record->plural_label) . ' (Copy)',
+            'singular_label'     => ($data['singular_label'] ?? $record->singular_label) . ' Copy',
+            'plural_label'       => ($data['plural_label'] ?? $record->plural_label) . ' Copy',
             'icon'               => $record->icon,
             'description'        => $record->description,
             'relationships_json' => $record->relationships_json,
+            'is_relationships'   => $record->is_relationships,
             'use_uuid'           => $record->use_uuid,
             'is_deploy'          => false,
             'is_enable'          => false,

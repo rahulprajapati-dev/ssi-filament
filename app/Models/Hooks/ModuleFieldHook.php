@@ -29,16 +29,32 @@ class ModuleFieldHook
                     ->where('field_name', $oldName . $suffix)
                     ->update(['field_name' => $newName . $suffix]);
             }
+
+            if ($model->module) {
+                $subSuffixes = array_keys(FieldTypeMap::ADDRESS_SUB_FIELDS);
+                foreach ($model->module->layouts as $layout) {
+                    $json    = $layout->layout_json ?? [];
+                    $changed = false;
+                    foreach ($json as $si => $section) {
+                        if (empty($section['fields'])) continue;
+                        $json[$si]['fields'] = array_map(
+                            function ($f) use ($oldName, $newName, $subSuffixes, &$changed) {
+                                if ($f === $oldName) { $changed = true; return $newName; }
+                                foreach ($subSuffixes as $suffix) {
+                                    if ($f === $oldName . $suffix) { $changed = true; return $newName . $suffix; }
+                                }
+                                return $f;
+                            },
+                            (array) $section['fields']
+                        );
+                    }
+                    if ($changed) { $layout->update(['layout_json' => $json]); }
+                }
+            }
         }
 
         if ($model->wasChanged('label')) {
-            $subLabels = [
-                '_street1' => 'Street 1',
-                '_street2' => 'Street 2',
-                '_city'    => 'City',
-                '_state'   => 'State',
-                '_pincode' => 'Pincode',
-            ];
+            $subLabels = ModuleField::addressSubLabels();
             $baseName = $model->field_name;
             $baseLabel = $model->label ?? $baseName;
 
@@ -65,7 +81,7 @@ class ModuleFieldHook
 
             ModuleField::where('module_id', $model->module_id)
                 ->whereIn('field_name', $subNames)
-                ->delete();
+                ->each(fn ($sub) => $sub->delete());
         }
     }
 }

@@ -26,6 +26,7 @@ return [
     |     up to date without waiting for a separate migrate step.
     |
     */
+    // Valid values: "migration" (default), "schema", "hybrid"
     'mode' => env('STUDIO_MODE', 'migration'),
 
 ];

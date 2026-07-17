@@ -280,7 +280,11 @@ class JsonTableBuilder
                             if ($state === null || $state === '') {
                                 return '—';
                             }
-                            $record = $modelClass::find($state);
+                            static $cache = [];
+                            if (!array_key_exists($state, $cache[$modelClass] ?? [])) {
+                                $cache[$modelClass][$state] = $modelClass::find($state);
+                            }
+                            $record = $cache[$modelClass][$state];
                             if (! $record) {
                                 return (string) $state;
                             }
@@ -394,17 +398,18 @@ class JsonTableBuilder
                                 query: function ($query, $search) use ($searchFields) {
                                     $query->where(function ($q) use ($searchFields, $search) {
                                         foreach ($searchFields as $field) {
-                                            return $q->orWhere( $field, 'like', "%{$search}%");
-                                            }
-                                        });
-                                        return $query;
+                                            $q->orWhere($field, 'like', "%{$search}%");
+                                        }
+                                        return $q;
+                                    });
+                                    return $query;
                                 }
                             );
                         }
                         elseif  (!empty($c['dropdown'])) {
                             $dropdownType = $c['dropdown'];
                             $col->searchable(isIndividual: (bool) $isIndividual, query: function ($query, $search) use ($name, $dropdownType) {
-                                $options = getDropdownValue($dropdownType);
+                                $options = DropdownHandler::get($dropdownType);
                                 if (!is_array($options)) {
                                     return $query->where($name, 'like', "%{$search}%");
                                 }
@@ -628,18 +633,20 @@ class JsonTableBuilder
             if ($source === 'relationship') {
                 $relationship = $f['relationship'] ?? null;
                 $title = $f['title_column'] ?? 'name';
-                $user = auth()->user();
-                $role = ($user && method_exists($user, 'getRoleNames')) ? $user->getRoleNames()->first() : null;
-                $allowEmpty = $f['allow_empty_for_roles'][$role]
-                    ?? $f['allow_empty_for_roles']['default']
-                    ?? true;
+                // $roleMap is static config; user lookup is deferred to a closure
+                // so it is evaluated at filter-application time, not component-mount time.
+                $roleMap = $f['allow_empty_for_roles'] ?? [];
 
                 return SelectFilter::make($name)
                     ->label($label)
                     ->relationship(
                         $relationship,
                         $title,
-                        hasEmptyOption: $allowEmpty,
+                        hasEmptyOption: function () use ($roleMap) {
+                            $user = auth()->user();
+                            $role = ($user && method_exists($user, 'getRoleNames')) ? $user->getRoleNames()->first() : null;
+                            return $roleMap[$role] ?? $roleMap['default'] ?? true;
+                        },
                         modifyQueryUsing: fn ($query) =>
                         $query->whereNotNull($title)
                     );
@@ -709,6 +716,12 @@ class JsonTableBuilder
 
     protected static function normalizeConditions(array $config): array
     {
+        // Unwrap the form-builder {logic:..., conditions:[...]} envelope so that
+        // evaluateConditions receives a plain list of condition objects.
+        if (isset($config['logic']) && isset($config['conditions'])) {
+            return (array) $config['conditions'];
+        }
+
         // If it looks like a single condition (has 'field'), wrap in an array
         if (isset($config['field'])) {
             return [$config];
@@ -772,7 +785,7 @@ class JsonTableBuilder
     {
         $type = $a['type'] ?? 'view';
         $label = $a['label'] ?? null;
-        $name = $a['name'] ?? 'action_' . uniqid();
+        $name = $a['name'] ?? 'action-' . substr(md5(serialize([$a['type'] ?? '', $a['label'] ?? ''])), 0, 8);
         $ui = $a['ui'] ?? [];
 
         // action group
@@ -881,62 +894,34 @@ class JsonTableBuilder
 
         // Special handling for activity_log type to inject schema/hook automatically
         if ($type == 'activity_log') {
-            // Force hide submit action for logs
             $act->modalSubmitAction(false);
 
-            // Set the premium list-view schema
-            $act->schema([
-                \Filament\Schemas\Components\View::make('filament.components.activity-log-list'),
-            ]);
+            // The view component can be overridden via JSON: "view": "my.blade.component"
+            $viewName = $a['view'] ?? 'filament.components.activity-log-list';
+            $act->schema([\Filament\Schemas\Components\View::make($viewName)]);
 
-            // Bind the generic activity log hook
-            self::bindHook($act, 'fillForm', 'App\\Helpers\\CommonHelper@changeLogFillForm');
+            // The fillForm hook can be overridden via JSON: "fill_hook": "App\\MyClass@method"
+            $fillHookStr  = $a['fill_hook'] ?? 'App\\Helpers\\CommonHelper@changeLogFillForm';
+            [$fillHookClass] = explode('@', $fillHookStr);
+            if (class_exists($fillHookClass)) {
+                self::bindHook($act, 'fillForm', $fillHookStr);
+            }
 
-            // Explicitly ensure action callback exists to trigger modal
             $act->action(fn () => null);
         }
         if ($type == 'popup') {
-            // Bind the generic activity log hook
-            self::bindHook($act, 'fillForm', '\\App\\Filament\\Resources\\Stocks\\Hooks\\MFCHooks@beforeWindowStickerFill');
-
-            // Explicitly ensure action callback exists to trigger modal
-            $act->action(function ($record, array $data, $livewire) {
-                $freshRecord = $record->fresh();
-
-                $payload = [
-                    'stock_id' => $freshRecord->id,
-                    'insurance_date' => $freshRecord->insurance_exp_date,
-                    'warranty_type' => $freshRecord->warranty_recommended,
-                    ...$data,
-                ];
-
-                $url = route('window-sticker');
-                $csrf = csrf_token();
-
-                // Build fields string
-                $fields = collect($payload)
-                    ->map(
-                        fn ($value, $key) =>
-                        "<input type='hidden' name='" . e($key) . "' value='" . e($value) . "'>"
-                    )
-                    ->implode('');
-
-                $livewire->dispatch('close-modal');
-
-                // Submit via JS in new tab
-                $livewire->js("
-                    (function() {
-                        const form = document.createElement('form');
-                        form.method = 'POST';
-                        form.action = '{$url}';
-                        form.target = '_blank';
-                        form.innerHTML = `<input type='hidden' name='_token' value='{$csrf}'>{$fields}`;
-                        document.body.appendChild(form);
-                        form.submit();
-                        document.body.removeChild(form);
-                    })();
-                ");
-            });
+            // popup actions are configured via $a['hooks'] and optional $a['fill_hook'].
+            // The previous hardcoded Stocks/MFC logic has been removed; wire it up
+            // through the standard hooks mechanism in the JSON config instead.
+            if (!empty($a['fill_hook'])) {
+                [$fillHookClass] = explode('@', $a['fill_hook']);
+                if (class_exists($fillHookClass)) {
+                    self::bindHook($act, 'fillForm', $a['fill_hook']);
+                }
+            }
+            if (empty($a['hooks']['action'])) {
+                $act->action(fn () => null);
+            }
         }
 
         // 4. Handle Lifecycle Hooks
@@ -1087,6 +1072,12 @@ class JsonTableBuilder
             }
 
             [$class, $method] = explode('@', $methodHook);
+
+            // Guard: bail out with a warning if the class or method does not exist
+            if (!class_exists($class) || !method_exists($class, $method)) {
+                Log::warning("JsonTableBuilder::resolveHook: class [{$class}] or method [{$method}] not found in hook [{$methodHook}]. Skipping.");
+                return;
+            }
 
             // Determine target to call
             $targetClass = $class;

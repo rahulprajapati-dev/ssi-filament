@@ -8,7 +8,7 @@ use App\Models\Module;
 use App\Models\ModuleField;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use App\Helpers\Studio\FieldTypeMap;
@@ -51,6 +51,7 @@ final class SchemaSyncService
 
         Schema::create($table, function (Blueprint $blueprint) use ($fields) {
             $blueprint->id();
+            $blueprint->uuid('uuid')->unique();
 
             foreach ($fields as $field) {
                 self::addColumn($blueprint, $field);
@@ -102,10 +103,17 @@ final class SchemaSyncService
                         if (! $field->required) {
                             $col->nullable();
                         }
+                        if ($field->unique_field && FieldTypeMap::supportsUnique($field->type)) {
+                            $col->unique();
+                        }
                         $col->change();
                     });
-                } catch (\Throwable) {
-                    // Silently skip — driver may not support ALTER on this column.
+                } catch (\Throwable $e) {
+                    Log::warning('SchemaSyncService: could not adjust column', [
+                        'table'  => $table,
+                        'column' => $field->field_name,
+                        'error'  => $e->getMessage(),
+                    ]);
                 }
             }
         }
@@ -154,6 +162,7 @@ final class SchemaSyncService
             'json', 'array', 'repeater',
             'checkbox_list', 'checkboxlist',
             'tags'                              => $blueprint->json($name),
+            'relationship', 'relate'            => $blueprint->unsignedBigInteger($name),
             default                             => $blueprint->string($name, FieldTypeMap::resolveLength($field)),
         };
 
@@ -175,7 +184,8 @@ final class SchemaSyncService
 
     private static function tableName(Module $module): string
     {
-        return Str::snake(Str::plural((string) $module->fullname));
+        // Use the same formula as MigrationGenerator for consistency.
+        return strtolower($module->table);
     }
 
     /** @return Collection<int, ModuleField> */
@@ -193,23 +203,22 @@ final class SchemaSyncService
     }
 
     /**
-     * Query information_schema for the current CHARACTER_MAXIMUM_LENGTH of a column.
-     * Returns null when the information is unavailable (e.g. SQLite).
+     * Return the current character max-length of a string column, or null when unavailable.
+     * Uses Laravel's cross-database Schema::getColumns() (Laravel 10+) so this works on
+     * MySQL, PostgreSQL, and SQLite. Falls back to null on any error.
      */
     private static function getColumnLength(string $table, string $column): ?int
     {
         try {
-            $row = DB::selectOne(
-                "SELECT CHARACTER_MAXIMUM_LENGTH AS len
-                 FROM information_schema.COLUMNS
-                 WHERE TABLE_SCHEMA = DATABASE()
-                   AND TABLE_NAME   = ?
-                   AND COLUMN_NAME  = ?
-                 LIMIT 1",
-                [$table, $column]
-            );
-
-            return $row ? (int) $row->len : null;
+            foreach (Schema::getColumns($table) as $col) {
+                if ($col['name'] === $column) {
+                    // type is e.g. "varchar(255)" or "character varying(191)"
+                    if (preg_match('/\((\d+)\)/', $col['type'] ?? '', $m)) {
+                        return (int) $m[1];
+                    }
+                }
+            }
+            return null;
         } catch (\Throwable) {
             return null;
         }

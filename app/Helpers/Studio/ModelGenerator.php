@@ -71,7 +71,9 @@ final class ModelGenerator
         foreach ($regions as $region => $newContent) {
             $updated = preg_replace_callback(
                 '/(?m)^(\s*\/\/ region:' . preg_quote($region, '/') . '[^\n]*\n).*?([ \t]*\/\/ endregion:' . preg_quote($region, '/') . ')/s',
-                fn (array $m) => $m[1] . $newContent . '    // endregion:' . $region,
+                // [M5] $m[2] captures the original whitespace before // endregion
+                // so we preserve whatever indent the file actually uses.
+                fn (array $m) => $m[1] . $newContent . $m[2],
                 $content,
             );
 
@@ -124,7 +126,12 @@ final class ModelGenerator
                 continue;
             }
 
-            $relatedModel = 'App\\Models\\' . Str::studly(Str::singular($relatedModule));
+            // [M6] Validate the derived class name is a legal PHP identifier before use.
+            $relatedClass = Str::studly(Str::singular($relatedModule));
+            if (! preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $relatedClass)) {
+                continue;
+            }
+            $relatedModel = 'App\\Models\\' . $relatedClass;
             $methodName   = ! empty($rel['name'])
                 ? $rel['name']
                 : self::guessMethodName($type, $relatedModule);
@@ -212,7 +219,13 @@ final class ModelGenerator
                 app_path('Custom'),
             ] as $dir) {
                 if (is_dir($dir) && self::isEmptyDirectory($dir)) {
-                    rmdir($dir);
+                    // [L2] Log a warning when rmdir() fails instead of silently ignoring it.
+                    if (! @rmdir($dir)) {
+                        \Illuminate\Support\Facades\Log::warning(
+                            'ModelGenerator: rmdir failed',
+                            ['path' => $dir]
+                        );
+                    }
                 }
             }
         }

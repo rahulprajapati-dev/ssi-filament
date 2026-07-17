@@ -390,8 +390,11 @@ class JsonFormBuilder
     protected static function buildSection(array $item): Components\Section
     {
         $section = Components\Section::make($item['label'] ?? null)
-            ->schema(self::buildComponents($item['schema'] ?? []))
-            ->columns($item['columns'] ?? 1);
+            ->schema(self::buildComponents($item['schema'] ?? []));
+
+        if (array_key_exists('columns', $item)) {
+            $section->columns((int) $item['columns']);
+        }
 
         if (! empty($item['description'])) {
             $section->description($item['description']);
@@ -681,12 +684,14 @@ class JsonFormBuilder
         }
 
         // Handle dropdown value mapping
+        $stateFormatterApplied = false;
         if (! empty($item['dropdown'])) {
             $dropdownType = $item['dropdown'];
             $field->formatStateUsing(function ($state) use ($dropdownType) {
                 $options = DropdownHandler::get($dropdownType);
                 return $options[$state] ?? $state;
             });
+            $stateFormatterApplied = true;
         }
 
         // Relate: resolve stored ID to the related record's display label
@@ -696,7 +701,7 @@ class JsonFormBuilder
             if (! class_exists($modelClass)) {
                 $modelClass = 'App\\Models\\' . Str::studly(Str::singular($relateModule));
             }
-            if (class_exists($modelClass)) {
+            if (class_exists($modelClass) && ! $stateFormatterApplied) {
                 $displayField = self::resolveRelateDisplayColumn($modelClass, $item['display_field'] ?? 'name');
                 $field->formatStateUsing(function ($state) use ($modelClass, $displayField) {
                     if ($state === null || $state === '') {
@@ -791,7 +796,7 @@ class JsonFormBuilder
             $field->same($item['same']);
         }
 
-        if (! empty($item['rules'])) {
+        if (! empty($item['rules']) && ($item['type'] ?? null) === 'password') {
             $field->rules([
                 Password::min($item['rules'])
                     ->mixedCase()
@@ -837,6 +842,12 @@ class JsonFormBuilder
                                     'regex'    => $value !== null && $value !== '' && ! preg_match($ruleParam, (string) $value),
                                     'required' => $value === null || $value === '',
                                     'string'   => ! is_string($value),
+                                    'email'    => filter_var($value, FILTER_VALIDATE_EMAIL) === false,
+                                    'url'      => filter_var($value, FILTER_VALIDATE_URL) === false,
+                                    'integer', 'biginteger', 'bigint', 'number', 'int'
+                                               => ! (is_numeric($value) && floor((float) $value) == $value),
+                                    'date', 'datetime', 'timestamp'
+                                               => $value !== null && $value !== '' && strtotime($value) === false,
                                     'json'     => $value !== null && $value !== '' && (static function () use ($value): bool {
                                         json_decode($value);
                                         return json_last_error() !== JSON_ERROR_NONE;
@@ -988,6 +999,13 @@ class JsonFormBuilder
                                 'min'      => mb_strlen((string) $value) < (int) $ruleParam,
                                 'regex'    => $value !== null && $value !== '' && ! preg_match($ruleParam, (string) $value),
                                 'required' => $value === null || $value === '',
+                                'string'   => ! is_string($value),
+                                'email'    => filter_var($value, FILTER_VALIDATE_EMAIL) === false,
+                                'url'      => filter_var($value, FILTER_VALIDATE_URL) === false,
+                                'integer', 'biginteger', 'bigint', 'number', 'int'
+                                           => ! (is_numeric($value) && floor((float) $value) == $value),
+                                'date', 'datetime', 'timestamp'
+                                           => $value !== null && $value !== '' && strtotime($value) === false,
                                 'json'     => $value !== null && $value !== '' && (static function () use ($value): bool {
                                     json_decode($value);
                                     return json_last_error() !== JSON_ERROR_NONE;
@@ -1134,7 +1152,7 @@ class JsonFormBuilder
                         $user = auth()->user();
                         $allowedRoles = allowedRoleNames($user);
                         if (empty($allowedRoles)) {
-                            return;
+                            return [];
                         }
                         if (! empty($allowedRoles) && ! empty($relatedQuery)) {
                             $relatedQuery->whereIn('name', $allowedRoles);
@@ -1362,6 +1380,15 @@ class JsonFormBuilder
                     if (! class_exists($helperClass) || ! method_exists($helperClass, $helperMethod)) {
                         return null;
                     }
+                    // If any param is @-prefixed (reactive dependency), we cannot resolve
+                    // without the live form context — skip auto-select entirely.
+                    if ($helperType === 'hybrid') {
+                        foreach ($helperParams as $param) {
+                            if (is_string($param) && str_starts_with($param, '@')) {
+                                return null;
+                            }
+                        }
+                    }
                     $args = array_map(
                         fn ($param) => ($helperType === 'hybrid' && is_string($param) && str_starts_with($param, '@')) ? null : $param,
                         $helperParams
@@ -1515,7 +1542,7 @@ class JsonFormBuilder
         // before_or_equal
         if (isset($item['before_or_equal'])) {
             $callbackString = $item['before_or_equal'];
-            $field->beforeOrEqual(fn ($record, $get) => function () use ($callbackString, $record, $get) {
+            $field->beforeOrEqual(function ($record, $get) use ($callbackString) {
                 return app()->call($callbackString, [
                     'get' => $get,
                     'record' => $record,
@@ -1673,8 +1700,17 @@ class JsonFormBuilder
                 }
                 $localPath = storage_path('app/livewire-tmp/'.basename($state));
                 if (file_exists($localPath)) {
-                    Storage::disk($disk)->put($state, file_get_contents($localPath));
-                    unlink($localPath); // Cleanup local temp after move
+                    try {
+                        $handle = fopen($localPath, 'rb');
+                        Storage::disk($disk)->put($state, $handle !== false ? $handle : '');
+                        if (is_resource($handle)) {
+                            fclose($handle);
+                        }
+                    } finally {
+                        if (is_file($localPath)) {
+                            @unlink($localPath);
+                        }
+                    }
                 }
 
                 return Storage::disk($disk)->url($state);
@@ -1949,8 +1985,8 @@ class JsonFormBuilder
             }
         }
 
-        if (isset($item['dehydrated']) && method_exists($component, 'dehydrated')) {
-            $component->dehydrated($item['dehydrated']);
+        if (isset($item['dehydrate']) && method_exists($component, 'dehydrated')) {
+            $component->dehydrated($item['dehydrate']);
         }
 
         return $component;
@@ -2025,36 +2061,14 @@ class JsonFormBuilder
             $field->debounce($item['debounce']);
         }
 
-        if (array_key_exists('dehydrated', $item)) {
-            $field->dehydrated($item['dehydrated']);
-        }
-
-        if (! empty($item['extra_attributes'])) {
-            $field->extraAttributes($item['extra_attributes']);
+        if (array_key_exists('dehydrate', $item)) {
+            $field->dehydrated($item['dehydrate']);
         }
 
         if (! empty($item['uppercase'])) {
             $field->dehydrateStateUsing(fn ($state) => strtoupper((string) $state));
         }
 
-        // Handle Visibility (Roles)
-        if (! empty($item['visible_roles'])) {
-            $roles = is_array($item['visible_roles']) ? $item['visible_roles'] : [$item['visible_roles']];
-            $field->hidden(function () use ($roles) {
-                $user = auth()->user();
-
-                return ! $user || ! $user->hasAnyRole($roles);
-            });
-        }
-
-        if (! empty($item['hidden_roles'])) {
-            $roles = is_array($item['hidden_roles']) ? $item['hidden_roles'] : [$item['hidden_roles']];
-            $field->hidden(function () use ($roles) {
-                $user = auth()->user();
-
-                return $user && $user->hasAnyRole($roles);
-            });
-        }
         // Consolidated visibility logic for fields
         $field->visible(function (Get $get, $record, ?string $context = null, $component = null) use ($item) {
             $operation = $context ?? ($component ? $component->getContainer()->getOperation() : null);
@@ -2242,7 +2256,7 @@ class JsonFormBuilder
             $field->live(onBlur: true)
                 ->afterStateUpdated(function ($state, Set $set, $livewire, $component) use ($isUppercase) {
                     if ($isUppercase) {
-                        $set($component->getName(), strtoupper((string) $state));
+                        $set($component->getStatePath(), strtoupper((string) $state));
                     }
                     $livewire->validateOnly($component->getStatePath());
                 });

@@ -19,6 +19,7 @@ final class ModuleValidator
     {
         self::assertNamePresent($module);
         self::assertNameFormat($module);
+        self::assertTableNamePresent($module);
         self::assertNotAlreadyDeployed($module);
         self::assertHasFields($module);
     }
@@ -42,6 +43,26 @@ final class ModuleValidator
                 "Module name \"{$module->fullname}\" is invalid. "
                 . 'Use only letters, digits, and underscores, starting with a letter. '
                 . 'Example: CustomerOrder or customer_order.'
+            );
+        }
+    }
+
+    private static function assertTableNamePresent(Module $module): void
+    {
+        $table = (string) $module->table;
+
+        if ($table === '') {
+            throw new RuntimeException(
+                'Cannot determine a database table name for this module. '
+                . 'Set "Module Name" or "Plural Label" in the module settings before deploying.'
+            );
+        }
+
+        if (! preg_match('/^[a-z][a-z0-9_]*$/', $table)) {
+            throw new RuntimeException(
+                "The computed table name \"{$table}\" is invalid. "
+                . 'Table names must use only lowercase letters, digits, and underscores. '
+                . 'Adjust "Plural Label" or "Module Name" in the module settings.'
             );
         }
     }

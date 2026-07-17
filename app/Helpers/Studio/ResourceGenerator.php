@@ -32,12 +32,20 @@ final class ResourceGenerator
         File::ensureDirectoryExists("{$basePath}/Schemas");
         File::ensureDirectoryExists("{$basePath}/Tables");
 
+        // [L10] Build RESOURCE_SLUG with fallback so an empty plural_label never
+        // produces a blank slug. [H12] Null-guard plural/singular labels.
+        $slug = Str::slug($module->plural_label ?? '');
+        if (empty($slug)) {
+            $slug = Str::slug($module->name ?? 'module');
+        }
+
         $vars = [
             'MODEL'             => $model,
-            'MODEL_LOWER'       => Str::lower($module->name),
+            'MODEL_LOWER'       => $module->name, // must match Module::where('name',...) in ModuleState::active()
             'RESOURCE'          => $resource,
-            'RESOURCE_SINGULAR' => $module->singular_label,
-            'RESOURCE_PLURAL' => $module->plural_label,
+            'RESOURCE_SINGULAR' => $module->singular_label ?? '', // [H12] null-safe
+            'RESOURCE_PLURAL'   => $module->plural_label ?? '',   // [H12] null-safe
+            'RESOURCE_SLUG'     => $slug,
             'ICON'              => $icon,
         ];
 

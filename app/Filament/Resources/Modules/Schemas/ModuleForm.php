@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Modules\Schemas;
 
 use App\Helpers\JsonStudioFormBuilder;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\File;
 
 class ModuleForm
 {
@@ -18,12 +19,11 @@ class ModuleForm
             default => 'default.json',
         };
 
-        $config = json_decode(
-            file_get_contents(
-                base_path("app/Filament/Resources/Modules/Schemas/{$configPath}")
-            ),
-            true
-        );
+        $fullPath = base_path("app/Filament/Resources/Modules/Schemas/{$configPath}");
+
+        $config = File::exists($fullPath)
+            ? json_decode(file_get_contents($fullPath), true)
+            : [];
 
         return JsonStudioFormBuilder::buildSchema($schema, $config);
     }

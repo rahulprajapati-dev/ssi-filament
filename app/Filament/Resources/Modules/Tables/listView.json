@@ -9,7 +9,7 @@
     "columns": [
         {
             "type": "text",
-            "name": "fullnamelable",
+            "name": "fullnamelabel",
             "label": "Module Name",
             "sortable": true,
             "sortable_field": [
@@ -95,7 +95,7 @@
                 "iconButton": true,
                 "tooltip": "Edit Module",
                 "modalHeading": "Update Module",
-                "modalWidth": "SevenExtraLarge"
+                "modalWidth": "7xl"
             }
         },
         {
@@ -117,7 +117,7 @@
                         "modalHeading": "Change Module Status",
                         "modalDescription": "Are you sure you want to change the status of this module?",
                         "modalSubmitActionLabel": "Confirm",
-                        "modalWidth": "Medium"
+                        "modalWidth": "md"
                     },
                     "hooks": {
                         "action": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@toggleModule"
@@ -137,7 +137,7 @@
                         "modalHeading": "Deploy Module",
                         "modalDescription": "This will generate all required files, database migrations, models, resources, and layouts for this module. Do you want to continue?",
                         "modalSubmitActionLabel": "Yes, Deploy",
-                        "modalWidth": "Medium"
+                        "modalWidth": "md"
                     },
                     "hooks": {
                         "action": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@deployModule"
@@ -211,7 +211,7 @@
                         "modalHeading": "Repair & Rebuild Module",
                         "modalDescription": "This will repair and rebuild the module by regenerating missing files and ensuring the database schema and layouts are up to date. Do you want to continue?",
                         "modalSubmitActionLabel": "Yes, Repair & Rebuild",
-                        "modalWidth": "Medium"
+                        "modalWidth": "md"
                     },
                     "hooks": {
                         "action": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@repairRebuild"
@@ -226,7 +226,7 @@
                         "color": "info",
                         "modalHeading": "Clone Module",
                         "modalSubmitActionLabel": "Clone",
-                        "modalWidth": "Medium"
+                        "modalWidth": "md"
                     },
                     "form": {
                         "components": [

@@ -24,8 +24,8 @@ final class FieldTypeMap
 
     private const STRING_TYPES = [
         'text', 'string', 'email', 'url', 'phone', 'password',
-        'select', 'dropdown', 'enum', 'radio', 'relationship',
-        'file', 'image', 'fileupload', 'color', 'currency',
+        'select', 'dropdown', 'enum', 'radio',
+        'file', 'image', 'fileupload', 'color',
     ];
 
     /**
@@ -88,7 +88,7 @@ final class FieldTypeMap
     /** Whether this type should receive a default value from the field definition. */
     public static function supportsDefault(string $type): bool
     {
-        return ! self::isBooleanType($type) && ! self::isJsonType($type);
+        return ! self::isBooleanType($type) && ! self::isJsonType($type) && ! self::isTextType($type);
     }
 
     // ── Shared helpers ────────────────────────────────────────────────────────
@@ -119,6 +119,11 @@ final class FieldTypeMap
             'json', 'array', 'repeater',
             'checkbox_list', 'checkboxlist',
             'tags'                             => 'json',
+            'relationship', 'relate'           => 'unsignedBigInteger',
+            'address'                          => (static function () {
+                \Log::warning('FieldTypeMap::dbType called on virtual address type');
+                return 'string';
+            })(),
             default                            => 'string',
         };
     }

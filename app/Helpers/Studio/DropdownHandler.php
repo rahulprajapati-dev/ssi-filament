@@ -23,15 +23,12 @@ class DropdownHandler
      */
     public static function set(string $group, string $key, string $value): bool
     {
-        $data = self::readFile();
-
-        if (!isset($data[$group])) {
-            $data[$group] = [];
-        }
-
-        $data[$group][$key] = $value;
-
-        return self::writeFile($data);
+        return self::modifyFile(function (array &$data) use ($group, $key, $value): void {
+            if (!isset($data[$group])) {
+                $data[$group] = [];
+            }
+            $data[$group][$key] = $value;
+        });
     }
 
     /**
@@ -39,13 +36,11 @@ class DropdownHandler
      */
     public static function delete(string $group, string $key): bool
     {
-        $data = self::readFile();
-
-        if (isset($data[$group][$key])) {
-            unset($data[$group][$key]);
-        }
-
-        return self::writeFile($data);
+        return self::modifyFile(function (array &$data) use ($group, $key): void {
+            if (isset($data[$group][$key])) {
+                unset($data[$group][$key]);
+            }
+        });
     }
 
     /**
@@ -53,17 +48,17 @@ class DropdownHandler
      */
     public static function createGroup(string $module, string $fieldname, $options): bool
     {
-        $data = self::readFile();
         $name = $module . '_' . $fieldname . '_dom';
-        if (!isset($data[$name])) {
-            $dropdown = [];
-            foreach ($options as $option) {
-                $dropdown[$option['key']] = $option['value'];
-            }
-            $data[$name] = $dropdown;
-        }
 
-        return self::writeFile($data);
+        return self::modifyFile(function (array &$data) use ($name, $options): void {
+            if (!isset($data[$name])) {
+                $dropdown = [];
+                foreach ($options as $option) {
+                    $dropdown[$option['key']] = $option['value'];
+                }
+                $data[$name] = $dropdown;
+            }
+        });
     }
 
     /**
@@ -71,13 +66,11 @@ class DropdownHandler
      */
     public static function deleteGroup(string $group): bool
     {
-        $data = self::readFile();
-
-        if (isset($data[$group])) {
-            unset($data[$group]);
-        }
-
-        return self::writeFile($data);
+        return self::modifyFile(function (array &$data) use ($group): void {
+            if (isset($data[$group])) {
+                unset($data[$group]);
+            }
+        });
     }
 
     /**
@@ -118,7 +111,60 @@ class DropdownHandler
     }
 
     /**
+     * ATOMIC READ-MODIFY-WRITE
+     *
+     * Opens the file once, acquires LOCK_EX before reading, applies $callback
+     * (which receives $data by reference), then writes back — all under the
+     * same exclusive lock.  This eliminates the TOCTOU race that existed when
+     * readFile() (LOCK_SH) and writeFile() (LOCK_EX) were called as two
+     * separate file-open/lock cycles.
+     *
+     * @param  callable(array &$data): void  $callback
+     */
+    protected static function modifyFile(callable $callback): bool
+    {
+        $file = base_path(self::$filePath);
+
+        if (!file_exists($file)) {
+            self::createFile();
+        }
+
+        $fp = fopen($file, 'c+');
+        if ($fp === false) {
+            return false;
+        }
+        try {
+            if (!flock($fp, LOCK_EX)) {
+                return false;
+            }
+            // Read under the exclusive lock
+            rewind($fp);
+            $json = stream_get_contents($fp);
+            $data = json_decode($json ?: '{}', true);
+            if (!is_array($data)) {
+                $data = [];
+            }
+            // Apply the caller's modification
+            $callback($data);
+            // Write back under the same exclusive lock (no gap between read and write)
+            ftruncate($fp, 0);
+            rewind($fp);
+            $written = fwrite($fp, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            fflush($fp);
+            flock($fp, LOCK_UN);
+            return $written !== false;
+        } finally {
+            fclose($fp);
+        }
+    }
+
+    /**
      * WRITE FILE SAFELY
+     *
+     * @deprecated  Use modifyFile() for any read-then-write operation so the
+     *              read and write share a single LOCK_EX.  writeFile() is kept
+     *              only for callers that build $data outside of the lock window
+     *              (none currently in this class).
      */
     protected static function writeFile(array $data): bool
     {
