@@ -69,6 +69,17 @@ class JsonStudioFormBuilder extends JsonFormBuilder
                 }
                 unset($tab);
             }
+
+            // [M11] Recurse into wizard steps — each step has its own schema array
+            // that must receive the same Studio defaults (e.g. fileUpload disk).
+            if (! empty($item['steps']) && is_array($item['steps'])) {
+                foreach ($item['steps'] as &$step) {
+                    if (! empty($step['schema']) && is_array($step['schema'])) {
+                        $step['schema'] = self::preprocessComponents($step['schema']);
+                    }
+                }
+                unset($step);
+            }
         }
         unset($item);
 

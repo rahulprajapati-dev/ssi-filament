@@ -32,7 +32,7 @@ class EditModuleLayout extends EditRecord
     protected function mutateFormDataBeforeSave(array $data): array
     {
         $this->ensureLayoutTypeIsUnique(
-            moduleId:   (int) $data['module_id'],
+            moduleId:   (int) ($data['module_id'] ?? $this->record->module_id),
             layoutType: (string) $data['layout_type'],
             ignoreId:   (int) $this->record->id,
         );

@@ -17,18 +17,18 @@
                     "name": "key",
                     "label": "Key",
                     "columnSpan": 1,
-                    "required": true,
+                    "required": false,
                     "validate_on_blur": true,
                     "validation": [
                         "required",
-                        "regex:/^[a-zA-Z]+$/",
-                        "max:4"
+                        "regex:/^[a-z0-9_]*$/",
+                        "max:10"
                     ],
                     "strict_messages": true,
                     "messages": {
                         "required": "Key is required.",
-                        "regex": "Key must contain letters only — no spaces, numbers, or symbols. Example: crm, ssi.",
-                        "max": "Key must not exceed 4 characters."
+                        "regex": "Key may only contain lowercase letters, digits, and underscores. Example: crm, ssi_v2.",
+                        "max": "Key must not exceed 10 characters."
                     },
                     "after_state_updated": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@revalidateNameOnKeyChange"
                 },

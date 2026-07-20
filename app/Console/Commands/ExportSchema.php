@@ -29,7 +29,6 @@ class ExportSchema extends Command
     {
         $table = $this->argument('table');
         $connection = $this->option('connection');
-        devfatal($connection);
         $outputDir = base_path('schemas/default');
         $path = "{$outputDir}/{$table}.json";
 

@@ -17,13 +17,27 @@ class {{MODEL}}Resource extends Resource
 
     protected static ?string $modelLabel = '{{RESOURCE_SINGULAR}}';
 
-    protected static ?string $slug = '{{RESOURCE_PLURAL}}'; 
+    protected static ?string $slug = '{{RESOURCE_SLUG}}';
 
     protected static ?string $pluralModelLabel = '{{RESOURCE_PLURAL}}';
 
     protected static string|\BackedEnum|null $navigationIcon = '{{ICON}}';
 
+    public static function getModel(): string
+    {
+        $customModel = 'App\\Custom\\Models\\' . class_basename(parent::getModel());
+        if (class_exists($customModel)) {
+            return $customModel;
+        }
+        return parent::getModel();
+    }
+
     public static function form(Schema $schema): Schema
+    {
+        return {{MODEL}}Form::configure($schema);
+    }
+
+    public static function infolist(Schema $schema): Schema
     {
         return {{MODEL}}Form::configure($schema);
     }

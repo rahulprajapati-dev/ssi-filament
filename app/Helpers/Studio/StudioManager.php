@@ -8,9 +8,9 @@ use App\Helpers\Studio\DropdownHandler;
 use App\Helpers\Studio\SchemaSyncService;
 use App\Models\Module;
 use App\Models\ModuleField;
+use App\Support\ModuleState;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
 
 /**
  * StudioManager — main deployment orchestrator.
@@ -100,14 +100,20 @@ final class StudioManager
             }
 
             // ── File generation steps (always run) ────────────────────────────
-            $this->step('model', fn() => ModelGenerator::generate($this->module));
+            $devModelCreated = null;
+            $this->step('base_model', function () use (&$devModelCreated) {
+                $devModelCreated = ModelGenerator::generate($this->module);
+                return true;
+            });
+            $this->step('dev_model', fn() => $devModelCreated);
             $this->step('resource', fn() => ResourceGenerator::generate($this->module));
             $this->step('layouts', fn() => LayoutGenerator::generate($this->module));
             $module = $this->module;
             $fields = $module->fields;
             foreach ($fields as $field) {
                 if (in_array($field->type, ['select', 'radio', 'checkbox_list', 'checkboxlist'], true)) {
-                    $this->step('create_dom', fn() => DropdownHandler::createGroup($module->fullname, $field->field_name, $field->options));
+                    $options = is_array($field->options) ? $field->options : [];
+                    $this->step('create_dom_' . $field->field_name, fn() => DropdownHandler::createGroup($module->fullname, $field->field_name, $options));
                 }
             }
 
@@ -120,7 +126,7 @@ final class StudioManager
             );
 
         } catch (\Throwable $e) {
-            return DeploymentResult::fail($e->getMessage());
+            return DeploymentResult::fail($e->getMessage(), $this->generated, $this->skipped);
         }
     }
 
@@ -151,21 +157,22 @@ final class StudioManager
             // Sync relationship methods in the existing model file.
             $this->step('model_relationships', fn() => ModelGenerator::sync($this->module));
 
+            // Regenerate the JSON-loading glue files (Form.php, Table.php) from the current stubs.
+            // This upgrades modules deployed before the CustomSchemas priority-check was added.
+            $this->step('regenerate_glue', fn() => ResourceGenerator::regenerateGlueFiles($this->module));
+
             // Regenerate JSON schema files from the current ModuleLayout records.
             $this->step('layouts', fn() => LayoutGenerator::generate($this->module, force: true));
             $module = $this->module;
             $fields = $module->fields;
             foreach ($fields as $field) {
                 if (in_array($field->type, ['select', 'radio', 'checkbox_list', 'checkboxlist'], true)) {
-                    $group = $module->fullname . '_' . $field->field_name . '_dom';
                     $options = is_array($field->options) ? $field->options : [];
-                    foreach ($options as $option) {
-                        if (isset($option['key'], $option['value'])) {
-                            $this->step('update_dom', function () use ($group, $option) {
-                                return DropdownHandler::set($group, $option['key'], $option['value']);
-                            });
-                        }
-                    }
+                    $this->step('sync_dom_' . $field->field_name, function () use ($module, $field, $options) {
+                        $group = $module->fullname . '_' . $field->field_name . '_dom';
+                        DropdownHandler::deleteGroup($group);
+                        return DropdownHandler::createGroup($module->fullname, $field->field_name, $options);
+                    });
                 }
             }
 
@@ -176,7 +183,7 @@ final class StudioManager
             );
 
         } catch (\Throwable $e) {
-            return DeploymentResult::fail($e->getMessage());
+            return DeploymentResult::fail($e->getMessage(), $this->generated, $this->skipped);
         }
     }
 
@@ -188,17 +195,18 @@ final class StudioManager
             foreach ($fields as $field) {
                 if (in_array($field->type, ['select', 'radio', 'checkbox_list', 'checkboxlist'], true)) {
                     $name = $module->fullname . '_' . $field->field_name . '_dom';
-                    $this->step('remove_dom', fn() => DropdownHandler::deleteGroup($name));
+                    $this->step('remove_dom_' . $field->field_name, fn() => DropdownHandler::deleteGroup($name));
                 }
             }
+            $dropCustom = ! empty($this->data['is_custom']);
+
             $this->step('remove_layouts', fn() => LayoutGenerator::remove($this->module));
-            $this->step('remove_resource', fn() => ResourceGenerator::remove($this->module));
+            $this->step('remove_resource', fn() => ResourceGenerator::remove($this->module, $dropCustom));
             $this->step('remove_model', fn() => ModelGenerator::remove($this->module));
             $this->step('remove_views', fn() => ViewGenerator::remove($this->module));
             $this->step('remove_migration', fn() => MigrationGenerator::remove($this->module));
 
-
-            if (($this->data['is_table'] ?? false) === true) {
+            if (! empty($this->data['is_table'])) {
                 $this->step('drop_table', fn() => $this->dropTable());
             }
 
@@ -211,7 +219,7 @@ final class StudioManager
             );
 
         } catch (\Throwable $e) {
-            return DeploymentResult::fail($e->getMessage());
+            return DeploymentResult::fail($e->getMessage(), $this->generated, $this->skipped);
         }
     }
 
@@ -253,9 +261,15 @@ final class StudioManager
      * Run all pending migrations.
      * --force is required when APP_ENV=production to skip the console confirmation.
      */
-    private function runMigrations(): bool
+    private function runMigrations(?string $path = null): bool
     {
-        Artisan::call('migrate', ['--force' => true]);
+        $opts = ['--force' => true];
+        if ($path) {
+            $opts['--path'] = 'database/migrations/' . basename($path);
+        } else {
+            $opts['--path'] = 'database/migrations';
+        }
+        Artisan::call('migrate', $opts);
         return true;
     }
 
@@ -265,22 +279,35 @@ final class StudioManager
             'is_deploy' => true,
             'deployed_at' => now(),
         ]);
+        ModuleState::clear($this->module->name);
     }
 
     private function markUninstalled(): void
     {
         $this->module->update([
-            'is_deploy' => false,
+            'is_deploy'  => false,
+            'is_enable'  => false,
             'deployed_at' => null,
         ]);
+        ModuleState::clear($this->module->name);
     }
 
     private function dropTable(): bool
     {
-        $table = strtolower($this->module->table);
-        if (!Schema::hasTable($table)) {
+        $table = strtolower((string) $this->module->computed_table);
+
+        if ($table === '') {
+            throw new \RuntimeException(
+                'Cannot determine the table name for this module. '
+                . 'Set "Module Name" or "Plural Label" and try again.'
+            );
+        }
+
+        if (! Schema::hasTable($table)) {
+            // Table never existed (e.g. a failed earlier deploy) — nothing to drop.
             return false;
         }
+
         Schema::dropIfExists($table);
         return true;
     }

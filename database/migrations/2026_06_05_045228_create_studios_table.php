@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('modules', function (Blueprint $table) {
             $table->id();
-            $table->uuid('uuid');
+            $table->uuid('uuid')->unique();
             $table->string('key',10)->nullable();
             $table->string('name', 100)->unique();
             $table->string('singular_label', 100);
@@ -33,7 +33,7 @@ return new class extends Migration
 
         Schema::create('module_fields', function (Blueprint $table) {
             $table->id();
-            $table->uuid('uuid');
+            $table->uuid('uuid')->unique();
             $table->foreignId('module_id')->constrained()->cascadeOnDelete();
             $table->string('field_name', 100);
             $table->string('label', 100);
@@ -59,10 +59,10 @@ return new class extends Migration
 
         Schema::create('module_layouts', function (Blueprint $table) {
             $table->id();
-            $table->uuid('uuid');
+            $table->uuid('uuid')->unique();
             $table->foreignId('module_id')->constrained()->cascadeOnDelete();
             $table->enum('layout_type', ['create', 'edit', 'detail', 'list']);
-            $table->json('layout_json');
+            $table->json('layout_json')->nullable();
             $table->json('filters_json')->nullable();
             $table->boolean('inherit_edit_layout')->default(false);
             $table->boolean('inherit_detail_layout')->default(false);

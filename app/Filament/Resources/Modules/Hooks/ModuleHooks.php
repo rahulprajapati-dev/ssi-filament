@@ -6,6 +6,7 @@ use App\Helpers\Studio\StudioManager;
 use App\Models\Module;
 use App\Models\ModuleField;
 use App\Models\ModuleLayout;
+use App\Support\ModuleState;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Str;
@@ -13,12 +14,27 @@ use Illuminate\Support\Facades\DB;
 
 class ModuleHooks
 {
+    public static function getKeyOptions(): array
+    {
+        return Module::query()
+            ->whereNotNull('key')
+            ->where('key', '!=', '')
+            ->distinct()
+            ->orderBy('key')
+            ->pluck('key', 'key')
+            ->toArray();
+    }
+
     public function toggleModule(Module $record, array $_data = []): array
     {
         $record->update(['is_enable' => ! $record->is_enable]);
+        ModuleState::clear($record->name);
         $record->refresh();
-        if ($record->is_enable) { 
-            $this->repairRebuild($record);
+        if ($record->is_enable) {
+            $result = $this->repairRebuild($record);
+            if (! ($result['success'] ?? false)) {
+                return ['success' => false];
+            }
         }
 
         $status = $record->is_enable ? 'Enabled' : 'Disabled';
@@ -33,7 +49,9 @@ class ModuleHooks
 
     public function deployModule(Module $record, array $_data = []): array
     {
-        $result = StudioManager::deploy($record);
+        $result = $record->is_deploy
+            ? StudioManager::rebuild($record)
+            : StudioManager::deploy($record);
 
         if ($result->success) {
             Notification::make()->success()->title($result->message)->send();
@@ -81,7 +99,7 @@ class ModuleHooks
     {
         $newName = $data['name'] ?? ($record->name . '_copy');
 
-        if (Module::where('name', $newName)->exists()) {
+        if (Module::where('name', $newName)->where('key', $record->key)->exists()) {
             Notification::make()->danger()->title('Clone Failed')->body("A module named '{$newName}' already exists.")->send();
             return ['success' => false];
         }
@@ -89,33 +107,39 @@ class ModuleHooks
         $clone = Module::create([
             'key'                => $record->key,
             'name'               => $newName,
-            'singular_label'     => ($data['singular_label'] ?? $record->singular_label) . ' (Copy)',
-            'plural_label'       => ($data['plural_label'] ?? $record->plural_label) . ' (Copy)',
+            'singular_label'     => ($data['singular_label'] ?? $record->singular_label) . ' Copy',
+            'plural_label'       => ($data['plural_label'] ?? $record->plural_label) . ' Copy',
             'icon'               => $record->icon,
             'description'        => $record->description,
             'relationships_json' => $record->relationships_json,
+            'is_relationships'   => $record->is_relationships,
             'use_uuid'           => $record->use_uuid,
             'is_deploy'          => false,
             'is_enable'          => false,
         ]);
 
         foreach ($record->fields as $field) {
-            ModuleField::create([
-                ...$field->only([
-                    'field_name', 'label', 'type', 'length', 'required',
+            // firstOrCreate prevents UNIQUE crashes when an address parent's hook
+            // auto-seeds sub-fields and the loop then reaches those same rows.
+            ModuleField::firstOrCreate(
+                ['module_id' => $clone->id, 'field_name' => $field->field_name],
+                $field->only([
+                    'label', 'type', 'length', 'required',
                     'searchable', 'sortable', 'unique_field', 'default_value',
                     'options', 'sort_order', 'visibility_mode', 'condition_logic',
                     'always_save_value', 'visibility_conditions',
                 ]),
-                'module_id' => $clone->id,
-            ]);
+            );
         }
 
         foreach ($record->layouts as $layout) {
             ModuleLayout::create([
-                'module_id'   => $clone->id,
-                'layout_type' => $layout->layout_type,
-                'layout_json' => $layout->layout_json,
+                'module_id'              => $clone->id,
+                'layout_type'            => $layout->layout_type,
+                'layout_json'            => $layout->layout_json,
+                'filters_json'           => $layout->filters_json,
+                'inherit_edit_layout'    => $layout->inherit_edit_layout,
+                'inherit_detail_layout'  => $layout->inherit_detail_layout,
             ]);
         }
 
@@ -124,6 +148,16 @@ class ModuleHooks
         return ['success' => true];
     }
 
+      public function uninstallwarning($state, $set, $get, $livewire, $record, $component)
+      {
+         $iscustom = $get('is_custom') ?? false;
+         if ($iscustom) {
+             $set('custom_dummy', 'This will permanently delete all customizations for this resource. Continue?');
+         } else {
+             $set('custom_dummy', null);
+         }
+         return ['status' => false];
+      }
     public function uninstall(Module $record, array $_data = []): array
     {
         $result = StudioManager::uninstall($record, $_data);

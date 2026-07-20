@@ -2,47 +2,18 @@
 
 namespace App\Models;
 
-use App\Traits\HasCreatedBy;
-use App\Traits\ModuleHookTrait;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
+use App\Models\Studio\Base{{MODEL}};
 
 /**
  * {{MODEL}}
  *
- * Relationships inherited from HasCreatedBy:
- *   createdBy()  → BelongsTo User
- *   updatedBy()  → BelongsTo User
+ * This file is generated once and never overwritten by Studio.
+ * Add your custom scopes, accessors, mutators, and methods here.
+ *
+ * Studio-managed code (table, fillable, casts, relationships) lives in:
+ *   App\Models\Studio\Base{{MODEL}}
  */
-class {{MODEL}} extends Model
+class {{MODEL}} extends Base{{MODEL}}
 {
-    use HasCreatedBy;
-    use ModuleHookTrait;
-
-    protected $table = '{{TABLE}}';
-
-    protected $guarded = [];
-
-    protected $casts = [
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        // region:studio-casts — managed by Studio, do not edit manually
-{{FIELD_CASTS}}        // endregion:studio-casts
-    ];
-
-    protected static function boot(): void
-    {
-        parent::boot();
-        static::creating(function ($model) {
-            if (empty($model->uuid)) {
-                $model->uuid = (string) Str::uuid();
-            }
-        });
-    }
-
-    // region:studio-route-key — managed by Studio, do not edit manually
-{{UUID_ROUTE_KEY}}    // endregion:studio-route-key
-
-    // region:studio-relationships — managed by Studio, do not edit manually
-{{RELATIONSHIPS}}    // endregion:studio-relationships
+    //
 }

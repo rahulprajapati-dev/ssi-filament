@@ -34,9 +34,9 @@ final class DeploymentResult
         return new self(true, $message, $generated, $skipped);
     }
 
-    public static function fail(string $message): self
+    public static function fail(string $message, array $generated = [], array $skipped = []): self
     {
-        return new self(false, $message);
+        return new self(false, $message, $generated, $skipped);
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────

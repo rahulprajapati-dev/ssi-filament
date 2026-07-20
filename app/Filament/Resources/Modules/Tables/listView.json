@@ -9,34 +9,35 @@
     "columns": [
         {
             "type": "text",
-            "name": "fullnamelable",
-            "label": "Module Name",
+            "name": "fullnamelabel",
+            "label": "Module",
             "sortable": true,
-            "sortable_field": [
-                "key",
-                "plural_label"
-            ],
-            "searchable": {
-                "individual": true
-            },
-            "searchable_fields": [
-                "key",
-                "plural_label"
-            ],
-            
+            "sortable_field": ["key", "plural_label"],
+            "searchable": { "individual": true },
+            "searchable_fields": ["key", "plural_label", "name"],
+            "description": "description",
             "wrap": false
         },
         {
             "type": "text",
-            "name": "singular_label",
-            "label": "Label",
-            "sortable": true
+            "name": "key",
+            "label": "Key",
+            "sortable": true,
+            "badge": true,
+            "default": "—"
         },
         {
             "type": "text",
-            "name": "relationships_json",
-            "label": "Relationships",
-            "format_hook": "App\\Helpers\\Studio\\ModuleRelationshipHelper@formatRelationshipSummary",
+            "name": "singular_label",
+            "label": "Singular Label",
+            "sortable": true,
+            "default": "—"
+        },
+        {
+            "type": "text",
+            "name": "plural_label",
+            "label": "Plural Label",
+            "sortable": true,
             "default": "—"
         },
         {
@@ -49,7 +50,7 @@
         {
             "type": "icon",
             "name": "is_enable",
-            "label": "Enabled",
+            "label": "Active",
             "boolean": true,
             "sortable": true
         },
@@ -64,14 +65,74 @@
         },
         {
             "type": "text",
+            "name": "createdBy.name",
+            "label": "Created By",
+            "sortable": false,
+            "default": "—",
+            "toggleable": true,
+            "toggledHiddenByDefault": true
+        },
+        {
+            "type": "text",
             "name": "created_at",
-            "label": "Created",
+            "label": "Created At",
             "date": true,
-            "format": "d M Y",
-            "sortable": true
+            "format": "d M Y, h:i A",
+            "sortable": true,
+            "default": "—",
+            "toggleable": true,
+            "toggledHiddenByDefault": true
+        },
+        {
+            "type": "text",
+            "name": "updatedBy.name",
+            "label": "Updated By",
+            "sortable": false,
+            "default": "—",
+            "toggleable": true,
+            "toggledHiddenByDefault": true
+        },
+        {
+            "type": "text",
+            "name": "updated_at",
+            "label": "Updated At",
+            "date": true,
+            "format": "d M Y, h:i A",
+            "sortable": true,
+            "default": "—",
+            "toggleable": true,
+            "toggledHiddenByDefault": true
         }
     ],
-    "filters": [],
+    "filters": [
+        {
+            "type": "select",
+            "name": "is_deploy",
+            "label": "Deployment Status",
+            "options": {
+                "1": "Deployed",
+                "0": "Not Deployed"
+            }
+        },
+        {
+            "type": "select",
+            "name": "is_enable",
+            "label": "Active Status",
+            "options": {
+                "1": "Active",
+                "0": "Inactive"
+            }
+        },
+        {
+            "type": "select",
+            "name": "key",
+            "label": "Key",
+            "options_source": "helper",
+            "helper_class": "App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks",
+            "helper_method": "getKeyOptions",
+            "helper_params": []
+        }
+    ],
     "filters_layout": "modal",
     "record_action": null,
     "record_url": null,
@@ -96,7 +157,7 @@
                 "iconButton": true,
                 "tooltip": "Edit Module",
                 "modalHeading": "Update Module",
-                "modalWidth": "SevenExtraLarge"
+                "modalWidth": "7xl"
             }
         },
         {
@@ -118,7 +179,7 @@
                         "modalHeading": "Change Module Status",
                         "modalDescription": "Are you sure you want to change the status of this module?",
                         "modalSubmitActionLabel": "Confirm",
-                        "modalWidth": "Medium"
+                        "modalWidth": "md"
                     },
                     "hooks": {
                         "action": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@toggleModule"
@@ -138,7 +199,7 @@
                         "modalHeading": "Deploy Module",
                         "modalDescription": "This will generate all required files, database migrations, models, resources, and layouts for this module. Do you want to continue?",
                         "modalSubmitActionLabel": "Yes, Deploy",
-                        "modalWidth": "Medium"
+                        "modalWidth": "md"
                     },
                     "hooks": {
                         "action": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@deployModule"
@@ -158,17 +219,37 @@
                         "modalHeading": "Uninstall Module",
                         "modalDescription": "This action will remove all generated files, resources, and configurations for this module. You can optionally remove the database table as well. This action cannot be undone.",
                         "modalSubmitActionLabel": "Yes, Uninstall",
-                        "modalWidth": "Medium"
+                        "modalWidth": "xl"
                     },
                     "form": {
                         "components": [
                             {
                                 "component": "grid",
+                                "columnSpan": "full",
+                                "columns": 2,
                                 "schema": [
                                     {
                                         "component": "toggle",
                                         "name": "is_table",
-                                        "label": "Also drop the database table?"
+                                        "label": "Also drop the database table?",
+                                        "columnSpan": 1
+                                    },
+                                    {
+                                        "component": "toggle",
+                                        "name": "is_custom",
+                                        "label": "Also drop the custom directory?",
+                                        "columnSpan": 1,
+                                        "validate_on_blur": true,
+                                        "custom_after_state_updated": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@uninstallwarning",
+                                        "custom_after_state_updated_related": [
+                                            "custom_dummy"
+                                        ]
+                                    },
+                                    {
+                                        "component": "view",
+                                        "name": "custom_dummy",
+                                        "view": "filament.components.custom-dummy",
+                                        "columnSpan": "full"
                                     }
                                 ]
                             }
@@ -192,7 +273,7 @@
                         "modalHeading": "Repair & Rebuild Module",
                         "modalDescription": "This will repair and rebuild the module by regenerating missing files and ensuring the database schema and layouts are up to date. Do you want to continue?",
                         "modalSubmitActionLabel": "Yes, Repair & Rebuild",
-                        "modalWidth": "Medium"
+                        "modalWidth": "md"
                     },
                     "hooks": {
                         "action": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@repairRebuild"
@@ -207,7 +288,7 @@
                         "color": "info",
                         "modalHeading": "Clone Module",
                         "modalSubmitActionLabel": "Clone",
-                        "modalWidth": "Medium"
+                        "modalWidth": "md"
                     },
                     "form": {
                         "components": [
