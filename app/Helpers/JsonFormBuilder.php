@@ -1489,14 +1489,16 @@ class JsonFormBuilder
     protected static function matchCondition(mixed $actual, string $operator, mixed $expected): bool
     {
         return match ($operator) {
-            '!=' => $actual != $expected,
-            '>' => $actual > $expected,
-            '>=' => $actual >= $expected,
-            '<' => $actual < $expected,
-            '<=' => $actual <= $expected,
-            'in' => in_array($actual, (array) $expected),
-            'not_in' => ! in_array($actual, (array) $expected),
-            default => $actual == $expected,  // '='
+            '!='       => $actual != $expected,
+            '>'        => $actual > $expected,
+            '>='       => $actual >= $expected,
+            '<'        => $actual < $expected,
+            '<='       => $actual <= $expected,
+            'in'       => in_array($actual, (array) $expected),
+            'not_in'   => ! in_array($actual, (array) $expected),
+            'is_null'  => $actual === null || $actual === '',
+            'not_null' => $actual !== null && $actual !== '',
+            default    => $actual == $expected,  // '='
         };
     }
 

@@ -363,6 +363,7 @@
   <a href="#sdg-model">Model Extension</a>
   <a href="#sdg-rebuild">Rebuild Safety</a>
   <a href="#sdg-migrate">Migrating Old Modules</a>
+  <a href="#sdg-dropdowns">Dropdown DOMs</a>
   <a href="#sdg-quickref">Quick Reference</a>
 </div>
 
@@ -664,9 +665,91 @@
 
 <div class="sdg-hr"></div>
 
-{{-- ── 7. Quick Reference ───────────────────────────────────────── --}}
+{{-- ── 7. Dropdown DOMs ─────────────────────────────────────────── --}}
+<section class="sdg-section" id="sdg-dropdowns">
+  <div class="sdg-section-hd"><span class="sdg-num">7</span><h2>Dropdown DOM Files</h2></div>
+  <p>Dropdown option lists ("DOMs") live in two separate files. Studio-internal options are version-controlled in PHP config. Module-level options your application creates at runtime live in a writable JSON file.</p>
+
+  <div class="sdg-tbl-wrap">
+    <table class="sdg-tbl">
+      <thead><tr><th>File</th><th>Owner</th><th>Contains</th><th>Writable at runtime?</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="td-f">config/studio_doms.php</td>
+          <td class="td-s">Studio</td>
+          <td class="td-note"><code>field_type_dom</code>, <code>layout_type_dom</code>, <code>moudle_icons_dom</code>, <code>visibility_mode_dom</code>, <code>condition_logic_dom</code>, <code>relationship_type_dom</code>, <code>filter_type_dom</code>, <code>operator_dom</code></td>
+          <td class="td-note">No — edit the PHP file directly</td>
+        </tr>
+        <tr style="background:rgba(52,211,153,.04)">
+          <td class="td-f">storage/app/SSI/Dropdowns/app_doms.json</td>
+          <td class="td-d">Developer / App</td>
+          <td class="td-note">User-created groups: <code>status_dom</code>, <code>gender_dom</code>, and any DOM generated when a module field is deployed</td>
+          <td class="td-note">Yes — written by <code>DropdownHandler</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sdg-callout sdg-callout-info">
+    <span class="sdg-ci">💡</span>
+    <p><code>DropdownHandler::get('field_type_dom')</code> checks <code>app_doms.json</code> first, then falls back to <code>studio_doms.php</code> — callers never need to know which file a group came from. All write methods (<code>set</code>, <code>createGroup</code>, <code>deleteGroup</code>) always target <code>app_doms.json</code> only.</p>
+  </div>
+
+  <h3>Reading a dropdown in JSON (form or table)</h3>
+  <div class="sdg-cb">
+    <div class="sdg-cb-head"><span>Schemas/createView.json — badge column using a Studio DOM</span></div>
+    <pre>{
+  <span class="st">"type"</span>: <span class="st">"badge"</span>,
+  <span class="st">"name"</span>: <span class="st">"status"</span>,
+  <span class="st">"dropdown"</span>: <span class="st">"status_dom"</span>    <span class="cm">// ← key from app_doms.json</span>
+}</pre>
+  </div>
+  <div class="sdg-cb">
+    <div class="sdg-cb-head"><span>Tables/listView.json — filter using a Studio DOM via helper</span></div>
+    <pre>{
+  <span class="st">"type"</span>: <span class="st">"select"</span>,
+  <span class="st">"name"</span>: <span class="st">"type"</span>,
+  <span class="st">"options_source"</span>: <span class="st">"helper"</span>,
+  <span class="st">"helper_class"</span>: <span class="st">"App\\Helpers\\Studio\\DropdownHandler"</span>,
+  <span class="st">"helper_method"</span>: <span class="st">"get"</span>,
+  <span class="st">"helper_params"</span>: [<span class="st">"field_type_dom"</span>]    <span class="cm">// ← resolved from studio_doms.php</span>
+}</pre>
+  </div>
+
+  <h3>Creating a new app DOM in PHP</h3>
+  <div class="sdg-cb">
+    <div class="sdg-cb-head"><span>PHP — add or update a group in app_doms.json</span></div>
+    <pre><span class="kw">use</span> <span class="cl">App\Helpers\Studio\DropdownHandler</span>;
+
+<span class="cm">// Create a new group (module + field name → "{module}_{field}_dom")</span>
+<span class="cl">DropdownHandler</span>::<span class="fn">createGroup</span>(<span class="st">'lead'</span>, <span class="st">'priority'</span>, [
+    [<span class="st">'key'</span> => <span class="st">'high'</span>,   <span class="st">'value'</span> => <span class="st">'High'</span>],
+    [<span class="st">'key'</span> => <span class="st">'medium'</span>, <span class="st">'value'</span> => <span class="st">'Medium'</span>],
+    [<span class="st">'key'</span> => <span class="st">'low'</span>,    <span class="st">'value'</span> => <span class="st">'Low'</span>],
+]);
+<span class="cm">// Creates "lead_priority_dom" in app_doms.json</span>
+
+<span class="cm">// Add a single option to an existing group</span>
+<span class="cl">DropdownHandler</span>::<span class="fn">set</span>(<span class="st">'status_dom'</span>, <span class="st">'archived'</span>, <span class="st">'Archived'</span>);
+
+<span class="cm">// Read (always merges both files transparently)</span>
+<span class="at">$options</span> = <span class="cl">DropdownHandler</span>::<span class="fn">get</span>(<span class="st">'status_dom'</span>);</pre>
+  </div>
+
+  <h3>Extending a Studio DOM</h3>
+  <p>Studio DOMs in <code>config/studio_doms.php</code> are read-only at runtime. If you need to add an option to one (e.g. a custom field type), edit <code>config/studio_doms.php</code> directly and commit the change. Alternatively, add the same key to <code>app_doms.json</code> — the user file wins on collision.</p>
+
+  <div class="sdg-callout sdg-callout-warn">
+    <span class="sdg-ci">⚠️</span>
+    <p>Never call <code>DropdownHandler::createGroup()</code> or <code>set()</code> with a Studio DOM key (<code>field_type_dom</code>, <code>layout_type_dom</code>, etc.) in application code. Those groups belong in <code>studio_doms.php</code>. Use <code>DropdownHandler::isStudioDom($key)</code> to check before writing.</p>
+  </div>
+</section>
+
+<div class="sdg-hr"></div>
+
+{{-- ── 8. Quick Reference ───────────────────────────────────────── --}}
 <section class="sdg-section" id="sdg-quickref">
-  <div class="sdg-section-hd"><span class="sdg-num">7</span><h2>Quick Reference</h2></div>
+  <div class="sdg-section-hd"><span class="sdg-num">8</span><h2>Quick Reference</h2></div>
   <div class="sdg-cards">
     <div class="sdg-card sdg-card-s">
       <h4>Studio owns — auto-regenerated</h4>
