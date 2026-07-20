@@ -6,7 +6,11 @@ namespace App\Helpers\Studio;
 
 class DropdownHandler
 {
-    protected static string $filePath = 'SSI/Dropdowns/list.json';
+    /** Resolve the absolute path to the dropdown JSON file. */
+    protected static function filePath(): string
+    {
+        return config('studio.dropdown_path') ?: storage_path('app/SSI/Dropdowns/list.json');
+    }
 
     /**
      * GET ALL OPTIONS BY KEY
@@ -46,18 +50,16 @@ class DropdownHandler
     /**
      * CREATE NEW GROUP
      */
-    public static function createGroup(string $module, string $fieldname, $options): bool
+    public static function createGroup(string $module, string $fieldname, array $options): bool
     {
         $name = $module . '_' . $fieldname . '_dom';
 
         return self::modifyFile(function (array &$data) use ($name, $options): void {
-            if (!isset($data[$name])) {
-                $dropdown = [];
-                foreach ($options as $option) {
-                    $dropdown[$option['key']] = $option['value'];
-                }
-                $data[$name] = $dropdown;
+            $dropdown = [];
+            foreach ($options as $option) {
+                $dropdown[$option['key']] = $option['value'];
             }
+            $data[$name] = $dropdown;
         });
     }
 
@@ -86,7 +88,7 @@ class DropdownHandler
      */
     protected static function readFile(): array
     {
-        $file = base_path(self::$filePath);
+        $file = self::filePath();
 
         if (!file_exists($file)) {
             self::createFile();
@@ -123,7 +125,7 @@ class DropdownHandler
      */
     protected static function modifyFile(callable $callback): bool
     {
-        $file = base_path(self::$filePath);
+        $file = self::filePath();
 
         if (!file_exists($file)) {
             self::createFile();
@@ -168,7 +170,7 @@ class DropdownHandler
      */
     protected static function writeFile(array $data): bool
     {
-        $file = base_path(self::$filePath);
+        $file = self::filePath();
 
         $fp = fopen($file, 'c');
         if ($fp === false) {
@@ -194,7 +196,7 @@ class DropdownHandler
      */
     protected static function createFile(): void
     {
-        $file = base_path(self::$filePath);
+        $file = self::filePath();
 
         if (!file_exists(dirname($file))) {
             mkdir(dirname($file), 0755, true);

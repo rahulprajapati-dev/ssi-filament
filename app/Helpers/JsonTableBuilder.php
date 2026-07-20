@@ -714,59 +714,77 @@ class JsonTableBuilder
         };
     }
 
+    /**
+     * Normalise a raw visible_when / hidden_when value into the canonical
+     * {logic: 'and'|'or', conditions: [...]} envelope consumed by evaluateConditions().
+     */
     protected static function normalizeConditions(array $config): array
     {
-        // Unwrap the form-builder {logic:..., conditions:[...]} envelope so that
-        // evaluateConditions receives a plain list of condition objects.
-        if (isset($config['logic']) && isset($config['conditions'])) {
-            return (array) $config['conditions'];
+        // Already an envelope — preserve the logic key.
+        if (isset($config['conditions'])) {
+            return [
+                'logic'      => strtolower($config['logic'] ?? 'and'),
+                'conditions' => (array) $config['conditions'],
+            ];
         }
 
-        // If it looks like a single condition (has 'field'), wrap in an array
+        // Single condition object (has 'field').
         if (isset($config['field'])) {
-            return [$config];
+            return ['logic' => 'and', 'conditions' => [$config]];
         }
 
-        // Already a list of conditions
-        return $config;
+        // Flat array of condition objects.
+        return ['logic' => 'and', 'conditions' => $config];
     }
 
-    protected static function evaluateConditions(Closure $get, array $conditions): bool
+    /**
+     * Evaluate a normalised condition envelope against a record getter.
+     * Supports 'and' (all must pass) and 'or' (any must pass) logic.
+     */
+    protected static function evaluateConditions(Closure $get, array $envelope): bool
     {
+        $logic      = $envelope['logic'] ?? 'and';
+        $conditions = $envelope['conditions'] ?? [];
+
         foreach ($conditions as $condition) {
-            $field = $condition['field'] ?? null;
+            $field    = $condition['field'] ?? null;
             $operator = $condition['operator'] ?? '=';
             $expected = $condition['value'] ?? null;
 
-            if (!$field) {
+            if (! $field) {
                 continue;
             }
 
             $actual = $get($field);
-
-            // Normalize operator
-            $op = strtolower((string) $operator);
+            $op     = strtolower((string) $operator);
 
             $result = match ($op) {
                 '=', '==' => $actual == $expected,
-                '!=' => $actual != $expected,
-                '>' => $actual > $expected,
-                '>=' => $actual >= $expected,
-                '<' => $actual < $expected,
-                '<=' => $actual <= $expected,
-                'in' => is_array($expected) ? in_array($actual, $expected, true) : false,
-                'not_in' => is_array($expected) ? !in_array($actual, $expected, true) : false,
+                '!='      => $actual != $expected,
+                '>'       => $actual > $expected,
+                '>='      => $actual >= $expected,
+                '<'       => $actual < $expected,
+                '<='      => $actual <= $expected,
+                'in'      => is_array($expected) ? in_array($actual, $expected, true) : false,
+                'not_in'  => is_array($expected) ? ! in_array($actual, $expected, true) : false,
                 'is_null' => $actual === null || $actual === '',
-                'not_null' => !($actual === null || $actual === ''),
-                default => true,
+                'not_null'=> ! ($actual === null || $actual === ''),
+                default   => true,
             };
 
-            if (!$result) {
-                return false; // AND logic: one false breaks
+            if ($logic === 'or') {
+                if ($result) {
+                    return true; // OR: short-circuit on first true
+                }
+            } else {
+                if (! $result) {
+                    return false; // AND: short-circuit on first false
+                }
             }
         }
 
-        return true;
+        // AND: all passed → true. OR: none passed → false.
+        return $logic !== 'or';
     }
 
     /**
@@ -841,21 +859,10 @@ class JsonTableBuilder
             'custom' => ActionClass::make($name)->label($label), // Generic Action
             default => ActionClass::make($a['action'] ?? $name)->label($label),
         };
-        //requiresConfirmation
-        if (!empty($a['requires_confirmation']) && method_exists($act, 'requiresConfirmation')) {
-            $act->requiresConfirmation();
-            if (!empty($a['modal_icon'])) {
-                $act->modalIcon($a['modal_icon']);
-            }
-            if (!empty($a['modal_description'])) {
-                $act->modalDescription($a['modal_description']);
-            }
-            if (!empty($a['modal_heading'])) {
-                $act->modalHeading($a['modal_heading']);
-            }
-        }
+        // 2. Apply common options (icon, requiresConfirmation, visible_roles baseline)
+        self::applyCommonActionOptions($act, $a);
 
-        // 2. Apply UI Options (Icon, Modal, Color)
+        // Apply full UI options (modal size, color, slide-over, etc.)
         self::applyUiOptionsToAction($act, $ui);
 
         if ($type === 'navigate' && !empty($a['resource'])) {
@@ -1266,14 +1273,56 @@ class JsonTableBuilder
 
     protected static function buildBulkAction(array $b)
     {
-        $type = $b['type'] ?? 'delete';
-        $label = $b['label'] ?? null;
+        $type   = $b['type'] ?? 'delete';
+        $label  = $b['label'] ?? null;
         $action = $b['action'] ?? null;
 
-        return match ($type) {
+        $act = match ($type) {
             'delete' => DeleteBulkAction::make()->label($label),
-            default => TableBulkAction::make($action ?? 'bulk')->label($label),
+            default  => TableBulkAction::make($action ?? 'bulk')->label($label),
         };
+
+        self::applyCommonActionOptions($act, $b);
+
+        return $act;
+    }
+
+    /**
+     * Apply common action options (icon, requiresConfirmation, visible_roles)
+     * that are shared between row actions and bulk actions.
+     */
+    protected static function applyCommonActionOptions(mixed $act, array $a): void
+    {
+        $ui = $a['ui'] ?? [];
+
+        // Icon
+        $icon = $a['icon'] ?? $ui['icon'] ?? null;
+        if ($icon && method_exists($act, 'icon')) {
+            $act->icon($icon);
+        }
+
+        // Requires confirmation
+        if (! empty($a['requires_confirmation']) && method_exists($act, 'requiresConfirmation')) {
+            $act->requiresConfirmation();
+            if (! empty($a['modal_icon']) && method_exists($act, 'modalIcon')) {
+                $act->modalIcon($a['modal_icon']);
+            }
+            if (! empty($a['modal_description']) && method_exists($act, 'modalDescription')) {
+                $act->modalDescription($a['modal_description']);
+            }
+            if (! empty($a['modal_heading']) && method_exists($act, 'modalHeading')) {
+                $act->modalHeading($a['modal_heading']);
+            }
+        }
+
+        // Visible roles
+        if (! empty($a['visible_roles']) && method_exists($act, 'visible')) {
+            $visibleRoles = is_array($a['visible_roles']) ? $a['visible_roles'] : [$a['visible_roles']];
+            $act->visible(function () use ($visibleRoles) {
+                $user = \Illuminate\Support\Facades\Auth::user();
+                return $user && $user->hasAnyRole($visibleRoles);
+            });
+        }
     }
 
     protected static function guessRelatedModelClass(?string $relationship)

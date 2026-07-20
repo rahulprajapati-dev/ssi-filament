@@ -29,13 +29,12 @@ class GenrateSchema extends Command
     {
         $table = $this->argument('table');
         $connection = $this->option('connection');
-        devfatal($connection);
         $action = $this->option('action');
         $Resource = $this->argument('Resource');
         $outputDir = base_path("app/Filament/Resources");
         $paths = [
             'table' => "{$outputDir}/{$Resource}/Tables/listView.json",
-            'default' => "{$outputDir}/{$Resource}/Schemas/defaultView.json",
+            'default' => "{$outputDir}/{$Resource}/Schemas/default.json",
             'create' => "{$outputDir}/{$Resource}/Schemas/createView.json",
             'edit' => "{$outputDir}/{$Resource}/Schemas/editView.json",
             'detail' => "{$outputDir}/{$Resource}/Schemas/detailView.json",
@@ -46,7 +45,6 @@ class GenrateSchema extends Command
             return 1;
         }
         $path = $paths[$action];
-        devfatal($path);
         if (File::exists($path)) {
             if (!$this->confirm("Schema for '{$table}' already exists. Do you want to overwrite it?")) {
                 $this->info("Export cancelled.");

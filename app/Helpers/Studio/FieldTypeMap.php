@@ -88,7 +88,7 @@ final class FieldTypeMap
     /** Whether this type should receive a default value from the field definition. */
     public static function supportsDefault(string $type): bool
     {
-        return ! self::isBooleanType($type) && ! self::isJsonType($type) && ! self::isTextType($type);
+        return ! self::isJsonType($type) && ! self::isTextType($type);
     }
 
     // ── Shared helpers ────────────────────────────────────────────────────────
@@ -140,7 +140,7 @@ final class FieldTypeMap
             'date'                             => 'datePicker',
             'datetime', 'timestamp'            => 'dateTimePicker',
             'select', 'dropdown', 'enum',
-            'relationship'                     => 'select',
+            'relationship', 'relate'           => 'select',
             'radio'                            => 'radio',
             'checkboxlist', 'checkbox_list'    => 'checkboxList',
             'fileupload', 'file', 'image'      => 'fileUpload',

@@ -108,22 +108,27 @@ class ModuleHooks
         ]);
 
         foreach ($record->fields as $field) {
-            ModuleField::create([
-                ...$field->only([
-                    'field_name', 'label', 'type', 'length', 'required',
+            // firstOrCreate prevents UNIQUE crashes when an address parent's hook
+            // auto-seeds sub-fields and the loop then reaches those same rows.
+            ModuleField::firstOrCreate(
+                ['module_id' => $clone->id, 'field_name' => $field->field_name],
+                $field->only([
+                    'label', 'type', 'length', 'required',
                     'searchable', 'sortable', 'unique_field', 'default_value',
                     'options', 'sort_order', 'visibility_mode', 'condition_logic',
                     'always_save_value', 'visibility_conditions',
                 ]),
-                'module_id' => $clone->id,
-            ]);
+            );
         }
 
         foreach ($record->layouts as $layout) {
             ModuleLayout::create([
-                'module_id'   => $clone->id,
-                'layout_type' => $layout->layout_type,
-                'layout_json' => $layout->layout_json,
+                'module_id'              => $clone->id,
+                'layout_type'            => $layout->layout_type,
+                'layout_json'            => $layout->layout_json,
+                'filters_json'           => $layout->filters_json,
+                'inherit_edit_layout'    => $layout->inherit_edit_layout,
+                'inherit_detail_layout'  => $layout->inherit_detail_layout,
             ]);
         }
 

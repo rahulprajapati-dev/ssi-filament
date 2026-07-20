@@ -72,11 +72,7 @@ class Module extends Model
             : $this->plural_label
         );
     }
-    protected function fullnamelable(): Attribute
-    {
-        return $this->fullnamelabel();
-    }
-    protected function table(): Attribute
+    protected function computedTable(): Attribute
     {
         return Attribute::make(get: function () {
             $computed = implode('_', array_filter([$this->key, $this->plural_label]));

@@ -37,7 +37,7 @@ final class MigrationGenerator
 
     public static function generate(Module $module): bool
     {
-        $table = strtolower($module->table);
+        $table = strtolower($module->computed_table);
 
 
         $existing = glob(database_path("migrations/*_create_{$table}_table.php"));
@@ -146,7 +146,7 @@ final class MigrationGenerator
 
     public static function remove(Module $module): bool
     {
-        $table = strtolower($module->table);
+        $table = strtolower($module->computed_table);
 
         $files = glob(database_path("migrations/*_create_{$table}_table.php"));
 

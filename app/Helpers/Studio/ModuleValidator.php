@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Helpers\Studio;
 
+use App\Helpers\Studio\FieldTypeMap;
 use App\Models\Module;
+use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 
 /**
@@ -22,6 +24,9 @@ final class ModuleValidator
         self::assertTableNamePresent($module);
         self::assertNotAlreadyDeployed($module);
         self::assertHasFields($module);
+        self::assertNoSystemFieldNameConflicts($module);
+        self::assertNoDuplicateFieldNames($module);
+        self::assertTableDoesNotExist($module);
     }
 
     // --------------------------------------------------------------------------
@@ -49,7 +54,7 @@ final class ModuleValidator
 
     private static function assertTableNamePresent(Module $module): void
     {
-        $table = (string) $module->table;
+        $table = (string) $module->computed_table;
 
         if ($table === '') {
             throw new RuntimeException(
@@ -82,6 +87,51 @@ final class ModuleValidator
             throw new RuntimeException(
                 "Module \"{$module->fullname}\" has no fields defined. "
                 . 'Add at least one field before deploying.'
+            );
+        }
+    }
+
+    private static function assertNoSystemFieldNameConflicts(Module $module): void
+    {
+        $systemNames = FieldTypeMap::SYSTEM_FIELD_NAMES;
+        $conflicts   = $module->fields()
+            ->whereIn('field_name', $systemNames)
+            ->pluck('field_name')
+            ->all();
+
+        if (! empty($conflicts)) {
+            throw new RuntimeException(
+                "Module \"{$module->fullname}\" has fields that conflict with system column names: "
+                . implode(', ', $conflicts) . '. Rename these fields before deploying.'
+            );
+        }
+    }
+
+    private static function assertNoDuplicateFieldNames(Module $module): void
+    {
+        $duplicates = $module->fields()
+            ->select('field_name')
+            ->groupBy('field_name')
+            ->havingRaw('COUNT(*) > 1')
+            ->pluck('field_name')
+            ->all();
+
+        if (! empty($duplicates)) {
+            throw new RuntimeException(
+                "Module \"{$module->fullname}\" has duplicate field names: "
+                . implode(', ', $duplicates) . '. Each field name must be unique.'
+            );
+        }
+    }
+
+    private static function assertTableDoesNotExist(Module $module): void
+    {
+        $table = (string) $module->computed_table;
+
+        if ($table !== '' && Schema::hasTable($table)) {
+            throw new RuntimeException(
+                "Database table \"{$table}\" already exists. "
+                . 'Choose a different module name or drop the existing table before deploying.'
             );
         }
     }

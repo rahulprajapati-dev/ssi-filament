@@ -100,7 +100,12 @@ final class StudioManager
             }
 
             // ── File generation steps (always run) ────────────────────────────
-            $this->step('model', fn() => ModelGenerator::generate($this->module));
+            $devModelCreated = null;
+            $this->step('base_model', function () use (&$devModelCreated) {
+                $devModelCreated = ModelGenerator::generate($this->module);
+                return true;
+            });
+            $this->step('dev_model', fn() => $devModelCreated);
             $this->step('resource', fn() => ResourceGenerator::generate($this->module));
             $this->step('layouts', fn() => LayoutGenerator::generate($this->module));
             $module = $this->module;
@@ -194,8 +199,8 @@ final class StudioManager
                 }
             }
             $this->step('remove_layouts', fn() => LayoutGenerator::remove($this->module));
-            $this->step('remove_resource', fn() => ResourceGenerator::remove($this->module, $this->data['is_custom'] ?? false));
-            $this->step('remove_model', fn() => ModelGenerator::remove($this->module, $this->data['is_custom'] ?? false));
+            $this->step('remove_resource', fn() => ResourceGenerator::remove($this->module));
+            $this->step('remove_model', fn() => ModelGenerator::remove($this->module));
             $this->step('remove_views', fn() => ViewGenerator::remove($this->module));
             $this->step('remove_migration', fn() => MigrationGenerator::remove($this->module));
 
@@ -255,7 +260,7 @@ final class StudioManager
      * Run all pending migrations.
      * --force is required when APP_ENV=production to skip the console confirmation.
      */
-    private function runMigrations(string $path = null): bool
+    private function runMigrations(?string $path = null): bool
     {
         $opts = ['--force' => true];
         if ($path) {

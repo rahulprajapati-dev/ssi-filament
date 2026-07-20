@@ -10,7 +10,6 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
 use App\Helpers\Studio\FieldTypeMap;
 
 /**
@@ -86,13 +85,29 @@ final class SchemaSyncService
             });
         }
 
-        // ── Pass 2: adjust string column lengths ──────────────────────────────
+        // ── Pass 2: adjust string column lengths + warn on type changes ──────
         $present = $fields->filter(
             fn (ModuleField $f) => in_array($f->field_name, $existingColumns, true)
-                && self::isStringType($f->type)
         );
 
         foreach ($present as $field) {
+            // Detect field-type changes and warn (we never drop/retype columns automatically).
+            $currentDbType = self::getColumnDbType($table, $field->field_name);
+            $desiredDbType = FieldTypeMap::dbType($field->type);
+            if ($currentDbType !== null && $currentDbType !== $desiredDbType) {
+                Log::warning('SchemaSyncService: field type changed but DB column was not altered', [
+                    'table'    => $table,
+                    'column'   => $field->field_name,
+                    'current'  => $currentDbType,
+                    'desired'  => $desiredDbType,
+                ]);
+            }
+
+            // Adjust string column lengths when they change.
+            if (! self::isStringType($field->type)) {
+                continue;
+            }
+
             $desired = FieldTypeMap::resolveLength($field);
             $current = self::getColumnLength($table, $field->field_name);
 
@@ -155,7 +170,7 @@ final class SchemaSyncService
             'biginteger', 'bigint'              => $blueprint->bigInteger($name),
             'decimal', 'float', 'money',
             'currency'                          => $blueprint->decimal($name, 15, 4),
-            'boolean', 'toggle', 'checkbox'     => $blueprint->boolean($name)->default(false),
+            'boolean', 'toggle', 'checkbox'     => $blueprint->boolean($name),
             'date'                              => $blueprint->date($name),
             'datetime', 'timestamp'             => $blueprint->dateTime($name),
             'time'                              => $blueprint->time($name),
@@ -176,7 +191,10 @@ final class SchemaSyncService
         }
 
         if (FieldTypeMap::supportsDefault($field->type) && $field->default_value !== null && $field->default_value !== '') {
-            $col->default($field->default_value);
+            $defaultValue = FieldTypeMap::isBooleanType($field->type)
+                ? (bool) $field->default_value
+                : $field->default_value;
+            $col->default($defaultValue);
         }
     }
 
@@ -185,7 +203,7 @@ final class SchemaSyncService
     private static function tableName(Module $module): string
     {
         // Use the same formula as MigrationGenerator for consistency.
-        return strtolower($module->table);
+        return strtolower($module->computed_table);
     }
 
     /** @return Collection<int, ModuleField> */
@@ -216,6 +234,25 @@ final class SchemaSyncService
                     if (preg_match('/\((\d+)\)/', $col['type'] ?? '', $m)) {
                         return (int) $m[1];
                     }
+                }
+            }
+            return null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Return the raw DB type_name for a column (e.g. "varchar", "int", "boolean"),
+     * or null if unavailable. Used to detect mismatches between the stored schema and
+     * the current FieldTypeMap mapping.
+     */
+    private static function getColumnDbType(string $table, string $column): ?string
+    {
+        try {
+            foreach (Schema::getColumns($table) as $col) {
+                if ($col['name'] === $column) {
+                    return $col['type_name'] ?? null;
                 }
             }
             return null;

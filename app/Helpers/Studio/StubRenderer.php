@@ -41,11 +41,10 @@ final class StubRenderer
             $content = str_replace('{{' . $token . '}}', $value, $content);
         }
 
-        // [M4] Warn about any {{TOKEN}} placeholders that were not replaced.
-        if (preg_match('/{{[A-Z_]+}}/', $content, $m)) {
+        if (preg_match_all('/\{\{[A-Z_]+\}\}/', $content, $matches) && ! empty($matches[0])) {
             \Illuminate\Support\Facades\Log::warning(
-                'StubRenderer: unreplaced token',
-                ['token' => $m[0], 'stub' => $stub]
+                'StubRenderer: unreplaced tokens',
+                ['tokens' => array_unique($matches[0]), 'stub' => $stub]
             );
         }
 

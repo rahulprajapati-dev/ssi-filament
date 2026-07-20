@@ -15,19 +15,22 @@ class ModuleState
     }
 
     /**
-     * Clear the cached active-state for a module (or flush all module-state cache entries).
+     * Clear the cached active-state for a module (or all module-state entries).
      *
-     * This should be called from StudioManager::markDeployed() and
-     * StudioManager::markUninstalled() after the module's is_enable flag changes,
-     * to prevent stale cache hits on the next request.
+     * Pass a module name to clear that module's entry only.
+     * Pass null to clear all known module-state entries without touching
+     * the rest of the application cache.
      * Example: ModuleState::clear($module->name);
      */
-    public static function clear(string $name = null): void
+    public static function clear(?string $name = null): void
     {
         if ($name !== null) {
             Cache::forget("studio.module.active.{$name}");
         } else {
-            Cache::flush();
+            // Clear only studio module-state keys — never flush the whole cache.
+            foreach (Module::pluck('name') as $moduleName) {
+                Cache::forget("studio.module.active.{$moduleName}");
+            }
         }
     }
 }

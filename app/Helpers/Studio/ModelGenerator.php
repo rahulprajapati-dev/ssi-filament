@@ -22,7 +22,7 @@ final class ModelGenerator
     {
         $name  = (string) $module->fullname;
         $model = Str::studly($name);
-        $table = strtolower($module->table);
+        $table = strtolower($module->computed_table);
         $vars  = self::buildVars($module, $model, $table);
 
         File::ensureDirectoryExists(app_path('Models/Studio'));
@@ -55,7 +55,7 @@ final class ModelGenerator
     {
         $name  = (string) $module->fullname;
         $model = Str::studly($name);
-        $table = strtolower($module->table);
+        $table = strtolower($module->computed_table);
         $vars  = self::buildVars($module, $model, $table);
 
         File::ensureDirectoryExists(app_path('Models/Studio'));
@@ -77,7 +77,9 @@ final class ModelGenerator
         $content = File::get($devPath);
 
         // New-style model already extends the base — nothing more to do.
-        if (str_contains($content, "extends Base{$model}")) {
+        // Word-boundary regex prevents false positives when one module name is a
+        // prefix of another (e.g. 'Product' vs 'ProductCategory').
+        if (preg_match('/\bextends\s+Base' . preg_quote($model, '/') . '\b/', $content)) {
             return true;
         }
 
@@ -116,7 +118,6 @@ final class ModelGenerator
             'MODEL'           => $model,
             'TABLE'           => $table,
             'RESOURCE'        => Str::studly(Str::plural((string) $module->fullname)),
-            'PLURAL_RESOURCE' => Str::studly(Str::plural((string) $module->fullname)),
             'UUID_ROUTE_KEY'  => self::buildRouteKeyMethod($module),
             'RELATIONSHIPS'   => self::buildRelationshipMethods($module),
             'FIELD_CASTS'     => self::buildFieldCasts($module),
@@ -219,7 +220,7 @@ final class ModelGenerator
         return empty($lines) ? '' : implode("\n", $lines) . "\n";
     }
 
-    public static function remove(Module $module, bool $isCustom = false): bool
+    public static function remove(Module $module): bool
     {
         $model   = Str::studly((string) $module->fullname);
         $deleted = false;
@@ -251,6 +252,7 @@ final class ModelGenerator
 
     private static function isEmptyDirectory(string $dir): bool
     {
-        return count(array_diff(scandir($dir), ['.', '..'])) === 0;
+        $entries = scandir($dir);
+        return is_array($entries) && count(array_diff($entries, ['.', '..'])) === 0;
     }
 }

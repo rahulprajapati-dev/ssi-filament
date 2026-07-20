@@ -4,8 +4,8 @@
     "components": [
         {
             "component": "section",
-            "label": "Layout Inheritance",
-            "description": "Reuse an existing view layout structure to quickly create this layout. Enable an option to copy the configuration from another view type.",
+            "label": "Copy Layout To",
+            "description": "After saving, the current Create View layout will be copied into the selected view types.",
             "icon": "heroicon-o-document-duplicate",
             "columnSpan": "full",
             "collapsible": false,
@@ -16,16 +16,16 @@
                 {
                     "component": "toggle",
                     "name": "inherit_edit_layout",
-                    "label": "Use Edit View Layout",
+                    "label": "Also Apply to Edit View",
                     "columnSpan": 1,
-                    "hint": "Copy the field structure and layout configuration from the Edit View."
+                    "hint": "Copies this Create View layout into the Edit View when saved."
                 },
                 {
                     "component": "toggle",
                     "name": "inherit_detail_layout",
-                    "label": "Use Detail View Layout",
+                    "label": "Also Apply to Detail View",
                     "columnSpan": 1,
-                    "hint": "Copy the field structure and layout configuration from the Detail View."
+                    "hint": "Copies this Create View layout into the Detail View when saved."
                 }
             ]
         },

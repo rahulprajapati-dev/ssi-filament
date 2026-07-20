@@ -605,6 +605,8 @@
         <tr style="background:rgba(52,211,153,.04)"><td class="td-f">CustomTables/listView.json</td><td class="td-d">Developer</td><td class="td-safe">Preserved ✓</td></tr>
         <tr style="background:rgba(52,211,153,.04)"><td class="td-f">Pages/Create{Model}.php</td><td class="td-d">Developer</td><td class="td-safe">Preserved ✓</td></tr>
         <tr style="background:rgba(52,211,153,.04)"><td class="td-f">Pages/Edit{Model}.php</td><td class="td-d">Developer</td><td class="td-safe">Preserved ✓</td></tr>
+        <tr style="background:rgba(52,211,153,.04)"><td class="td-f">Pages/List{Resource}.php</td><td class="td-d">Developer</td><td class="td-safe">Preserved ✓</td></tr>
+        <tr style="background:rgba(52,211,153,.04)"><td class="td-f">Pages/View{Model}.php</td><td class="td-d">Developer</td><td class="td-safe">Preserved ✓</td></tr>
         <tr style="background:rgba(52,211,153,.04)"><td class="td-f">{Model}Resource.php</td><td class="td-d">Developer</td><td class="td-safe">Preserved ✓</td></tr>
       </tbody>
     </table>
@@ -690,6 +692,8 @@
         <li>CustomTables/listView.json</li>
         <li>Pages/Create{Model}.php</li>
         <li>Pages/Edit{Model}.php</li>
+        <li>Pages/List{Resource}.php</li>
+        <li>Pages/View{Model}.php</li>
       </ul>
     </div>
   </div>

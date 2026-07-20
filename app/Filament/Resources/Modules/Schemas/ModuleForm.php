@@ -21,9 +21,8 @@ class ModuleForm
 
         $fullPath = base_path("app/Filament/Resources/Modules/Schemas/{$configPath}");
 
-        $config = File::exists($fullPath)
-            ? json_decode(file_get_contents($fullPath), true)
-            : [];
+        $raw    = File::exists($fullPath) ? json_decode(file_get_contents($fullPath), true) : null;
+        $config = is_array($raw) ? $raw : [];
 
         return JsonStudioFormBuilder::buildSchema($schema, $config);
     }

@@ -21,7 +21,15 @@ class {{RESOURCE}}Table
 
         $config = [];
         if (File::exists($configPath)) {
-            $config = json_decode(File::get($configPath), true) ?: [];
+            $raw    = json_decode(File::get($configPath), true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                \Illuminate\Support\Facades\Log::error('Studio Table: invalid JSON config', [
+                    'path'  => $configPath,
+                    'error' => json_last_error_msg(),
+                ]);
+            } else {
+                $config = $raw ?? [];
+            }
         }
 
         return JsonTableBuilder::build($table, $config);

@@ -87,7 +87,7 @@ final class ResourceGenerator
         return $wrote;
     }
 
-    public static function remove(Module $module, bool $isCustom = false): bool
+    public static function remove(Module $module): bool
     {
         $model    = Str::studly((string) $module->fullname);
         $resource = Str::pluralStudly($model);
@@ -179,6 +179,9 @@ final class ResourceGenerator
             'RESOURCE_SLUG'     => $slug,
             'ICON'              => (string) ($module->icon ?: self::DEFAULT_ICON),
         ];
+
+        File::ensureDirectoryExists("{$basePath}/Schemas");
+        File::ensureDirectoryExists("{$basePath}/Tables");
 
         $glue = [
             "{$basePath}/Schemas/{$model}Form.php"    => 'Form.stub',

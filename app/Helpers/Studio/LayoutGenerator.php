@@ -81,9 +81,7 @@ final class LayoutGenerator
             // than the last time this layout record was saved in the database.
             if ($force && File::exists($filePath)) {
                 $layoutUpdatedAt = $layout->updated_at?->timestamp ?? 0;
-                // [M10] Guard with File::exists() before calling filemtime() so we never
-                // suppress a genuine error with @; File::exists() already confirmed above.
-                $fileModifiedAt  = \Illuminate\Support\Facades\File::exists($filePath) ? (int) filemtime($filePath) : 0;
+                $fileModifiedAt  = (int) filemtime($filePath);
                 if ($fileModifiedAt >= $layoutUpdatedAt) {
                     continue;
                 }

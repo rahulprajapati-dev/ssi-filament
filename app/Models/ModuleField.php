@@ -82,16 +82,9 @@ class ModuleField extends Model
     public static function seedAddressSubFields(self $parent): void
     {
         DB::transaction(function () use ($parent) {
-            $subLabels = [
-                '_street1' => 'Street 1',
-                '_street2' => 'Street 2',
-                '_city'    => 'City',
-                '_state'   => 'State',
-                '_pincode' => 'Pincode',
-            ];
-
-            $baseSort = ($parent->sort_order ?? 0);
-            $offset   = 1;
+            $subLabels = self::addressSubLabels();
+            $baseSort  = ($parent->sort_order ?? 0);
+            $offset    = 1;
 
             foreach (FieldTypeMap::ADDRESS_SUB_FIELDS as $suffix => $length) {
                 $colName = $parent->field_name . $suffix;
@@ -129,11 +122,13 @@ class ModuleField extends Model
             ['field_name' => 'updated_at', 'label' => 'Updated At', 'type' => 'datetime', 'length' => 0,  'sort_order' => 9993],
         ];
 
-        foreach ($systemFields as $data) {
-            static::firstOrCreate(
-                ['module_id' => $module->id, 'field_name' => $data['field_name']],
-                array_merge(['module_id' => $module->id], $data),
-            );
-        }
+        DB::transaction(function () use ($module, $systemFields) {
+            foreach ($systemFields as $data) {
+                static::firstOrCreate(
+                    ['module_id' => $module->id, 'field_name' => $data['field_name']],
+                    array_merge(['module_id' => $module->id], $data),
+                );
+            }
+        });
     }
 }

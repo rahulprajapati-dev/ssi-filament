@@ -4,7 +4,6 @@ namespace App\Helpers;
 
 use App\Models\User;
 use Carbon\Carbon;
-use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
@@ -30,7 +29,6 @@ use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
-use Livewire\Component;
 use Livewire\Form;
 use App\Helpers\Studio\DropdownHandler;
 use Illuminate\Validation\ValidationException;
@@ -239,87 +237,6 @@ class JsonFormBuilder
             'dragDrop' => self::buildDragDrop($item),
 
             default => null,
-        };
-    }
-
-    /* =============== Hooks ================== */
-    protected static function resolveHook($methodHook): ?callable
-    {
-        if (! $methodHook || ! str_contains($methodHook, '@')) {
-            return null;
-        }
-
-        // We use a closure that requests dependencies via Injection.
-        // This ensures Filament passes us the Livewire component, Action, and Record/Data if available.
-        return function (Component $livewire, Action $action, $record = null, $data = null, $form = null // mountUsing provides form
-        ) use ($methodHook) {
-
-            // Resolve Resource class from Livewire component
-            $resourceClass = null;
-            if (method_exists($livewire, 'getResource')) {
-                $resourceClass = $livewire->getResource(); // Using instance or static call depending on component
-            }
-            // Fallback for static getResource on page classes
-            if (! $resourceClass && method_exists($livewire, 'getResource')) { // try static
-                try {
-                    $resourceClass = $livewire::getResource();
-                } catch (\Throwable $t) {
-                }
-            }
-
-            [$class, $method] = explode('@', $methodHook);
-
-            // Determine target to call
-            $targetClass = $class;
-            $useStatic = false;
-            $useResource = false;
-
-            if (trait_exists($class)) {
-                if ($resourceClass && method_exists($resourceClass, $method)) {
-                    $targetClass = $resourceClass;
-                    $useResource = true;
-                } else {
-                    // Check if trait method is static and callable directly?
-                    if (method_exists($class, $method) && (new \ReflectionMethod($class, $method))->isStatic()) {
-                        $useStatic = true;
-                        $targetClass = $class;
-                    } else {
-                        // Fallback or error
-                        if (! $resourceClass) {
-                            // Try to execute on the livewire component itself if acceptable?
-                            // But error message should be clear.
-                            throw new \RuntimeException("Cannot execute trait hook [{$methodHook}]. Resource context not found.");
-                        }
-                        throw new \RuntimeException("Method [{$method}] not found on Resource [{$resourceClass}].");
-                    }
-                }
-            }
-
-            // Check if calling static
-            if (! $useStatic) {
-                // If it's a regular class or resource, check if method is static
-                if (method_exists($targetClass, $method)) {
-                    $useStatic = (new \ReflectionMethod($targetClass, $method))->isStatic();
-                }
-            }
-
-            // Normalize arguments to pass to the hook
-            // User code expects: (record, data, livewire, action)
-            // But sometimes 'data' is null or array.
-            $callArgs = [$record, $data ?? [], $livewire, $action];
-
-            if ($useStatic) {
-                return $targetClass::{$method}(...$callArgs);
-            }
-
-            // Instance call
-            // If it is the resource, we can try new instance
-            if ($useResource || is_subclass_of($targetClass, \Filament\Resources\Resource::class)) {
-                return (new $targetClass)->{$method}(...$callArgs);
-            }
-
-            // Otherwise use container
-            return app($targetClass)->{$method}(...$callArgs);
         };
     }
 
@@ -614,7 +531,10 @@ class JsonFormBuilder
         // formatStateUsing -> callback
         if (! empty($item['formatStateUsing'])) {
             $callbackString = $item['formatStateUsing'];
-            $field->formatStateUsing(function (string $state) use ($callbackString) {
+            $field->formatStateUsing(function (?string $state) use ($callbackString) {
+                if ($state === null) {
+                    return null;
+                }
                 return app()->call($callbackString, ['state' => $state]);
             });
         }
@@ -798,7 +718,7 @@ class JsonFormBuilder
 
         if (! empty($item['rules']) && ($item['type'] ?? null) === 'password') {
             $field->rules([
-                Password::min($item['rules'])
+                Password::min((int) $item['rules'])
                     ->mixedCase()
                     ->numbers()
                     ->symbols(),
@@ -875,9 +795,11 @@ class JsonFormBuilder
         */
 
         if (! empty($item['duplicate']) && is_array($item['duplicate'])) {
+            $table  = $item['duplicate'][0];
+            $column = $item['duplicate'][1];
             $field->rules([
-                fn ($get) => Rule::unique($item['duplicate'][0], $item['duplicate'][1])->ignore($get('id')), // ignore current record on edit
-            ])->reactive();
+                fn ($record) => Rule::unique($table, $column)->ignore($record?->getKey()),
+            ])->live(onBlur: true);
         }
 
         if (! empty($item['live'])) {
@@ -1064,7 +986,7 @@ class JsonFormBuilder
         if (! empty($item['clear_on_update']) && is_array($item['clear_on_update'])) {
             $targets = $item['clear_on_update'];
 
-            $field->afterStateUpdated(function ($state, Set $set) use ($targets) {
+            $field->live()->afterStateUpdated(function ($state, Set $set) use ($targets) {
                 foreach ($targets as $name) {
                     $set($name, null);
                 }
@@ -1093,7 +1015,7 @@ class JsonFormBuilder
         if (! empty($item['clear_on_update']) && is_array($item['clear_on_update'])) {
             $targets = $item['clear_on_update'];
 
-            $field->afterStateUpdated(function ($state, Set $set) use ($targets) {
+            $field->live()->afterStateUpdated(function ($state, Set $set) use ($targets) {
                 foreach ($targets as $name) {
                     $set($name, null);
                 }
@@ -1471,7 +1393,7 @@ class JsonFormBuilder
         if (! empty($item['clear_on_update']) && is_array($item['clear_on_update'])) {
             $targets = $item['clear_on_update'];
 
-            $field->afterStateUpdated(function ($state, Set $set) use ($targets) {
+            $field->live(onBlur: true)->afterStateUpdated(function ($state, Set $set) use ($targets) {
                 foreach ($targets as $name) {
                     $set($name, null);
                 }
@@ -1488,7 +1410,7 @@ class JsonFormBuilder
         if (! empty($item['clear_on_update']) && is_array($item['clear_on_update'])) {
             $targets = $item['clear_on_update'];
 
-            $field->afterStateUpdated(function ($state, Set $set) use ($targets) {
+            $field->live()->afterStateUpdated(function ($state, Set $set) use ($targets) {
                 foreach ($targets as $name) {
                     $set($name, null);
                 }
@@ -1557,7 +1479,7 @@ class JsonFormBuilder
     {
         return match (true) {
             $value === 'today' => Carbon::today()->endOfDay(),
-            $value === 'now' => Carbon::today(),
+            $value === 'now' => Carbon::now(),
             str_starts_with($value, '+'),
             str_starts_with($value, '-') => Carbon::parse($value),
             default => Carbon::parse($value),
@@ -2042,8 +1964,9 @@ class JsonFormBuilder
             $field->hint($item['hint']);
         }
 
-        if (! empty($item['hintIcon'])) {
-            $field->label(new HtmlString($item['label'].' <span title="' . e($item['hintIcon']) . '">🛈</span>'));
+        if (! empty($item['hintIcon']) && method_exists($field, 'hintIcon')) {
+            $field->hintIcon('heroicon-o-information-circle')
+                  ->hintIconTooltip($item['hintIcon']);
         }
 
         if (! empty($item['columnSpan'])) {
