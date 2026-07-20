@@ -17,7 +17,7 @@
                     "name": "key",
                     "label": "Key",
                     "columnSpan": 1,
-                    "required": true,
+                    "required": false,
                     "validate_on_blur": true,
                     "validation": [
                         "required",

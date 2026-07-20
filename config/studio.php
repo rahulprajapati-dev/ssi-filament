@@ -39,7 +39,7 @@ return [
     | the PHP process can write to it in production.
     |
     */
-    'dropdown_path' => env('STUDIO_DROPDOWN_PATH', null), // resolved at runtime via storage_path()
+    'dropdown_path' => env('STUDIO_DROPDOWN_PATH', null), // default: storage/app/SSI/Dropdowns/app_doms.json
 
     /*
     |--------------------------------------------------------------------------

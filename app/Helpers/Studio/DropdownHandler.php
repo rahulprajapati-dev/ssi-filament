@@ -9,17 +9,24 @@ class DropdownHandler
     /** Resolve the absolute path to the dropdown JSON file. */
     protected static function filePath(): string
     {
-        return config('studio.dropdown_path') ?: storage_path('app/SSI/Dropdowns/list.json');
+        return config('studio.dropdown_path') ?: storage_path('app/SSI/Dropdowns/app_doms.json');
     }
 
     /**
      * GET ALL OPTIONS BY KEY
+     *
+     * User file (list.json) takes precedence; Studio config DOMs are the fallback
+     * so callers never need to know which source a group lives in.
      */
     public static function get(string $key): array
     {
-        $data = self::readFile();
-        
-        return $data[$key] ?? [];
+        $user = self::readFile();
+
+        if (isset($user[$key])) {
+            return $user[$key];
+        }
+
+        return config('studio_doms.' . $key, []);
     }
 
     /**
@@ -77,10 +84,25 @@ class DropdownHandler
 
     /**
      * GET ALL DROPDOWNS
+     *
+     * Returns Studio config DOMs merged with user file DOMs.
+     * User file entries win on key collision.
      */
     public static function all(): array
     {
-        return self::readFile();
+        $studio = config('studio_doms', []);
+        $user   = self::readFile();
+
+        return array_merge($studio, $user);
+    }
+
+    /**
+     * Returns true when the given group key is a Studio-owned DOM
+     * (lives in config/studio_doms.php, not in the user's list.json).
+     */
+    public static function isStudioDom(string $key): bool
+    {
+        return array_key_exists($key, config('studio_doms', []));
     }
 
     /**
