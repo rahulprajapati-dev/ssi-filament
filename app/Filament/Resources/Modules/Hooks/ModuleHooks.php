@@ -14,6 +14,17 @@ use Illuminate\Support\Facades\DB;
 
 class ModuleHooks
 {
+    public static function getKeyOptions(): array
+    {
+        return Module::query()
+            ->whereNotNull('key')
+            ->where('key', '!=', '')
+            ->distinct()
+            ->orderBy('key')
+            ->pluck('key', 'key')
+            ->toArray();
+    }
+
     public function toggleModule(Module $record, array $_data = []): array
     {
         $record->update(['is_enable' => ! $record->is_enable]);

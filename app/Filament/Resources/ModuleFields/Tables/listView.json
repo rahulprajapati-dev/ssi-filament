@@ -1,41 +1,34 @@
 {
     "title": "Module Fields",
     "model": "App\\Models\\ModuleField",
-    "perPage": 10,
+    "perPage": 15,
     "defaultSort": {
-        "column": "created_at",
+        "column": "sort_order",
         "direction": "asc"
     },
     "columns": [
         {
             "type": "text",
-            "name": "module.plural_label",
+            "name": "module.fullnamelabel",
             "label": "Module",
             "searchable": {
                 "global": true,
                 "individual": true
             },
-            "sortable": true
+            "sortable": true,
+            "wrap": false
         },
         {
             "type": "text",
             "name": "field_name",
             "label": "Field Name",
+            "description": "label",
             "searchable": {
                 "global": true,
                 "individual": true
             },
-            "sortable": true
-        },
-        {
-            "type": "text",
-            "name": "label",
-            "label": "Display Label",
-            "searchable": {
-                "global": true,
-                "individual": true
-            },
-            "sortable": true
+            "sortable": true,
+            "wrap": false
         },
         {
             "type": "badge",
@@ -50,6 +43,7 @@
                 "url": "info",
                 "phone": "info",
                 "select": "warning",
+                "dropdown": "warning",
                 "toggle": "success",
                 "checkbox": "success",
                 "radio": "warning",
@@ -63,13 +57,18 @@
                 "color": "warning",
                 "tags": "gray",
                 "relationship": "primary",
+                "relate": "primary",
+                "address": "gray",
                 "json": "danger"
             },
+            "sortable": true
+        },
+        {
+            "type": "text",
+            "name": "sort_order",
+            "label": "Order",
             "sortable": true,
-            "searchable": {
-                "global": false,
-                "individual": false
-            }
+            "default": "—"
         },
         {
             "type": "icon",
@@ -90,21 +89,50 @@
             "boolean": true
         },
         {
+            "type": "icon",
+            "name": "unique_field",
+            "label": "Unique",
+            "boolean": true
+        },
+        {
             "type": "text",
             "name": "createdBy.name",
             "label": "Created By",
-            "searchable": {
-                "global": true,
-                "individual": true
-            },
-            "sortable": true
+            "sortable": false,
+            "default": "—",
+            "toggleable": true,
+            "toggledHiddenByDefault": true
         },
         {
             "type": "text",
             "name": "created_at",
             "label": "Created At",
             "date": true,
-            "sortable": true
+            "format": "d M Y, h:i A",
+            "sortable": true,
+            "default": "—",
+            "toggleable": true,
+            "toggledHiddenByDefault": true
+        },
+        {
+            "type": "text",
+            "name": "updatedBy.name",
+            "label": "Updated By",
+            "sortable": false,
+            "default": "—",
+            "toggleable": true,
+            "toggledHiddenByDefault": true
+        },
+        {
+            "type": "text",
+            "name": "updated_at",
+            "label": "Updated At",
+            "date": true,
+            "format": "d M Y, h:i A",
+            "sortable": true,
+            "default": "—",
+            "toggleable": true,
+            "toggledHiddenByDefault": true
         }
     ],
     "filters": [
@@ -115,6 +143,24 @@
             "options_source": "relationship",
             "relationship": "module",
             "title_column": "plural_label"
+        },
+        {
+            "type": "select",
+            "name": "type",
+            "label": "Field Type",
+            "options_source": "helper",
+            "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
+            "helper_method": "get",
+            "helper_params": ["field_type_dom"]
+        },
+        {
+            "type": "select",
+            "name": "required",
+            "label": "Required",
+            "options": {
+                "1": "Required",
+                "0": "Optional"
+            }
         }
     ],
     "filters_layout": "modal",

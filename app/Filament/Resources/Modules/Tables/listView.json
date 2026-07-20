@@ -10,32 +10,34 @@
         {
             "type": "text",
             "name": "fullnamelabel",
-            "label": "Module Name",
+            "label": "Module",
             "sortable": true,
-            "sortable_field": [
-                "key",
-                "plural_label"
-            ],
-            "searchable": {
-                "individual": true
-            },
-            "searchable_fields": [
-                "key",
-                "plural_label"
-            ],
+            "sortable_field": ["key", "plural_label"],
+            "searchable": { "individual": true },
+            "searchable_fields": ["key", "plural_label", "name"],
+            "description": "description",
             "wrap": false
         },
         {
             "type": "text",
-            "name": "singular_label",
-            "label": "Label",
-            "sortable": true
+            "name": "key",
+            "label": "Key",
+            "sortable": true,
+            "badge": true,
+            "default": "—"
         },
         {
             "type": "text",
-            "name": "relationships_json",
-            "label": "Relationships",
-            "format_hook": "App\\Helpers\\Studio\\ModuleRelationshipHelper@formatRelationshipSummary",
+            "name": "singular_label",
+            "label": "Singular Label",
+            "sortable": true,
+            "default": "—"
+        },
+        {
+            "type": "text",
+            "name": "plural_label",
+            "label": "Plural Label",
+            "sortable": true,
             "default": "—"
         },
         {
@@ -48,7 +50,7 @@
         {
             "type": "icon",
             "name": "is_enable",
-            "label": "Enabled",
+            "label": "Active",
             "boolean": true,
             "sortable": true
         },
@@ -63,14 +65,74 @@
         },
         {
             "type": "text",
+            "name": "createdBy.name",
+            "label": "Created By",
+            "sortable": false,
+            "default": "—",
+            "toggleable": true,
+            "toggledHiddenByDefault": true
+        },
+        {
+            "type": "text",
             "name": "created_at",
-            "label": "Created",
+            "label": "Created At",
             "date": true,
-            "format": "d M Y",
-            "sortable": true
+            "format": "d M Y, h:i A",
+            "sortable": true,
+            "default": "—",
+            "toggleable": true,
+            "toggledHiddenByDefault": true
+        },
+        {
+            "type": "text",
+            "name": "updatedBy.name",
+            "label": "Updated By",
+            "sortable": false,
+            "default": "—",
+            "toggleable": true,
+            "toggledHiddenByDefault": true
+        },
+        {
+            "type": "text",
+            "name": "updated_at",
+            "label": "Updated At",
+            "date": true,
+            "format": "d M Y, h:i A",
+            "sortable": true,
+            "default": "—",
+            "toggleable": true,
+            "toggledHiddenByDefault": true
         }
     ],
-    "filters": [],
+    "filters": [
+        {
+            "type": "select",
+            "name": "is_deploy",
+            "label": "Deployment Status",
+            "options": {
+                "1": "Deployed",
+                "0": "Not Deployed"
+            }
+        },
+        {
+            "type": "select",
+            "name": "is_enable",
+            "label": "Active Status",
+            "options": {
+                "1": "Active",
+                "0": "Inactive"
+            }
+        },
+        {
+            "type": "select",
+            "name": "key",
+            "label": "Key",
+            "options_source": "helper",
+            "helper_class": "App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks",
+            "helper_method": "getKeyOptions",
+            "helper_params": []
+        }
+    ],
     "filters_layout": "modal",
     "record_action": null,
     "record_url": null,
