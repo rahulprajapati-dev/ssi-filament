@@ -87,7 +87,7 @@ final class ResourceGenerator
         return $wrote;
     }
 
-    public static function remove(Module $module): bool
+    public static function remove(Module $module, bool $dropCustom = false): bool
     {
         $model    = Str::studly((string) $module->fullname);
         $resource = Str::pluralStudly($model);
@@ -117,11 +117,13 @@ final class ResourceGenerator
             }
         }
 
-        // Always wipe Custom* dirs entirely on uninstall (developer overrides go with the module).
-        foreach (["{$basePath}/CustomSchemas", "{$basePath}/CustomTables"] as $dir) {
-            if (File::isDirectory($dir)) {
-                File::deleteDirectory($dir);
-                $removed = true;
+        // Only wipe Custom* dirs when the user explicitly chose to drop them.
+        if ($dropCustom) {
+            foreach (["{$basePath}/CustomSchemas", "{$basePath}/CustomTables"] as $dir) {
+                if (File::isDirectory($dir)) {
+                    File::deleteDirectory($dir);
+                    $removed = true;
+                }
             }
         }
 

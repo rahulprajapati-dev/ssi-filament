@@ -6,7 +6,6 @@ namespace App\Helpers\Studio;
 
 use App\Helpers\Studio\FieldTypeMap;
 use App\Models\Module;
-use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 
 /**
@@ -26,7 +25,6 @@ final class ModuleValidator
         self::assertHasFields($module);
         self::assertNoSystemFieldNameConflicts($module);
         self::assertNoDuplicateFieldNames($module);
-        self::assertTableDoesNotExist($module);
     }
 
     // --------------------------------------------------------------------------
@@ -94,8 +92,13 @@ final class ModuleValidator
     private static function assertNoSystemFieldNameConflicts(Module $module): void
     {
         $systemNames = FieldTypeMap::SYSTEM_FIELD_NAMES;
-        $conflicts   = $module->fields()
+
+        // Exclude system-seeded records (sort_order >= 9990) — those are created by
+        // seedSystemFields() intentionally so they appear in the layout builder.
+        // Only block user-defined fields that accidentally share a system column name.
+        $conflicts = $module->fields()
             ->whereIn('field_name', $systemNames)
+            ->where('sort_order', '<', 9990)
             ->pluck('field_name')
             ->all();
 
@@ -124,15 +127,4 @@ final class ModuleValidator
         }
     }
 
-    private static function assertTableDoesNotExist(Module $module): void
-    {
-        $table = (string) $module->computed_table;
-
-        if ($table !== '' && Schema::hasTable($table)) {
-            throw new RuntimeException(
-                "Database table \"{$table}\" already exists. "
-                . 'Choose a different module name or drop the existing table before deploying.'
-            );
-        }
-    }
 }

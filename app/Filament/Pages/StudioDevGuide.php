@@ -20,11 +20,11 @@ class StudioDevGuide extends Page
         return 'Studio';
     }
 
-    public static function canAccess(): bool
+    /*public static function canAccess(): bool
     {
         $user = auth()->user();
         return $user && method_exists($user, 'hasRole') && $user->hasRole('super_admin');
-    }
+    }*/
 
     public function getView(): string
     {

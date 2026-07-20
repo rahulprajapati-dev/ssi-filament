@@ -198,12 +198,13 @@ final class StudioManager
                     $this->step('remove_dom_' . $field->field_name, fn() => DropdownHandler::deleteGroup($name));
                 }
             }
+            $dropCustom = ! empty($this->data['is_custom']);
+
             $this->step('remove_layouts', fn() => LayoutGenerator::remove($this->module));
-            $this->step('remove_resource', fn() => ResourceGenerator::remove($this->module));
+            $this->step('remove_resource', fn() => ResourceGenerator::remove($this->module, $dropCustom));
             $this->step('remove_model', fn() => ModelGenerator::remove($this->module));
             $this->step('remove_views', fn() => ViewGenerator::remove($this->module));
             $this->step('remove_migration', fn() => MigrationGenerator::remove($this->module));
-
 
             if (! empty($this->data['is_table'])) {
                 $this->step('drop_table', fn() => $this->dropTable());
@@ -293,7 +294,7 @@ final class StudioManager
 
     private function dropTable(): bool
     {
-        $table = strtolower((string) $this->module->table);
+        $table = strtolower((string) $this->module->computed_table);
 
         if ($table === '') {
             throw new \RuntimeException(
