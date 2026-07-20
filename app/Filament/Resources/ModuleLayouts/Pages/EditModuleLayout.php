@@ -2,9 +2,11 @@
 
 namespace App\Filament\Resources\ModuleLayouts\Pages;
 
+use App\Console\Commands\StudioSyncFields;
 use App\Filament\Resources\ModuleLayouts\Hooks\ModuleLayoutHooks;
 use App\Filament\Resources\ModuleLayouts\ModuleLayoutResource;
 use App\Helpers\Studio\FieldTypeMap;
+use App\Models\Module;
 use App\Models\ModuleField;
 use App\Models\ModuleLayout;
 use Filament\Actions\DeleteAction;
@@ -55,8 +57,14 @@ class EditModuleLayout extends EditRecord
     }
 
     // Helper used by the form when populating field lists.
+    // Also auto-syncs any manually-added DB columns so they appear without a rebuild.
     public function getModuleFields(int $moduleId, ?string $layoutType = null): array
     {
+        $module = Module::find($moduleId);
+        if ($module) {
+            StudioSyncFields::syncSilent($module);
+        }
+
         $layoutType = $layoutType ?? $this->record?->layout_type;
 
         $excludeSystem = in_array($layoutType, ['create', 'edit'], true);

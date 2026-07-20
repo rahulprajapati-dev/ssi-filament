@@ -64,14 +64,14 @@ class Module extends Model
             get: fn () => implode('_', array_filter([$this->key, $this->name,])),
         );
     }
-    protected function fullnamelabel(): Attribute
+    /*protected function fullnamelabel(): Attribute
     {
          return Attribute::make(
         get: fn () => filled($this->key)
             ? Str::studly($this->key) . ' ' . $this->plural_label
             : $this->plural_label
         );
-    }
+    }*/
     protected function computedTable(): Attribute
     {
         return Attribute::make(get: function () {

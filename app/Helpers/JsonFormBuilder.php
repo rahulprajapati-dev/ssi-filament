@@ -1909,8 +1909,9 @@ class JsonFormBuilder
             }
         }
 
-        if (isset($item['dehydrate']) && method_exists($component, 'dehydrated')) {
-            $component->dehydrated($item['dehydrate']);
+        $dehydrateVal = $item['dehydrated'] ?? $item['dehydrate'] ?? null;
+        if ($dehydrateVal !== null && method_exists($component, 'dehydrated')) {
+            $component->dehydrated((bool) $dehydrateVal);
         }
 
         return $component;
@@ -1986,8 +1987,9 @@ class JsonFormBuilder
             $field->debounce($item['debounce']);
         }
 
-        if (array_key_exists('dehydrate', $item)) {
-            $field->dehydrated($item['dehydrate']);
+        $dehydrateVal = $item['dehydrated'] ?? $item['dehydrate'] ?? null;
+        if ($dehydrateVal !== null) {
+            $field->dehydrated((bool) $dehydrateVal);
         }
 
         if (! empty($item['uppercase'])) {

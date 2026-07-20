@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Helpers\Studio;
 
+use App\Console\Commands\StudioSyncFields;
 use App\Helpers\Studio\DropdownHandler;
 use App\Helpers\Studio\SchemaSyncService;
 use App\Models\Module;
@@ -99,6 +100,11 @@ final class StudioManager
                 });
             }
 
+            // ── Sync any manually-added DB columns into module_fields ─────────
+            $this->step('sync_fields', function () {
+                return StudioSyncFields::syncSilent($this->module) > 0;
+            });
+
             // ── File generation steps (always run) ────────────────────────────
             $devModelCreated = null;
             $this->step('base_model', function () use (&$devModelCreated) {
@@ -152,6 +158,11 @@ final class StudioManager
                     ->where('type', 'address')
                     ->each(fn ($f) => ModuleField::seedAddressSubFields($f));
                 return true;
+            });
+
+            // Sync any manually-added DB columns into module_fields.
+            $this->step('sync_fields', function () {
+                return StudioSyncFields::syncSilent($this->module) > 0;
             });
 
             // Sync relationship methods in the existing model file.

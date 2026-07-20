@@ -128,6 +128,66 @@ final class FieldTypeMap
         };
     }
 
+    // ── Reverse DB-type mapper ────────────────────────────────────────────────
+
+    /**
+     * Infer a Studio field type from a raw DB column type.
+     * Used by StudioSyncFields to auto-classify manually-added columns.
+     *
+     * @param  string  $typeName   Base type name from Schema::getColumns() e.g. "varchar", "tinyint"
+     * @param  string  $fullType   Full type declaration e.g. "varchar(255)", "tinyint(1)"
+     * @param  string  $columnName Column name — used for heuristics (e.g. _id suffix → relationship)
+     */
+    public static function fromDbType(string $typeName, string $fullType = '', string $columnName = ''): string
+    {
+        $t   = strtolower($typeName);
+        $col = strtolower($columnName);
+
+        // Boolean: tinyint(1) or explicit boolean/bool type or is_/has_ prefix pattern
+        if (in_array($t, ['boolean', 'bool'], true)) {
+            return 'boolean';
+        }
+        if ($t === 'tinyint') {
+            if (strtolower($fullType) === 'tinyint(1)') {
+                return 'boolean';
+            }
+            if (preg_match('/^(is_|has_|can_|show_|use_|with_|enable)/', $col)) {
+                return 'boolean';
+            }
+            return 'integer';
+        }
+
+        // Text / long content
+        if (in_array($t, ['text', 'mediumtext', 'longtext'], true)) {
+            return 'textarea';
+        }
+
+        // Structured
+        if ($t === 'json') {
+            return 'json';
+        }
+
+        // Date / time
+        if ($t === 'date')                                       return 'date';
+        if (in_array($t, ['datetime', 'timestamp'], true))      return 'datetime';
+        if ($t === 'time')                                       return 'time';
+
+        // Numeric
+        if (in_array($t, ['int', 'integer', 'smallint', 'mediumint'], true)) {
+            return 'integer';
+        }
+        if (in_array($t, ['bigint'], true)) {
+            // Unsigned bigint whose name ends in _id is almost certainly a FK
+            return str_ends_with($col, '_id') ? 'relationship' : 'biginteger';
+        }
+        if (in_array($t, ['decimal', 'numeric', 'float', 'double', 'real'], true)) {
+            return 'decimal';
+        }
+
+        // varchar, char, enum, set — all map to a generic text input
+        return 'text';
+    }
+
     // ── Filament component mappers ─────────────────────────────────────────────
 
     /** Field type → Filament form component name (create / edit views). */
