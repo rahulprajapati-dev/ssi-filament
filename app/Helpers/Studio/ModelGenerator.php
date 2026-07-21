@@ -22,46 +22,70 @@ final class ModelGenerator
     {
         $name  = (string) $module->fullname;
         $model = Str::studly($name);
-        $table =strtolower($module->table);
-        $path  = app_path("Models/{$model}.php");
+        $table = strtolower($module->computed_table);
+        $vars  = self::buildVars($module, $model, $table);
 
-        if (File::exists($path)) {
-            return false;
+        File::ensureDirectoryExists(app_path('Models/Studio'));
+        File::ensureDirectoryExists(app_path('Models'));
+
+        // Base class — Studio-owned, always written.
+        File::put(
+            app_path("Models/Studio/Base{$model}.php"),
+            StubRenderer::render('BaseModel.stub', $vars),
+        );
+
+        // Developer extension — written once, never overwritten.
+        $devPath = app_path("Models/{$model}.php");
+        if (! File::exists($devPath)) {
+            File::put($devPath, StubRenderer::render('Model.stub', $vars));
+            return true;
         }
 
-        $content = StubRenderer::render('Model.stub', [
-            'MODEL'           => $model,
-            'TABLE'           => $table,
-            'RESOURCE'        => Str::studly(Str::plural($name)),
-            'PLURAL_RESOURCE' => Str::studly(Str::plural($name)),
-            'UUID_ROUTE_KEY'  => self::buildRouteKeyMethod($module),
-            'RELATIONSHIPS'   => self::buildRelationshipMethods($module),
-            'FIELD_CASTS'     => self::buildFieldCasts($module),
-        ]);
-
-        File::ensureDirectoryExists(app_path('Models'));
-        File::put($path, $content);
-
-        return true;
+        return false;
     }
 
     /**
-     * Sync studio-managed regions (route-key + relationships) in an existing model file.
-     * Only the content inside the region markers is replaced — all custom code is preserved.
-     * Returns true when the file was updated, false when unchanged or markers are absent.
+     * Regenerate the Studio-managed base class.
+     *
+     * For modules still on the old single-file style (file contains region markers),
+     * also applies the legacy regex sync so their developer model stays consistent
+     * until they are fully rebuilt with the new base/extension pattern.
      */
     public static function sync(Module $module): bool
     {
-        $model = Str::studly((string) $module->fullname);
-        $path  = app_path("Models/{$model}.php");
+        $name  = (string) $module->fullname;
+        $model = Str::studly($name);
+        $table = strtolower($module->computed_table);
+        $vars  = self::buildVars($module, $model, $table);
 
-        if (! File::exists($path)) {
-            return self::generate($module);
+        File::ensureDirectoryExists(app_path('Models/Studio'));
+
+        // Always regenerate the base class.
+        File::put(
+            app_path("Models/Studio/Base{$model}.php"),
+            StubRenderer::render('BaseModel.stub', $vars),
+        );
+
+        $devPath = app_path("Models/{$model}.php");
+
+        if (! File::exists($devPath)) {
+            // No developer model at all — generate the thin extension.
+            File::put($devPath, StubRenderer::render('Model.stub', $vars));
+            return true;
         }
 
-        $content = File::get($path);
-        $changed = false;
+        $content = File::get($devPath);
 
+        // New-style model already extends the base — nothing more to do.
+        // Word-boundary regex prevents false positives when one module name is a
+        // prefix of another (e.g. 'Product' vs 'ProductCategory').
+        if (preg_match('/\bextends\s+Base' . preg_quote($model, '/') . '\b/', $content)) {
+            return true;
+        }
+
+        // Old-style single-file model — apply the legacy region sync so the
+        // developer's file stays consistent while it hasn't been migrated yet.
+        $changed = false;
         $regions = [
             'studio-route-key'     => self::buildRouteKeyMethod($module),
             'studio-relationships' => self::buildRelationshipMethods($module),
@@ -71,7 +95,7 @@ final class ModelGenerator
         foreach ($regions as $region => $newContent) {
             $updated = preg_replace_callback(
                 '/(?m)^(\s*\/\/ region:' . preg_quote($region, '/') . '[^\n]*\n).*?([ \t]*\/\/ endregion:' . preg_quote($region, '/') . ')/s',
-                fn (array $m) => $m[1] . $newContent . '    // endregion:' . $region,
+                fn (array $m) => $m[1] . $newContent . $m[2],
                 $content,
             );
 
@@ -81,13 +105,23 @@ final class ModelGenerator
             }
         }
 
-        if (! $changed) {
-            return false;
+        if ($changed) {
+            File::put($devPath, $content);
         }
 
-        File::put($path, $content);
+        return $changed;
+    }
 
-        return true;
+    private static function buildVars(Module $module, string $model, string $table): array
+    {
+        return [
+            'MODEL'           => $model,
+            'TABLE'           => $table,
+            'RESOURCE'        => Str::studly(Str::plural((string) $module->fullname)),
+            'UUID_ROUTE_KEY'  => self::buildRouteKeyMethod($module),
+            'RELATIONSHIPS'   => self::buildRelationshipMethods($module),
+            'FIELD_CASTS'     => self::buildFieldCasts($module),
+        ];
     }
 
     private static function buildRouteKeyMethod(Module $module): string
@@ -124,7 +158,12 @@ final class ModelGenerator
                 continue;
             }
 
-            $relatedModel = 'App\\Models\\' . Str::studly(Str::singular($relatedModule));
+            // [M6] Validate the derived class name is a legal PHP identifier before use.
+            $relatedClass = Str::studly(Str::singular($relatedModule));
+            if (! preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $relatedClass)) {
+                continue;
+            }
+            $relatedModel = 'App\\Models\\' . $relatedClass;
             $methodName   = ! empty($rel['name'])
                 ? $rel['name']
                 : self::guessMethodName($type, $relatedModule);
@@ -183,15 +222,37 @@ final class ModelGenerator
 
     public static function remove(Module $module): bool
     {
-        $model = Str::studly((string) $module->fullname);
-        $path  = app_path("Models/{$model}.php");
+        $model   = Str::studly((string) $module->fullname);
+        $deleted = false;
 
-        if (! File::exists($path)) {
-            return false;
+        // Developer extension model.
+        $devPath = app_path("Models/{$model}.php");
+        if (File::exists($devPath)) {
+            File::delete($devPath);
+            $deleted = true;
         }
 
-        File::delete($path);
+        // Studio-managed base class.
+        $basePath = app_path("Models/Studio/Base{$model}.php");
+        if (File::exists($basePath)) {
+            File::delete($basePath);
+            $deleted = true;
+        }
 
-        return true;
+        // Remove Studio/ dir if it is now empty.
+        $studioDir = app_path('Models/Studio');
+        if (is_dir($studioDir) && self::isEmptyDirectory($studioDir)) {
+            if (! @rmdir($studioDir)) {
+                \Illuminate\Support\Facades\Log::warning('ModelGenerator: rmdir failed', ['path' => $studioDir]);
+            }
+        }
+
+        return $deleted;
+    }
+
+    private static function isEmptyDirectory(string $dir): bool
+    {
+        $entries = scandir($dir);
+        return is_array($entries) && count(array_diff($entries, ['.', '..'])) === 0;
     }
 }

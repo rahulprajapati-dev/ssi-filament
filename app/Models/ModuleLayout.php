@@ -23,6 +23,7 @@ class ModuleLayout extends Model
     }
 
     protected $fillable = [
+        'uuid',
         'module_id',
         'layout_type',
         'layout_json',

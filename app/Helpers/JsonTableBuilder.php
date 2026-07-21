@@ -280,7 +280,11 @@ class JsonTableBuilder
                             if ($state === null || $state === '') {
                                 return '—';
                             }
-                            $record = $modelClass::find($state);
+                            static $cache = [];
+                            if (!array_key_exists($state, $cache[$modelClass] ?? [])) {
+                                $cache[$modelClass][$state] = $modelClass::find($state);
+                            }
+                            $record = $cache[$modelClass][$state];
                             if (! $record) {
                                 return (string) $state;
                             }
@@ -394,17 +398,18 @@ class JsonTableBuilder
                                 query: function ($query, $search) use ($searchFields) {
                                     $query->where(function ($q) use ($searchFields, $search) {
                                         foreach ($searchFields as $field) {
-                                            return $q->orWhere( $field, 'like', "%{$search}%");
-                                            }
-                                        });
-                                        return $query;
+                                            $q->orWhere($field, 'like', "%{$search}%");
+                                        }
+                                        return $q;
+                                    });
+                                    return $query;
                                 }
                             );
                         }
                         elseif  (!empty($c['dropdown'])) {
                             $dropdownType = $c['dropdown'];
                             $col->searchable(isIndividual: (bool) $isIndividual, query: function ($query, $search) use ($name, $dropdownType) {
-                                $options = getDropdownValue($dropdownType);
+                                $options = DropdownHandler::get($dropdownType);
                                 if (!is_array($options)) {
                                     return $query->where($name, 'like', "%{$search}%");
                                 }
@@ -628,18 +633,20 @@ class JsonTableBuilder
             if ($source === 'relationship') {
                 $relationship = $f['relationship'] ?? null;
                 $title = $f['title_column'] ?? 'name';
-                $user = auth()->user();
-                $role = ($user && method_exists($user, 'getRoleNames')) ? $user->getRoleNames()->first() : null;
-                $allowEmpty = $f['allow_empty_for_roles'][$role]
-                    ?? $f['allow_empty_for_roles']['default']
-                    ?? true;
+                // $roleMap is static config; user lookup is deferred to a closure
+                // so it is evaluated at filter-application time, not component-mount time.
+                $roleMap = $f['allow_empty_for_roles'] ?? [];
 
                 return SelectFilter::make($name)
                     ->label($label)
                     ->relationship(
                         $relationship,
                         $title,
-                        hasEmptyOption: $allowEmpty,
+                        hasEmptyOption: function () use ($roleMap) {
+                            $user = auth()->user();
+                            $role = ($user && method_exists($user, 'getRoleNames')) ? $user->getRoleNames()->first() : null;
+                            return $roleMap[$role] ?? $roleMap['default'] ?? true;
+                        },
                         modifyQueryUsing: fn ($query) =>
                         $query->whereNotNull($title)
                     );
@@ -707,53 +714,77 @@ class JsonTableBuilder
         };
     }
 
+    /**
+     * Normalise a raw visible_when / hidden_when value into the canonical
+     * {logic: 'and'|'or', conditions: [...]} envelope consumed by evaluateConditions().
+     */
     protected static function normalizeConditions(array $config): array
     {
-        // If it looks like a single condition (has 'field'), wrap in an array
-        if (isset($config['field'])) {
-            return [$config];
+        // Already an envelope — preserve the logic key.
+        if (isset($config['conditions'])) {
+            return [
+                'logic'      => strtolower($config['logic'] ?? 'and'),
+                'conditions' => (array) $config['conditions'],
+            ];
         }
 
-        // Already a list of conditions
-        return $config;
+        // Single condition object (has 'field').
+        if (isset($config['field'])) {
+            return ['logic' => 'and', 'conditions' => [$config]];
+        }
+
+        // Flat array of condition objects.
+        return ['logic' => 'and', 'conditions' => $config];
     }
 
-    protected static function evaluateConditions(Closure $get, array $conditions): bool
+    /**
+     * Evaluate a normalised condition envelope against a record getter.
+     * Supports 'and' (all must pass) and 'or' (any must pass) logic.
+     */
+    protected static function evaluateConditions(Closure $get, array $envelope): bool
     {
+        $logic      = $envelope['logic'] ?? 'and';
+        $conditions = $envelope['conditions'] ?? [];
+
         foreach ($conditions as $condition) {
-            $field = $condition['field'] ?? null;
+            $field    = $condition['field'] ?? null;
             $operator = $condition['operator'] ?? '=';
             $expected = $condition['value'] ?? null;
 
-            if (!$field) {
+            if (! $field) {
                 continue;
             }
 
             $actual = $get($field);
-
-            // Normalize operator
-            $op = strtolower((string) $operator);
+            $op     = strtolower((string) $operator);
 
             $result = match ($op) {
                 '=', '==' => $actual == $expected,
-                '!=' => $actual != $expected,
-                '>' => $actual > $expected,
-                '>=' => $actual >= $expected,
-                '<' => $actual < $expected,
-                '<=' => $actual <= $expected,
-                'in' => is_array($expected) ? in_array($actual, $expected, true) : false,
-                'not_in' => is_array($expected) ? !in_array($actual, $expected, true) : false,
+                '!='      => $actual != $expected,
+                '>'       => $actual > $expected,
+                '>='      => $actual >= $expected,
+                '<'       => $actual < $expected,
+                '<='      => $actual <= $expected,
+                'in'      => is_array($expected) ? in_array($actual, $expected, true) : false,
+                'not_in'  => is_array($expected) ? ! in_array($actual, $expected, true) : false,
                 'is_null' => $actual === null || $actual === '',
-                'not_null' => !($actual === null || $actual === ''),
-                default => true,
+                'not_null'=> ! ($actual === null || $actual === ''),
+                default   => true,
             };
 
-            if (!$result) {
-                return false; // AND logic: one false breaks
+            if ($logic === 'or') {
+                if ($result) {
+                    return true; // OR: short-circuit on first true
+                }
+            } else {
+                if (! $result) {
+                    return false; // AND: short-circuit on first false
+                }
             }
         }
 
-        return true;
+        // AND: all passed → true. OR: none passed → false.
+        return $logic !== 'or';
     }
 
     /**
@@ -772,7 +803,7 @@ class JsonTableBuilder
     {
         $type = $a['type'] ?? 'view';
         $label = $a['label'] ?? null;
-        $name = $a['name'] ?? 'action_' . uniqid();
+        $name = $a['name'] ?? 'action-' . substr(md5(serialize([$a['type'] ?? '', $a['label'] ?? ''])), 0, 8);
         $ui = $a['ui'] ?? [];
 
         // action group
@@ -828,21 +859,10 @@ class JsonTableBuilder
             'custom' => ActionClass::make($name)->label($label), // Generic Action
             default => ActionClass::make($a['action'] ?? $name)->label($label),
         };
-        //requiresConfirmation
-        if (!empty($a['requires_confirmation']) && method_exists($act, 'requiresConfirmation')) {
-            $act->requiresConfirmation();
-            if (!empty($a['modal_icon'])) {
-                $act->modalIcon($a['modal_icon']);
-            }
-            if (!empty($a['modal_description'])) {
-                $act->modalDescription($a['modal_description']);
-            }
-            if (!empty($a['modal_heading'])) {
-                $act->modalHeading($a['modal_heading']);
-            }
-        }
+        // 2. Apply common options (icon, requiresConfirmation, visible_roles baseline)
+        self::applyCommonActionOptions($act, $a);
 
-        // 2. Apply UI Options (Icon, Modal, Color)
+        // Apply full UI options (modal size, color, slide-over, etc.)
         self::applyUiOptionsToAction($act, $ui);
 
         if ($type === 'navigate' && !empty($a['resource'])) {
@@ -881,62 +901,34 @@ class JsonTableBuilder
 
         // Special handling for activity_log type to inject schema/hook automatically
         if ($type == 'activity_log') {
-            // Force hide submit action for logs
             $act->modalSubmitAction(false);
 
-            // Set the premium list-view schema
-            $act->schema([
-                \Filament\Schemas\Components\View::make('filament.components.activity-log-list'),
-            ]);
+            // The view component can be overridden via JSON: "view": "my.blade.component"
+            $viewName = $a['view'] ?? 'filament.components.activity-log-list';
+            $act->schema([\Filament\Schemas\Components\View::make($viewName)]);
 
-            // Bind the generic activity log hook
-            self::bindHook($act, 'fillForm', 'App\\Helpers\\CommonHelper@changeLogFillForm');
+            // The fillForm hook can be overridden via JSON: "fill_hook": "App\\MyClass@method"
+            $fillHookStr  = $a['fill_hook'] ?? 'App\\Helpers\\CommonHelper@changeLogFillForm';
+            [$fillHookClass] = explode('@', $fillHookStr);
+            if (class_exists($fillHookClass)) {
+                self::bindHook($act, 'fillForm', $fillHookStr);
+            }
 
-            // Explicitly ensure action callback exists to trigger modal
             $act->action(fn () => null);
         }
         if ($type == 'popup') {
-            // Bind the generic activity log hook
-            self::bindHook($act, 'fillForm', '\\App\\Filament\\Resources\\Stocks\\Hooks\\MFCHooks@beforeWindowStickerFill');
-
-            // Explicitly ensure action callback exists to trigger modal
-            $act->action(function ($record, array $data, $livewire) {
-                $freshRecord = $record->fresh();
-
-                $payload = [
-                    'stock_id' => $freshRecord->id,
-                    'insurance_date' => $freshRecord->insurance_exp_date,
-                    'warranty_type' => $freshRecord->warranty_recommended,
-                    ...$data,
-                ];
-
-                $url = route('window-sticker');
-                $csrf = csrf_token();
-
-                // Build fields string
-                $fields = collect($payload)
-                    ->map(
-                        fn ($value, $key) =>
-                        "<input type='hidden' name='" . e($key) . "' value='" . e($value) . "'>"
-                    )
-                    ->implode('');
-
-                $livewire->dispatch('close-modal');
-
-                // Submit via JS in new tab
-                $livewire->js("
-                    (function() {
-                        const form = document.createElement('form');
-                        form.method = 'POST';
-                        form.action = '{$url}';
-                        form.target = '_blank';
-                        form.innerHTML = `<input type='hidden' name='_token' value='{$csrf}'>{$fields}`;
-                        document.body.appendChild(form);
-                        form.submit();
-                        document.body.removeChild(form);
-                    })();
-                ");
-            });
+            // popup actions are configured via $a['hooks'] and optional $a['fill_hook'].
+            // The previous hardcoded Stocks/MFC logic has been removed; wire it up
+            // through the standard hooks mechanism in the JSON config instead.
+            if (!empty($a['fill_hook'])) {
+                [$fillHookClass] = explode('@', $a['fill_hook']);
+                if (class_exists($fillHookClass)) {
+                    self::bindHook($act, 'fillForm', $a['fill_hook']);
+                }
+            }
+            if (empty($a['hooks']['action'])) {
+                $act->action(fn () => null);
+            }
         }
 
         // 4. Handle Lifecycle Hooks
@@ -1087,6 +1079,12 @@ class JsonTableBuilder
             }
 
             [$class, $method] = explode('@', $methodHook);
+
+            // Guard: bail out with a warning if the class or method does not exist
+            if (!class_exists($class) || !method_exists($class, $method)) {
+                Log::warning("JsonTableBuilder::resolveHook: class [{$class}] or method [{$method}] not found in hook [{$methodHook}]. Skipping.");
+                return;
+            }
 
             // Determine target to call
             $targetClass = $class;
@@ -1275,14 +1273,56 @@ class JsonTableBuilder
 
     protected static function buildBulkAction(array $b)
     {
-        $type = $b['type'] ?? 'delete';
-        $label = $b['label'] ?? null;
+        $type   = $b['type'] ?? 'delete';
+        $label  = $b['label'] ?? null;
         $action = $b['action'] ?? null;
 
-        return match ($type) {
+        $act = match ($type) {
             'delete' => DeleteBulkAction::make()->label($label),
-            default => TableBulkAction::make($action ?? 'bulk')->label($label),
+            default  => TableBulkAction::make($action ?? 'bulk')->label($label),
         };
+
+        self::applyCommonActionOptions($act, $b);
+
+        return $act;
+    }
+
+    /**
+     * Apply common action options (icon, requiresConfirmation, visible_roles)
+     * that are shared between row actions and bulk actions.
+     */
+    protected static function applyCommonActionOptions(mixed $act, array $a): void
+    {
+        $ui = $a['ui'] ?? [];
+
+        // Icon
+        $icon = $a['icon'] ?? $ui['icon'] ?? null;
+        if ($icon && method_exists($act, 'icon')) {
+            $act->icon($icon);
+        }
+
+        // Requires confirmation
+        if (! empty($a['requires_confirmation']) && method_exists($act, 'requiresConfirmation')) {
+            $act->requiresConfirmation();
+            if (! empty($a['modal_icon']) && method_exists($act, 'modalIcon')) {
+                $act->modalIcon($a['modal_icon']);
+            }
+            if (! empty($a['modal_description']) && method_exists($act, 'modalDescription')) {
+                $act->modalDescription($a['modal_description']);
+            }
+            if (! empty($a['modal_heading']) && method_exists($act, 'modalHeading')) {
+                $act->modalHeading($a['modal_heading']);
+            }
+        }
+
+        // Visible roles
+        if (! empty($a['visible_roles']) && method_exists($act, 'visible')) {
+            $visibleRoles = is_array($a['visible_roles']) ? $a['visible_roles'] : [$a['visible_roles']];
+            $act->visible(function () use ($visibleRoles) {
+                $user = \Illuminate\Support\Facades\Auth::user();
+                return $user && $user->hasAnyRole($visibleRoles);
+            });
+        }
     }
 
     protected static function guessRelatedModelClass(?string $relationship)

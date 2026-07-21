@@ -14,9 +14,21 @@ trait ModuleHookTrait
 {
     protected static function bootModuleHookTrait(): void
     {
-        $hookClass = 'App\\Models\\Hooks\\' . class_basename(static::class) . 'Hook';
+        $baseName = class_basename(static::class) . 'Hook';
 
-        if (! class_exists($hookClass)) {
+        $hookClass = null;
+        foreach ([
+            'App\\Custom\\Models\\Hooks\\' . $baseName,
+            'App\\Models\\Hooks\\Custom\\' . $baseName,
+            'App\\Models\\Hooks\\' . $baseName,
+        ] as $candidate) {
+            if (class_exists($candidate)) {
+                $hookClass = $candidate;
+                break;
+            }
+        }
+
+        if ($hookClass === null) {
             return;
         }
 

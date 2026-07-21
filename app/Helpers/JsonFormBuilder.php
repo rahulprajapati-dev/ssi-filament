@@ -4,7 +4,6 @@ namespace App\Helpers;
 
 use App\Models\User;
 use Carbon\Carbon;
-use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
@@ -30,7 +29,6 @@ use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
-use Livewire\Component;
 use Livewire\Form;
 use App\Helpers\Studio\DropdownHandler;
 use Illuminate\Validation\ValidationException;
@@ -242,87 +240,6 @@ class JsonFormBuilder
         };
     }
 
-    /* =============== Hooks ================== */
-    protected static function resolveHook($methodHook): ?callable
-    {
-        if (! $methodHook || ! str_contains($methodHook, '@')) {
-            return null;
-        }
-
-        // We use a closure that requests dependencies via Injection.
-        // This ensures Filament passes us the Livewire component, Action, and Record/Data if available.
-        return function (Component $livewire, Action $action, $record = null, $data = null, $form = null // mountUsing provides form
-        ) use ($methodHook) {
-
-            // Resolve Resource class from Livewire component
-            $resourceClass = null;
-            if (method_exists($livewire, 'getResource')) {
-                $resourceClass = $livewire->getResource(); // Using instance or static call depending on component
-            }
-            // Fallback for static getResource on page classes
-            if (! $resourceClass && method_exists($livewire, 'getResource')) { // try static
-                try {
-                    $resourceClass = $livewire::getResource();
-                } catch (\Throwable $t) {
-                }
-            }
-
-            [$class, $method] = explode('@', $methodHook);
-
-            // Determine target to call
-            $targetClass = $class;
-            $useStatic = false;
-            $useResource = false;
-
-            if (trait_exists($class)) {
-                if ($resourceClass && method_exists($resourceClass, $method)) {
-                    $targetClass = $resourceClass;
-                    $useResource = true;
-                } else {
-                    // Check if trait method is static and callable directly?
-                    if (method_exists($class, $method) && (new \ReflectionMethod($class, $method))->isStatic()) {
-                        $useStatic = true;
-                        $targetClass = $class;
-                    } else {
-                        // Fallback or error
-                        if (! $resourceClass) {
-                            // Try to execute on the livewire component itself if acceptable?
-                            // But error message should be clear.
-                            throw new \RuntimeException("Cannot execute trait hook [{$methodHook}]. Resource context not found.");
-                        }
-                        throw new \RuntimeException("Method [{$method}] not found on Resource [{$resourceClass}].");
-                    }
-                }
-            }
-
-            // Check if calling static
-            if (! $useStatic) {
-                // If it's a regular class or resource, check if method is static
-                if (method_exists($targetClass, $method)) {
-                    $useStatic = (new \ReflectionMethod($targetClass, $method))->isStatic();
-                }
-            }
-
-            // Normalize arguments to pass to the hook
-            // User code expects: (record, data, livewire, action)
-            // But sometimes 'data' is null or array.
-            $callArgs = [$record, $data ?? [], $livewire, $action];
-
-            if ($useStatic) {
-                return $targetClass::{$method}(...$callArgs);
-            }
-
-            // Instance call
-            // If it is the resource, we can try new instance
-            if ($useResource || is_subclass_of($targetClass, \Filament\Resources\Resource::class)) {
-                return (new $targetClass)->{$method}(...$callArgs);
-            }
-
-            // Otherwise use container
-            return app($targetClass)->{$method}(...$callArgs);
-        };
-    }
-
     /* ========== Layout components ========== */
     protected static function buildWizard(array $item): Components\Wizard
     {
@@ -390,8 +307,11 @@ class JsonFormBuilder
     protected static function buildSection(array $item): Components\Section
     {
         $section = Components\Section::make($item['label'] ?? null)
-            ->schema(self::buildComponents($item['schema'] ?? []))
-            ->columns($item['columns'] ?? 1);
+            ->schema(self::buildComponents($item['schema'] ?? []));
+
+        if (array_key_exists('columns', $item)) {
+            $section->columns((int) $item['columns']);
+        }
 
         if (! empty($item['description'])) {
             $section->description($item['description']);
@@ -611,7 +531,10 @@ class JsonFormBuilder
         // formatStateUsing -> callback
         if (! empty($item['formatStateUsing'])) {
             $callbackString = $item['formatStateUsing'];
-            $field->formatStateUsing(function (string $state) use ($callbackString) {
+            $field->formatStateUsing(function (?string $state) use ($callbackString) {
+                if ($state === null) {
+                    return null;
+                }
                 return app()->call($callbackString, ['state' => $state]);
             });
         }
@@ -681,12 +604,14 @@ class JsonFormBuilder
         }
 
         // Handle dropdown value mapping
+        $stateFormatterApplied = false;
         if (! empty($item['dropdown'])) {
             $dropdownType = $item['dropdown'];
             $field->formatStateUsing(function ($state) use ($dropdownType) {
                 $options = DropdownHandler::get($dropdownType);
                 return $options[$state] ?? $state;
             });
+            $stateFormatterApplied = true;
         }
 
         // Relate: resolve stored ID to the related record's display label
@@ -696,7 +621,7 @@ class JsonFormBuilder
             if (! class_exists($modelClass)) {
                 $modelClass = 'App\\Models\\' . Str::studly(Str::singular($relateModule));
             }
-            if (class_exists($modelClass)) {
+            if (class_exists($modelClass) && ! $stateFormatterApplied) {
                 $displayField = self::resolveRelateDisplayColumn($modelClass, $item['display_field'] ?? 'name');
                 $field->formatStateUsing(function ($state) use ($modelClass, $displayField) {
                     if ($state === null || $state === '') {
@@ -791,9 +716,9 @@ class JsonFormBuilder
             $field->same($item['same']);
         }
 
-        if (! empty($item['rules'])) {
+        if (! empty($item['rules']) && ($item['type'] ?? null) === 'password') {
             $field->rules([
-                Password::min($item['rules'])
+                Password::min((int) $item['rules'])
                     ->mixedCase()
                     ->numbers()
                     ->symbols(),
@@ -837,6 +762,12 @@ class JsonFormBuilder
                                     'regex'    => $value !== null && $value !== '' && ! preg_match($ruleParam, (string) $value),
                                     'required' => $value === null || $value === '',
                                     'string'   => ! is_string($value),
+                                    'email'    => filter_var($value, FILTER_VALIDATE_EMAIL) === false,
+                                    'url'      => filter_var($value, FILTER_VALIDATE_URL) === false,
+                                    'integer', 'biginteger', 'bigint', 'number', 'int'
+                                               => ! (is_numeric($value) && floor((float) $value) == $value),
+                                    'date', 'datetime', 'timestamp'
+                                               => $value !== null && $value !== '' && strtotime($value) === false,
                                     'json'     => $value !== null && $value !== '' && (static function () use ($value): bool {
                                         json_decode($value);
                                         return json_last_error() !== JSON_ERROR_NONE;
@@ -864,9 +795,11 @@ class JsonFormBuilder
         */
 
         if (! empty($item['duplicate']) && is_array($item['duplicate'])) {
+            $table  = $item['duplicate'][0];
+            $column = $item['duplicate'][1];
             $field->rules([
-                fn ($get) => Rule::unique($item['duplicate'][0], $item['duplicate'][1])->ignore($get('id')), // ignore current record on edit
-            ])->reactive();
+                fn ($record) => Rule::unique($table, $column)->ignore($record?->getKey()),
+            ])->live(onBlur: true);
         }
 
         if (! empty($item['live'])) {
@@ -988,6 +921,13 @@ class JsonFormBuilder
                                 'min'      => mb_strlen((string) $value) < (int) $ruleParam,
                                 'regex'    => $value !== null && $value !== '' && ! preg_match($ruleParam, (string) $value),
                                 'required' => $value === null || $value === '',
+                                'string'   => ! is_string($value),
+                                'email'    => filter_var($value, FILTER_VALIDATE_EMAIL) === false,
+                                'url'      => filter_var($value, FILTER_VALIDATE_URL) === false,
+                                'integer', 'biginteger', 'bigint', 'number', 'int'
+                                           => ! (is_numeric($value) && floor((float) $value) == $value),
+                                'date', 'datetime', 'timestamp'
+                                           => $value !== null && $value !== '' && strtotime($value) === false,
                                 'json'     => $value !== null && $value !== '' && (static function () use ($value): bool {
                                     json_decode($value);
                                     return json_last_error() !== JSON_ERROR_NONE;
@@ -1046,7 +986,7 @@ class JsonFormBuilder
         if (! empty($item['clear_on_update']) && is_array($item['clear_on_update'])) {
             $targets = $item['clear_on_update'];
 
-            $field->afterStateUpdated(function ($state, Set $set) use ($targets) {
+            $field->live()->afterStateUpdated(function ($state, Set $set) use ($targets) {
                 foreach ($targets as $name) {
                     $set($name, null);
                 }
@@ -1075,7 +1015,7 @@ class JsonFormBuilder
         if (! empty($item['clear_on_update']) && is_array($item['clear_on_update'])) {
             $targets = $item['clear_on_update'];
 
-            $field->afterStateUpdated(function ($state, Set $set) use ($targets) {
+            $field->live()->afterStateUpdated(function ($state, Set $set) use ($targets) {
                 foreach ($targets as $name) {
                     $set($name, null);
                 }
@@ -1134,7 +1074,7 @@ class JsonFormBuilder
                         $user = auth()->user();
                         $allowedRoles = allowedRoleNames($user);
                         if (empty($allowedRoles)) {
-                            return;
+                            return [];
                         }
                         if (! empty($allowedRoles) && ! empty($relatedQuery)) {
                             $relatedQuery->whereIn('name', $allowedRoles);
@@ -1362,6 +1302,15 @@ class JsonFormBuilder
                     if (! class_exists($helperClass) || ! method_exists($helperClass, $helperMethod)) {
                         return null;
                     }
+                    // If any param is @-prefixed (reactive dependency), we cannot resolve
+                    // without the live form context — skip auto-select entirely.
+                    if ($helperType === 'hybrid') {
+                        foreach ($helperParams as $param) {
+                            if (is_string($param) && str_starts_with($param, '@')) {
+                                return null;
+                            }
+                        }
+                    }
                     $args = array_map(
                         fn ($param) => ($helperType === 'hybrid' && is_string($param) && str_starts_with($param, '@')) ? null : $param,
                         $helperParams
@@ -1444,7 +1393,7 @@ class JsonFormBuilder
         if (! empty($item['clear_on_update']) && is_array($item['clear_on_update'])) {
             $targets = $item['clear_on_update'];
 
-            $field->afterStateUpdated(function ($state, Set $set) use ($targets) {
+            $field->live(onBlur: true)->afterStateUpdated(function ($state, Set $set) use ($targets) {
                 foreach ($targets as $name) {
                     $set($name, null);
                 }
@@ -1461,7 +1410,7 @@ class JsonFormBuilder
         if (! empty($item['clear_on_update']) && is_array($item['clear_on_update'])) {
             $targets = $item['clear_on_update'];
 
-            $field->afterStateUpdated(function ($state, Set $set) use ($targets) {
+            $field->live()->afterStateUpdated(function ($state, Set $set) use ($targets) {
                 foreach ($targets as $name) {
                     $set($name, null);
                 }
@@ -1515,7 +1464,7 @@ class JsonFormBuilder
         // before_or_equal
         if (isset($item['before_or_equal'])) {
             $callbackString = $item['before_or_equal'];
-            $field->beforeOrEqual(fn ($record, $get) => function () use ($callbackString, $record, $get) {
+            $field->beforeOrEqual(function ($record, $get) use ($callbackString) {
                 return app()->call($callbackString, [
                     'get' => $get,
                     'record' => $record,
@@ -1530,7 +1479,7 @@ class JsonFormBuilder
     {
         return match (true) {
             $value === 'today' => Carbon::today()->endOfDay(),
-            $value === 'now' => Carbon::today(),
+            $value === 'now' => Carbon::now(),
             str_starts_with($value, '+'),
             str_starts_with($value, '-') => Carbon::parse($value),
             default => Carbon::parse($value),
@@ -1540,14 +1489,16 @@ class JsonFormBuilder
     protected static function matchCondition(mixed $actual, string $operator, mixed $expected): bool
     {
         return match ($operator) {
-            '!=' => $actual != $expected,
-            '>' => $actual > $expected,
-            '>=' => $actual >= $expected,
-            '<' => $actual < $expected,
-            '<=' => $actual <= $expected,
-            'in' => in_array($actual, (array) $expected),
-            'not_in' => ! in_array($actual, (array) $expected),
-            default => $actual == $expected,  // '='
+            '!='       => $actual != $expected,
+            '>'        => $actual > $expected,
+            '>='       => $actual >= $expected,
+            '<'        => $actual < $expected,
+            '<='       => $actual <= $expected,
+            'in'       => in_array($actual, (array) $expected),
+            'not_in'   => ! in_array($actual, (array) $expected),
+            'is_null'  => $actual === null || $actual === '',
+            'not_null' => $actual !== null && $actual !== '',
+            default    => $actual == $expected,  // '='
         };
     }
 
@@ -1673,8 +1624,17 @@ class JsonFormBuilder
                 }
                 $localPath = storage_path('app/livewire-tmp/'.basename($state));
                 if (file_exists($localPath)) {
-                    Storage::disk($disk)->put($state, file_get_contents($localPath));
-                    unlink($localPath); // Cleanup local temp after move
+                    try {
+                        $handle = fopen($localPath, 'rb');
+                        Storage::disk($disk)->put($state, $handle !== false ? $handle : '');
+                        if (is_resource($handle)) {
+                            fclose($handle);
+                        }
+                    } finally {
+                        if (is_file($localPath)) {
+                            @unlink($localPath);
+                        }
+                    }
                 }
 
                 return Storage::disk($disk)->url($state);
@@ -1949,8 +1909,9 @@ class JsonFormBuilder
             }
         }
 
-        if (isset($item['dehydrated']) && method_exists($component, 'dehydrated')) {
-            $component->dehydrated($item['dehydrated']);
+        $dehydrateVal = $item['dehydrated'] ?? $item['dehydrate'] ?? null;
+        if ($dehydrateVal !== null && method_exists($component, 'dehydrated')) {
+            $component->dehydrated((bool) $dehydrateVal);
         }
 
         return $component;
@@ -2006,8 +1967,9 @@ class JsonFormBuilder
             $field->hint($item['hint']);
         }
 
-        if (! empty($item['hintIcon'])) {
-            $field->label(new HtmlString($item['label'].' <span title="' . e($item['hintIcon']) . '">🛈</span>'));
+        if (! empty($item['hintIcon']) && method_exists($field, 'hintIcon')) {
+            $field->hintIcon('heroicon-o-information-circle')
+                  ->hintIconTooltip($item['hintIcon']);
         }
 
         if (! empty($item['columnSpan'])) {
@@ -2025,36 +1987,15 @@ class JsonFormBuilder
             $field->debounce($item['debounce']);
         }
 
-        if (array_key_exists('dehydrated', $item)) {
-            $field->dehydrated($item['dehydrated']);
-        }
-
-        if (! empty($item['extra_attributes'])) {
-            $field->extraAttributes($item['extra_attributes']);
+        $dehydrateVal = $item['dehydrated'] ?? $item['dehydrate'] ?? null;
+        if ($dehydrateVal !== null) {
+            $field->dehydrated((bool) $dehydrateVal);
         }
 
         if (! empty($item['uppercase'])) {
             $field->dehydrateStateUsing(fn ($state) => strtoupper((string) $state));
         }
 
-        // Handle Visibility (Roles)
-        if (! empty($item['visible_roles'])) {
-            $roles = is_array($item['visible_roles']) ? $item['visible_roles'] : [$item['visible_roles']];
-            $field->hidden(function () use ($roles) {
-                $user = auth()->user();
-
-                return ! $user || ! $user->hasAnyRole($roles);
-            });
-        }
-
-        if (! empty($item['hidden_roles'])) {
-            $roles = is_array($item['hidden_roles']) ? $item['hidden_roles'] : [$item['hidden_roles']];
-            $field->hidden(function () use ($roles) {
-                $user = auth()->user();
-
-                return $user && $user->hasAnyRole($roles);
-            });
-        }
         // Consolidated visibility logic for fields
         $field->visible(function (Get $get, $record, ?string $context = null, $component = null) use ($item) {
             $operation = $context ?? ($component ? $component->getContainer()->getOperation() : null);
@@ -2242,7 +2183,7 @@ class JsonFormBuilder
             $field->live(onBlur: true)
                 ->afterStateUpdated(function ($state, Set $set, $livewire, $component) use ($isUppercase) {
                     if ($isUppercase) {
-                        $set($component->getName(), strtoupper((string) $state));
+                        $set($component->getStatePath(), strtoupper((string) $state));
                     }
                     $livewire->validateOnly($component->getStatePath());
                 });

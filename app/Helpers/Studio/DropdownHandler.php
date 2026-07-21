@@ -6,16 +6,27 @@ namespace App\Helpers\Studio;
 
 class DropdownHandler
 {
-    protected static string $filePath = 'SSI/Dropdowns/list.json';
+    /** Resolve the absolute path to the dropdown JSON file. */
+    protected static function filePath(): string
+    {
+        return config('studio.dropdown_path') ?: storage_path('app/SSI/Dropdowns/app_doms.json');
+    }
 
     /**
      * GET ALL OPTIONS BY KEY
+     *
+     * User file (list.json) takes precedence; Studio config DOMs are the fallback
+     * so callers never need to know which source a group lives in.
      */
     public static function get(string $key): array
     {
-        $data = self::readFile();
-        
-        return $data[$key] ?? [];
+        $user = self::readFile();
+
+        if (isset($user[$key])) {
+            return $user[$key];
+        }
+
+        return config('studio_doms.' . $key, []);
     }
 
     /**
@@ -23,15 +34,12 @@ class DropdownHandler
      */
     public static function set(string $group, string $key, string $value): bool
     {
-        $data = self::readFile();
-
-        if (!isset($data[$group])) {
-            $data[$group] = [];
-        }
-
-        $data[$group][$key] = $value;
-
-        return self::writeFile($data);
+        return self::modifyFile(function (array &$data) use ($group, $key, $value): void {
+            if (!isset($data[$group])) {
+                $data[$group] = [];
+            }
+            $data[$group][$key] = $value;
+        });
     }
 
     /**
@@ -39,31 +47,27 @@ class DropdownHandler
      */
     public static function delete(string $group, string $key): bool
     {
-        $data = self::readFile();
-
-        if (isset($data[$group][$key])) {
-            unset($data[$group][$key]);
-        }
-
-        return self::writeFile($data);
+        return self::modifyFile(function (array &$data) use ($group, $key): void {
+            if (isset($data[$group][$key])) {
+                unset($data[$group][$key]);
+            }
+        });
     }
 
     /**
      * CREATE NEW GROUP
      */
-    public static function createGroup(string $module, string $fieldname, $options): bool
+    public static function createGroup(string $module, string $fieldname, array $options): bool
     {
-        $data = self::readFile();
         $name = $module . '_' . $fieldname . '_dom';
-        if (!isset($data[$name])) {
+
+        return self::modifyFile(function (array &$data) use ($name, $options): void {
             $dropdown = [];
             foreach ($options as $option) {
                 $dropdown[$option['key']] = $option['value'];
             }
             $data[$name] = $dropdown;
-        }
-
-        return self::writeFile($data);
+        });
     }
 
     /**
@@ -71,21 +75,34 @@ class DropdownHandler
      */
     public static function deleteGroup(string $group): bool
     {
-        $data = self::readFile();
-
-        if (isset($data[$group])) {
-            unset($data[$group]);
-        }
-
-        return self::writeFile($data);
+        return self::modifyFile(function (array &$data) use ($group): void {
+            if (isset($data[$group])) {
+                unset($data[$group]);
+            }
+        });
     }
 
     /**
      * GET ALL DROPDOWNS
+     *
+     * Returns Studio config DOMs merged with user file DOMs.
+     * User file entries win on key collision.
      */
     public static function all(): array
     {
-        return self::readFile();
+        $studio = config('studio_doms', []);
+        $user   = self::readFile();
+
+        return array_merge($studio, $user);
+    }
+
+    /**
+     * Returns true when the given group key is a Studio-owned DOM
+     * (lives in config/studio_doms.php, not in the user's list.json).
+     */
+    public static function isStudioDom(string $key): bool
+    {
+        return array_key_exists($key, config('studio_doms', []));
     }
 
     /**
@@ -93,7 +110,7 @@ class DropdownHandler
      */
     protected static function readFile(): array
     {
-        $file = base_path(self::$filePath);
+        $file = self::filePath();
 
         if (!file_exists($file)) {
             self::createFile();
@@ -118,11 +135,64 @@ class DropdownHandler
     }
 
     /**
+     * ATOMIC READ-MODIFY-WRITE
+     *
+     * Opens the file once, acquires LOCK_EX before reading, applies $callback
+     * (which receives $data by reference), then writes back — all under the
+     * same exclusive lock.  This eliminates the TOCTOU race that existed when
+     * readFile() (LOCK_SH) and writeFile() (LOCK_EX) were called as two
+     * separate file-open/lock cycles.
+     *
+     * @param  callable(array &$data): void  $callback
+     */
+    protected static function modifyFile(callable $callback): bool
+    {
+        $file = self::filePath();
+
+        if (!file_exists($file)) {
+            self::createFile();
+        }
+
+        $fp = fopen($file, 'c+');
+        if ($fp === false) {
+            return false;
+        }
+        try {
+            if (!flock($fp, LOCK_EX)) {
+                return false;
+            }
+            // Read under the exclusive lock
+            rewind($fp);
+            $json = stream_get_contents($fp);
+            $data = json_decode($json ?: '{}', true);
+            if (!is_array($data)) {
+                $data = [];
+            }
+            // Apply the caller's modification
+            $callback($data);
+            // Write back under the same exclusive lock (no gap between read and write)
+            ftruncate($fp, 0);
+            rewind($fp);
+            $written = fwrite($fp, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            fflush($fp);
+            flock($fp, LOCK_UN);
+            return $written !== false;
+        } finally {
+            fclose($fp);
+        }
+    }
+
+    /**
      * WRITE FILE SAFELY
+     *
+     * @deprecated  Use modifyFile() for any read-then-write operation so the
+     *              read and write share a single LOCK_EX.  writeFile() is kept
+     *              only for callers that build $data outside of the lock window
+     *              (none currently in this class).
      */
     protected static function writeFile(array $data): bool
     {
-        $file = base_path(self::$filePath);
+        $file = self::filePath();
 
         $fp = fopen($file, 'c');
         if ($fp === false) {
@@ -148,7 +218,7 @@ class DropdownHandler
      */
     protected static function createFile(): void
     {
-        $file = base_path(self::$filePath);
+        $file = self::filePath();
 
         if (!file_exists(dirname($file))) {
             mkdir(dirname($file), 0755, true);

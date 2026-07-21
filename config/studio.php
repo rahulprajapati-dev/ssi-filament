@@ -26,6 +26,26 @@ return [
     |     up to date without waiting for a separate migrate step.
     |
     */
+    // Valid values: "migration" (default), "schema", "hybrid"
     'mode' => env('STUDIO_MODE', 'migration'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Dropdown JSON file path
+    |--------------------------------------------------------------------------
+    |
+    | Absolute path to the JSON file that stores all Studio dropdown option
+    | groups. Must be inside storage/ (or another writable directory) so that
+    | the PHP process can write to it in production.
+    |
+    */
+    'dropdown_path' => env('STUDIO_DROPDOWN_PATH', null), // default: storage/app/SSI/Dropdowns/app_doms.json
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default filesystem disk for file/image fields
+    |--------------------------------------------------------------------------
+    */
+    'default_disk' => env('STUDIO_DEFAULT_DISK', 'public'),
 
 ];

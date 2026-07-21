@@ -31,13 +31,30 @@ final class ResourceGenerator
         File::ensureDirectoryExists("{$basePath}/Pages");
         File::ensureDirectoryExists("{$basePath}/Schemas");
         File::ensureDirectoryExists("{$basePath}/Tables");
+        File::ensureDirectoryExists("{$basePath}/CustomSchemas");
+        File::ensureDirectoryExists("{$basePath}/CustomTables");
+
+        if (! File::exists("{$basePath}/CustomSchemas/README.md")) {
+            File::put("{$basePath}/CustomSchemas/README.md", self::customSchemasReadme());
+        }
+        if (! File::exists("{$basePath}/CustomTables/README.md")) {
+            File::put("{$basePath}/CustomTables/README.md", self::customTablesReadme());
+        }
+
+        // [L10] Build RESOURCE_SLUG with fallback so an empty plural_label never
+        // produces a blank slug. [H12] Null-guard plural/singular labels.
+        $slug = Str::slug($module->plural_label ?? '');
+        if (empty($slug)) {
+            $slug = Str::slug($module->name ?? 'module');
+        }
 
         $vars = [
             'MODEL'             => $model,
-            'MODEL_LOWER'       => Str::lower($module->name),
+            'MODEL_LOWER'       => $module->name, // must match Module::where('name',...) in ModuleState::active()
             'RESOURCE'          => $resource,
-            'RESOURCE_SINGULAR' => $module->singular_label,
-            'RESOURCE_PLURAL' => $module->plural_label,
+            'RESOURCE_SINGULAR' => $module->singular_label ?? '', // [H12] null-safe
+            'RESOURCE_PLURAL'   => $module->plural_label ?? '',   // [H12] null-safe
+            'RESOURCE_SLUG'     => $slug,
             'ICON'              => $icon,
         ];
 
@@ -70,7 +87,7 @@ final class ResourceGenerator
         return $wrote;
     }
 
-    public static function remove(Module $module): bool
+    public static function remove(Module $module, bool $dropCustom = false): bool
     {
         $model    = Str::studly((string) $module->fullname);
         $resource = Str::pluralStudly($model);
@@ -100,8 +117,21 @@ final class ResourceGenerator
             }
         }
 
+        // Only wipe Custom* dirs when the user explicitly chose to drop them.
+        if ($dropCustom) {
+            foreach (["{$basePath}/CustomSchemas", "{$basePath}/CustomTables"] as $dir) {
+                if (File::isDirectory($dir)) {
+                    File::deleteDirectory($dir);
+                    $removed = true;
+                }
+            }
+        }
+
         foreach (["{$basePath}/Pages", "{$basePath}/Schemas", "{$basePath}/Tables"] as $dir) {
-            if (File::isDirectory($dir) && empty(File::files($dir))) {
+            if (File::isDirectory($dir)
+                && empty(File::files($dir))
+                && empty(File::directories($dir))
+            ) {
                 File::deleteDirectory($dir);
             }
         }
@@ -114,5 +144,89 @@ final class ResourceGenerator
         }
 
         return $removed;
+    }
+
+    /**
+     * Force-regenerate only the JSON-loading glue files (Form.php, Table.php).
+     *
+     * These are Studio-owned thin wrappers — they are the only PHP files that
+     * load the JSON schema at runtime and must reflect the current stub logic
+     * (e.g. CustomSchemas/ priority check). Developers should never customise
+     * these files directly; they should copy JSON into CustomSchemas/ instead.
+     *
+     * Called by StudioManager::runRebuild() so that modules deployed before the
+     * custom-path-check was added to the stubs are automatically upgraded.
+     */
+    public static function regenerateGlueFiles(Module $module): bool
+    {
+        $model    = Str::studly((string) $module->fullname);
+        $resource = Str::pluralStudly($model);
+        $basePath = app_path("Filament/Resources/{$resource}");
+
+        if (! File::isDirectory($basePath)) {
+            return false;
+        }
+
+        $slug = Str::slug($module->plural_label ?? '');
+        if (empty($slug)) {
+            $slug = Str::slug($module->name ?? 'module');
+        }
+
+        $vars = [
+            'MODEL'             => $model,
+            'MODEL_LOWER'       => $module->name,
+            'RESOURCE'          => $resource,
+            'RESOURCE_SINGULAR' => $module->singular_label ?? '',
+            'RESOURCE_PLURAL'   => $module->plural_label ?? '',
+            'RESOURCE_SLUG'     => $slug,
+            'ICON'              => (string) ($module->icon ?: self::DEFAULT_ICON),
+        ];
+
+        File::ensureDirectoryExists("{$basePath}/Schemas");
+        File::ensureDirectoryExists("{$basePath}/Tables");
+
+        $glue = [
+            "{$basePath}/Schemas/{$model}Form.php"    => 'Form.stub',
+            "{$basePath}/Tables/{$resource}Table.php" => 'Table.stub',
+        ];
+
+        foreach ($glue as $destination => $stub) {
+            File::put($destination, StubRenderer::render($stub, $vars));
+        }
+
+        return true;
+    }
+
+    private static function customSchemasReadme(): string
+    {
+        return <<<'TEXT'
+# CustomSchemas
+
+Your customization zone for form and detail layouts.
+Studio never modifies files here — they survive every Repair & Rebuild.
+
+Supported overrides (copy the file from ../Schemas/ into this folder and edit):
+  createView.json  — Create form layout
+  editView.json    — Edit form layout
+  detailView.json  — View / detail layout
+  default.json     — Fallback layout
+
+A file placed here takes priority over the Studio-generated version in ../Schemas/ at runtime.
+TEXT;
+    }
+
+    private static function customTablesReadme(): string
+    {
+        return <<<'TEXT'
+# CustomTables
+
+Your customization zone for the list table.
+Studio never modifies files here — they survive every Repair & Rebuild.
+
+Supported overrides (copy the file from ../Tables/ into this folder and edit):
+  listView.json  — Table columns, filters, and actions
+
+A file placed here takes priority over the Studio-generated version in ../Tables/ at runtime.
+TEXT;
     }
 }

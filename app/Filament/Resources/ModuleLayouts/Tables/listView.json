@@ -3,8 +3,8 @@
     "model": "App\\Models\\ModuleLayout",
     "perPage": 15,
     "defaultSort": {
-        "column": "created_at",
-        "direction": "desc"
+        "column": "module_id",
+        "direction": "asc"
     },
     "columns": [
         {
@@ -43,23 +43,55 @@
             "sortable": false
         },
         {
+            "type": "icon",
+            "name": "inherit_edit_layout",
+            "label": "Copies to Edit",
+            "boolean": true,
+            "tooltip": "Layout is copied to the Edit View on save"
+        },
+        {
+            "type": "icon",
+            "name": "inherit_detail_layout",
+            "label": "Copies to Detail",
+            "boolean": true,
+            "tooltip": "Layout is copied to the Detail View on save"
+        },
+        {
+            "type": "text",
+            "name": "updated_at",
+            "label": "Last Updated",
+            "date": true,
+            "format": "d M Y, h:i A",
+            "sortable": true
+        },
+        {
             "type": "text",
             "name": "createdBy.name",
             "label": "Created By",
-            "searchable": {
-                "global": true,
-                "individual": false
-            },
             "sortable": false,
-            "default": "—"
+            "default": "—",
+            "toggleable": true,
+            "toggledHiddenByDefault": true
         },
         {
             "type": "text",
             "name": "created_at",
-            "label": "Created",
+            "label": "Created At",
             "date": true,
             "format": "d M Y, h:i A",
-            "sortable": true
+            "sortable": true,
+            "default": "—",
+            "toggleable": true,
+            "toggledHiddenByDefault": true
+        },
+        {
+            "type": "text",
+            "name": "updatedBy.name",
+            "label": "Updated By",
+            "sortable": false,
+            "default": "—",
+            "toggleable": true,
+            "toggledHiddenByDefault": true
         }
     ],
     "filters": [

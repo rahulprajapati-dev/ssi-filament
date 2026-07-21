@@ -6,6 +6,7 @@ use App\Helpers\Studio\FieldTypeMap;
 use App\Traits\HasCreatedBy;
 use App\Traits\ModuleHookTrait;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ModuleField extends Model
@@ -24,6 +25,7 @@ class ModuleField extends Model
     }
 
     protected $fillable = [
+        'uuid',
         'module_id',
         'field_name',
         'label',
@@ -66,38 +68,44 @@ class ModuleField extends Model
      * Each sub-field is stored as type='text' and its DB column is created by normal generators.
      * Uses firstOrCreate so repeated calls are safe.
      */
-    public static function seedAddressSubFields(self $parent): void
+    public static function addressSubLabels(): array
     {
-        $subLabels = [
+        return [
             '_street1' => 'Street 1',
             '_street2' => 'Street 2',
             '_city'    => 'City',
             '_state'   => 'State',
             '_pincode' => 'Pincode',
         ];
+    }
 
-        $baseSort = ($parent->sort_order ?? 0);
-        $offset   = 1;
+    public static function seedAddressSubFields(self $parent): void
+    {
+        DB::transaction(function () use ($parent) {
+            $subLabels = self::addressSubLabels();
+            $baseSort  = ($parent->sort_order ?? 0);
+            $offset    = 1;
 
-        foreach (FieldTypeMap::ADDRESS_SUB_FIELDS as $suffix => $length) {
-            $colName = $parent->field_name . $suffix;
-            $label   = ($parent->label ?? $parent->field_name) . ' (' . $subLabels[$suffix] . ')';
+            foreach (FieldTypeMap::ADDRESS_SUB_FIELDS as $suffix => $length) {
+                $colName = $parent->field_name . $suffix;
+                $label   = ($parent->label ?? $parent->field_name) . ' (' . $subLabels[$suffix] . ')';
 
-            static::firstOrCreate(
-                ['module_id' => $parent->module_id, 'field_name' => $colName],
-                [
-                    'module_id'  => $parent->module_id,
-                    'field_name' => $colName,
-                    'label'      => $label,
-                    'type'       => 'text',
-                    'length'     => $length,
-                    'required'   => ($suffix !== '_street2') && (bool) $parent->required,
-                    'sort_order' => $baseSort + $offset,
-                ],
-            );
+                static::firstOrCreate(
+                    ['module_id' => $parent->module_id, 'field_name' => $colName],
+                    [
+                        'module_id'  => $parent->module_id,
+                        'field_name' => $colName,
+                        'label'      => $label,
+                        'type'       => 'text',
+                        'length'     => $length,
+                        'required'   => ($suffix !== '_street2') && (bool) $parent->required,
+                        'sort_order' => $baseSort + $offset,
+                    ],
+                );
 
-            $offset++;
-        }
+                $offset++;
+            }
+        });
     }
 
     /**
@@ -114,11 +122,13 @@ class ModuleField extends Model
             ['field_name' => 'updated_at', 'label' => 'Updated At', 'type' => 'datetime', 'length' => 0,  'sort_order' => 9993],
         ];
 
-        foreach ($systemFields as $data) {
-            static::firstOrCreate(
-                ['module_id' => $module->id, 'field_name' => $data['field_name']],
-                array_merge(['module_id' => $module->id], $data),
-            );
-        }
+        DB::transaction(function () use ($module, $systemFields) {
+            foreach ($systemFields as $data) {
+                static::firstOrCreate(
+                    ['module_id' => $module->id, 'field_name' => $data['field_name']],
+                    array_merge(['module_id' => $module->id], $data),
+                );
+            }
+        });
     }
 }

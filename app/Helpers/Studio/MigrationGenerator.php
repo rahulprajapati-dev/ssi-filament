@@ -37,12 +37,13 @@ final class MigrationGenerator
 
     public static function generate(Module $module): bool
     {
-        $table = strtolower($module->table);
+        $table = strtolower($module->computed_table);
 
 
         $existing = glob(database_path("migrations/*_create_{$table}_table.php"));
 
-        if (! empty($existing)) {
+        // [M7] glob() returns false on error; treat that as "no existing files".
+        if (is_array($existing) && ! empty($existing)) {
             // If the table already exists the migration has been applied — don't touch it.
             if (Schema::hasTable($table)) {
                 return false;
@@ -145,11 +146,12 @@ final class MigrationGenerator
 
     public static function remove(Module $module): bool
     {
-        $table = strtolower($module->table);
+        $table = strtolower($module->computed_table);
 
         $files = glob(database_path("migrations/*_create_{$table}_table.php"));
 
-        if (empty($files)) {
+        // [M7] glob() returns false on error; treat that as "nothing to remove".
+        if (! is_array($files) || empty($files)) {
             return false;
         }
 
@@ -255,10 +257,13 @@ final class MigrationGenerator
 
     private static function defaultNum(ModuleField $field): string
     {
-        if (! self::hasDefault($field)) {
+        // [H10] Validate that default_value is genuinely numeric before injecting
+        // it as a PHP literal to prevent arbitrary code injection.
+        $val = $field->default_value;
+        if (! $val || ! is_numeric((string) $val)) {
             return '';
         }
-
-        return '->default(' . $field->default_value . ')';
+        $typed = (strpos((string) $val, '.') !== false) ? (float) $val : (int) $val;
+        return '->default(' . $typed . ')';
     }
 }

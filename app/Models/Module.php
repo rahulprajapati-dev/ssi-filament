@@ -24,6 +24,7 @@ class Module extends Model
     }
 
     protected $fillable = [
+        'uuid',
         'key',
         'name',
         'singular_label',
@@ -63,17 +64,24 @@ class Module extends Model
             get: fn () => implode('_', array_filter([$this->key, $this->name,])),
         );
     }
-    protected function fullnamelable(): Attribute
+    /*protected function fullnamelabel(): Attribute
     {
          return Attribute::make(
         get: fn () => filled($this->key)
             ? Str::studly($this->key) . ' ' . $this->plural_label
             : $this->plural_label
         );
-    }
-    protected function table(): Attribute
+    }*/
+    protected function computedTable(): Attribute
     {
-        return Attribute::make(get: fn () => strtolower(str_replace(' ', '_', implode('_', array_filter([$this->key, $this->plural_label])))));
+        return Attribute::make(get: function () {
+            $computed = implode('_', array_filter([$this->key, $this->plural_label]));
+            if ($computed !== '') {
+                return strtolower(str_replace(' ', '_', $computed));
+            }
+            // Fallback: derive from name when key and plural_label are both empty.
+            return Str::snake(Str::plural($this->name ?? ''));
+        });
     }
     
 }

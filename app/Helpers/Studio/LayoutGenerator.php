@@ -31,7 +31,11 @@ final class LayoutGenerator
     public static function generate(Module $module, bool $force = false): bool
     {
         $model = Str::studly((string) $module->fullname);
-        $resource = Str::studly(Str::plural($module->fullname));
+        // [L21] Use Str::pluralStudly($model) — identical formula to ResourceGenerator::generate()
+        // which does Str::pluralStudly($model).  Str::studly(Str::plural($module->fullname))
+        // can diverge for multi-word snake_case fullnames because pluralisation happens before
+        // studly-casing rather than on the already-studly-cased last word.
+        $resource = Str::pluralStudly($model);
         $basePath = app_path("Filament/Resources/{$resource}");
 
         /** @var Collection<string, ModuleField> $fieldMap field_name → ModuleField */
@@ -51,10 +55,15 @@ final class LayoutGenerator
 
         foreach ($layouts as $layout) {
             $rawJson = is_array($layout->layout_json) ? $layout->layout_json : [];
-            // Normalize to sections format for unified processing
-            $sections = self::normalizeSections($rawJson);
-            // Flat list of all field names (used for list/table view)
-            $fieldNames = collect($sections)->flatMap(fn ($s) => $s['fields'] ?? [])->values()->all();
+            // Normalize to containers format for unified processing
+            $containers = self::normalizeContainers($rawJson);
+            // Flat list of all field names (used for list/table view); tabs nest fields one level deeper
+            $fieldNames = collect($containers)->flatMap(function ($c) {
+                if (($c['type'] ?? 'section') === 'tabs') {
+                    return collect($c['tabs'] ?? [])->flatMap(fn ($t) => $t['fields'] ?? []);
+                }
+                return $c['fields'] ?? [];
+            })->values()->all();
 
             $filePath = match ($layout->layout_type) {
                 'create' => "{$basePath}/Schemas/createView.json",
@@ -73,9 +82,19 @@ final class LayoutGenerator
                 continue;
             }
 
+            // When force-regenerating (rebuild), preserve manual edits that are newer
+            // than the last time this layout record was saved in the database.
+            if ($force && File::exists($filePath)) {
+                $layoutUpdatedAt = $layout->updated_at?->timestamp ?? 0;
+                $fileModifiedAt  = (int) filemtime($filePath);
+                if ($fileModifiedAt >= $layoutUpdatedAt) {
+                    continue;
+                }
+            }
+
             $content = $layout->layout_type === 'list'
-                ? self::buildListJson($model, $resource, $fieldNames, $fieldMap, $layout->filters_json ?? [])
-                : self::buildFormJson( $module, $model, $layout->layout_type, $sections, $fieldMap);
+                ? self::buildListJson($model, $resource, (string) $module->fullname, $fieldNames, $fieldMap, $layout->filters_json ?? [])
+                : self::buildFormJson($module, $model, $layout->layout_type, $containers, $fieldMap);
 
             File::ensureDirectoryExists(dirname($filePath));
             File::put($filePath, json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -90,7 +109,9 @@ final class LayoutGenerator
 
     public static function remove(Module $module): bool
     {
-        $resource = Str::studly(Str::plural($module->fullname));
+        // [L21] Match ResourceGenerator's formula: studly first, then pluralStudly.
+        $model    = Str::studly((string) $module->fullname);
+        $resource = Str::pluralStudly($model);
         $basePath = app_path("Filament/Resources/{$resource}");
 
         $files = [
@@ -112,11 +133,17 @@ final class LayoutGenerator
         $schemasPath = "{$basePath}/Schemas";
         $tablesPath  = "{$basePath}/Tables";
 
-        if (File::isDirectory($schemasPath) && empty(File::files($schemasPath))) {
+        if (File::isDirectory($schemasPath)
+            && empty(File::files($schemasPath))
+            && empty(File::directories($schemasPath))
+        ) {
             File::deleteDirectory($schemasPath);
         }
 
-        if (File::isDirectory($tablesPath) && empty(File::files($tablesPath))) {
+        if (File::isDirectory($tablesPath)
+            && empty(File::files($tablesPath))
+            && empty(File::directories($tablesPath))
+        ) {
             File::deleteDirectory($tablesPath);
         }
 
@@ -124,13 +151,14 @@ final class LayoutGenerator
     }
 
     /**
-     * @param  array<int, array{title: string, columns: int, fields: string[]}>  $sections
+     * @param  array<int, array{type: string, ...}>  $containers
      * @param  Collection<string, ModuleField>  $fieldMap
      */
-    private static function buildFormJson(module $module,
+    private static function buildFormJson(
+        Module $module,
         string $model,
         string $layoutType,
-        array $sections,
+        array $containers,
         Collection $fieldMap,
     ): array {
         $label = $module->singular_label ?: $model;
@@ -156,219 +184,303 @@ final class LayoutGenerator
         }
         $reactiveFields = array_unique($reactiveFields);
 
-        foreach ($sections as $section) {
-            $sectionTitle = $section['title'] ?? 'General';
-            $sectionColumns = $section['columns'] ?? 2;
-            $fieldNames = $section['fields'] ?? [];
+        foreach ($containers as $container) {
+            $type = $container['type'] ?? 'section';
 
-            $sectionFields = [];
-            foreach ($fieldNames as $fieldName) {
-                $field = $fieldMap->get($fieldName);
-                if ($field === null) {
+            if ($type === 'tabs') {
+                $tabColumns = (int) ($container['columns'] ?? 1);
+                $tabsItems  = [];
+                foreach ($container['tabs'] ?? [] as $tab) {
+                    $tabFields = self::buildFieldComponents(
+                        $tab['fields'] ?? [], $fieldMap, $isDetail, $reactiveFields, $module
+                    );
+                    if (empty($tabFields)) {
+                        continue;
+                    }
+                    // Wrap fields in a grid when columns > 1 (avoids touching JsonFormBuilder)
+                    $schema = $tabColumns > 1
+                        ? [['component' => 'grid', 'columns' => $tabColumns, 'schema' => $tabFields]]
+                        : $tabFields;
+                    $tabsItems[] = ['label' => $tab['label'] ?? 'Tab', 'schema' => $schema];
+                }
+                if (empty($tabsItems)) {
                     continue;
                 }
+                $entry = ['component' => 'tabs', 'columnSpan' => 'full', 'tabs' => $tabsItems];
+                if (! empty($container['title'])) {
+                    $entry['label'] = $container['title'];
+                }
+                $components[] = $entry;
 
-                $componentType = $isDetail
-                    ? FieldTypeMap::toDetailComponent($field->type)
-                    : FieldTypeMap::toFormComponent($field->type);
-
-                $component = [
-                    'component' => $componentType,
-                    'name'      => $field->field_name,
-                    'label'     => $field->label,
+            } elseif ($type === 'grid') {
+                $fields = self::buildFieldComponents(
+                    $container['fields'] ?? [], $fieldMap, $isDetail, $reactiveFields, $module
+                );
+                if (empty($fields)) {
+                    continue;
+                }
+                $components[] = [
+                    'component'  => 'grid',
+                    'columns'    => (int) ($container['columns'] ?? 2),
+                    'columnSpan' => 'full',
+                    'schema'     => $fields,
                 ];
-                // If this field is referenced in any visibility condition, make it reactive
-                if (in_array($field->field_name, $reactiveFields, true)) {
-                    $component['reactive'] = true;
-                }
 
-                if (! $isDetail && $field->required) {
-                    $component['required'] = true;
+            } else {
+                // section (default — backward-compatible with layout_json that has no 'type' key)
+                $fields = self::buildFieldComponents(
+                    $container['fields'] ?? [], $fieldMap, $isDetail, $reactiveFields, $module
+                );
+                if (empty($fields)) {
+                    continue;
                 }
-
-                if ($field->always_save_value) {
-                    $component['dehydrate'] = true;
-                }
-
-                // Attach static options for select/radio/checkboxList fields
-                if (! $isDetail && in_array($field->type, ['select', 'dropdown', 'enum', 'radio', 'checkboxList', 'checkbox_list'], true)) {
-                    
-                    $default = null;
-
-                    if (! empty($field->options) && is_array($field->options)) {
-                        foreach ($field->options as $option) {
-                            if (! empty($option['default'])) {
-                                $default = $option['key'];
-                                break; // Stop once the default option is found
-                            }
-                        }
-                    }
-                    $dropdownName = "{$module->fullname}_{$field->field_name}_dom";
-                    $component['options_source'] = 'helper';
-                    $component['helper_class']   = 'App\\Helpers\\Studio\\DropdownHandler';
-                    $component['helper_method']  = 'get';
-                    $component['helper_params']  = [
-                        $dropdownName
-                    ];
-                    if ($default !== null) {
-                        $component['default'] = $default;
-                    }
-                }
-
-                // Use public disk for file/image fields (avoids S3 default in JsonFormBuilder)
-                if (in_array($field->type, ['file', 'image', 'fileupload'], true)) {
-                    $component['disk'] = 'public';
-                    if (! empty($field->is_multiple)) {
-                        $component['multiple'] = true;
-                    }
-                }
-
-                // Multi-select: inject multiple flag for select/dropdown types
-                if (in_array($field->type, ['select', 'dropdown', 'enum'], true) && ! empty($field->is_multiple)) {
-                    $component['multiple'] = true;
-                }
-                if (in_array($field->type, [ 'image'], true)) {
-                    $component['image'] = true;
-                }
-                if ($field->type == 'email') {
-                    $component['type'] = 'email';
-                }
-
-                // Relate (cross-module lookup) field — always emit config so
-                // detail/list views can resolve the stored ID to a display label.
-                if ($field->type === 'relationship') {
-                    $relateConfig = is_array($field->options) ? ($field->options[0] ?? []) : [];
-                    $component['options_source'] = 'relate';
-                    if (! empty($relateConfig['relate_module'])) {
-                        $component['relate_module'] = $relateConfig['relate_module'];
-                        $component['display_field'] = $relateConfig['display_field'] ?? 'name';
-                    }
-                    if (! $isDetail) {
-                        $component['searchable'] = true;
-                    }
-                }
-
-                // URL validation flag
-                if ($field->type === 'url') {
-                    $component['type'] = 'url';
-                }
-
-                // Numeric input constraints
-                if (in_array($field->type, ['money', 'currency'], true)) {
-                    $component['money'] = true;
-                } elseif (in_array($field->type, ['decimal', 'float', 'integer', 'number', 'int', 'biginteger', 'bigint'], true)) {
-                    $component['numeric'] = true;
-                }
-
-                // Type-specific UI validation rules (create/edit only, not detail)
-                if (! $isDetail) {
-                    self::applyFieldValidations($component, $field);
-                }
-
-                // Add visibility configuration for fields with visibility settings
-                if (! empty($field->visibility_mode) && $field->visibility_mode !== 'always_visible') {
-                    $key = $field->visibility_mode; // e.g., 'visible_when' or 'hidden_when'
-                    $conditions = $field->visibility_conditions ?? [];
-
-                    // Normalize condition values for "in", "not_in", and "user_guid" operators
-                    if (is_array($conditions)) {
-                        foreach ($conditions as &$cond) {
-                            if (isset($cond['operator']) && in_array($cond['operator'], ['in','not_in'], true)) {
-                                $raw = $cond['value'] ?? '';
-                                if (is_string($raw)) {
-                                    $cond['value'] = array_values(array_filter(array_map('trim', explode(',', $raw))));
-                                } elseif (is_array($raw)) {
-                                    $cond['value'] = array_values(array_filter(array_map(fn ($v) => is_string($v) ? trim($v) : $v, $raw)));
-                                }
-                            }
-                        }
-                        unset($cond);
-                    }
-                    if (! empty($field->condition_logic) && $field->condition_logic !== 'and') {
-                        $component[$key] = [
-                            'logic' => $field->condition_logic,
-                            'conditions' => $conditions,
-                        ];
-                    } else {
-                        $component[$key] = $conditions;
-                    }
-                }
-
-                // System fields in detail view: resolve user IDs to names, format timestamps.
-                if ($isDetail) {
-                    if ($field->field_name === 'created_by') {
-                        $component['name'] = 'createdBy.name';
-                    } elseif ($field->field_name === 'updated_by') {
-                        $component['name'] = 'updatedBy.name';
-                    } elseif (in_array($field->field_name, ['created_at', 'updated_at'], true)) {
-                        $component['dateTime'] = 'd M Y H:i';
-                    }
-                }
-
-                $sectionFields[] = $component;
+                $components[] = [
+                    'component'   => 'section',
+                    'label'       => $container['title'] ?? 'General',
+                    'columns'     => (int) ($container['columns'] ?? 2),
+                    'collapsible' => false,
+                    'columnSpan'  => 'full',
+                    'schema'      => $fields,
+                ];
             }
-
-            if (empty($sectionFields)) {
-                continue;
-            }
-
-            $components[] = [
-                'component' => 'section',
-                'label' => $sectionTitle,
-                'columns' => $sectionColumns,
-                'collapsible' => false,
-                'columnSpan' => 'full',
-                'schema' => $sectionFields,
-            ];
         }
 
         return [
-            'title' => $title,
-            'model' => "App\\Models\\{$model}",
+            'title'      => $title,
+            'model'      => "App\\Models\\{$model}",
             'components' => $components,
         ];
     }
 
     /**
-     * Normalize layout_json to the canonical sections array format.
+     * Build the field component config array for a list of field names.
+     * Shared by section, grid, and tabs containers.
      *
-     * Supports:
-     *  - New format: [{"title":"...","columns":2,"fields":[...]}]
-     *  - Legacy flat format: ["field1","field2"]
-     *  - Empty / null → returns one empty default section.
-     *
-     * @param  array<mixed>  $raw
-     * @return array<int, array{title: string, columns: int, fields: string[]}>
+     * @param  string[]  $fieldNames
+     * @param  Collection<string, ModuleField>  $fieldMap
+     * @param  string[]  $reactiveFields
+     * @return array[]
      */
-    private static function normalizeSections(array $raw): array
-    {
-        if (empty($raw)) {
-            return [['title' => 'General', 'columns' => 2, 'fields' => []]];
+    private static function buildFieldComponents(
+        array $fieldNames,
+        Collection $fieldMap,
+        bool $isDetail,
+        array $reactiveFields,
+        Module $module,
+    ): array {
+        $out = [];
+
+        foreach ($fieldNames as $fieldName) {
+            $field = $fieldMap->get($fieldName);
+            if ($field === null) {
+                continue;
+            }
+
+            $componentType = $isDetail
+                ? FieldTypeMap::toDetailComponent($field->type)
+                : FieldTypeMap::toFormComponent($field->type);
+
+            $component = [
+                'component' => $componentType,
+                'name'      => $field->field_name,
+                'label'     => $field->label,
+            ];
+
+            if (in_array($field->field_name, $reactiveFields, true)) {
+                $component['reactive'] = true;
+            }
+
+            if (! $isDetail && $field->required) {
+                $component['required'] = true;
+            }
+
+            if ($field->always_save_value) {
+                // [L23] Key MUST stay 'dehydrate' — JsonFormBuilder reads it at applyCommonFieldOptions.
+                $component['dehydrate'] = true;
+            }
+
+            if (! $isDetail && in_array($field->type, ['select', 'dropdown', 'enum', 'radio', 'checkboxList', 'checkbox_list'], true)) {
+                $default = null;
+                if (! empty($field->options) && is_array($field->options)) {
+                    foreach ($field->options as $option) {
+                        if (! empty($option['default'])) {
+                            $default = $option['key'];
+                            break;
+                        }
+                    }
+                }
+                $dropdownName = "{$module->fullname}_{$field->field_name}_dom";
+                $component['options_source'] = 'helper';
+                $component['helper_class']   = 'App\\Helpers\\Studio\\DropdownHandler';
+                $component['helper_method']  = 'get';
+                $component['helper_params']  = [$dropdownName];
+                if ($default !== null) {
+                    $component['default'] = $default;
+                }
+            }
+
+            if (in_array($field->type, ['file', 'image', 'fileupload'], true)) {
+                $component['disk'] = 'public';
+                if (! empty($field->is_multiple)) {
+                    $component['multiple'] = true;
+                }
+            }
+
+            if (in_array($field->type, ['select', 'dropdown', 'enum'], true) && ! empty($field->is_multiple)) {
+                $component['multiple'] = true;
+            }
+
+            if (in_array($field->type, ['image'], true)) {
+                $component['image'] = true;
+            }
+
+            if ($field->type === 'email') {
+                $component['type'] = 'email';
+            }
+
+            if ($field->type === 'relationship') {
+                $relateConfig = is_array($field->options) ? ($field->options[0] ?? []) : [];
+                $component['options_source'] = 'relate';
+                if (! empty($relateConfig['relate_module'])) {
+                    $component['relate_module'] = $relateConfig['relate_module'];
+                    $component['display_field'] = $relateConfig['display_field'] ?? 'name';
+                }
+                if (! $isDetail) {
+                    $component['searchable'] = true;
+                }
+            }
+
+            if ($field->type === 'url') {
+                $component['type'] = 'url';
+            }
+
+            if (in_array($field->type, ['money', 'currency'], true)) {
+                $component['money'] = true;
+            } elseif (in_array($field->type, ['decimal', 'float', 'integer', 'number', 'int', 'biginteger', 'bigint'], true)) {
+                $component['numeric'] = true;
+            }
+
+            if (! $isDetail) {
+                self::applyFieldValidations($component, $field);
+            }
+
+            if (! empty($field->visibility_mode) && $field->visibility_mode !== 'always_visible') {
+                $key        = $field->visibility_mode;
+                $conditions = $field->visibility_conditions ?? [];
+                if (is_array($conditions)) {
+                    foreach ($conditions as &$cond) {
+                        if (isset($cond['operator']) && in_array($cond['operator'], ['in', 'not_in'], true)) {
+                            $raw = $cond['value'] ?? '';
+                            if (is_string($raw)) {
+                                $cond['value'] = array_values(array_filter(array_map('trim', explode(',', $raw))));
+                            } elseif (is_array($raw)) {
+                                $cond['value'] = array_values(array_filter(array_map(fn ($v) => is_string($v) ? trim($v) : $v, $raw)));
+                            }
+                        }
+                    }
+                    unset($cond);
+                }
+                if (! empty($field->condition_logic) && $field->condition_logic !== 'and') {
+                    $component[$key] = ['logic' => $field->condition_logic, 'conditions' => $conditions];
+                } else {
+                    $component[$key] = $conditions;
+                }
+            }
+
+            if ($isDetail) {
+                if ($field->field_name === 'created_by') {
+                    $component['name'] = 'createdBy.name';
+                } elseif ($field->field_name === 'updated_by') {
+                    $component['name'] = 'updatedBy.name';
+                } elseif (in_array($field->field_name, ['created_at', 'updated_at'], true)) {
+                    $component['dateTime'] = 'd M Y H:i';
+                }
+            }
+
+            $out[] = $component;
         }
 
-        // Already sections format: first element is an associative array with a 'fields' key
-        if (isset($raw[0]) && is_array($raw[0]) && array_key_exists('fields', $raw[0])) {
-            return array_map(fn ($s) => [
-                'title' => $s['title'] ?? 'Section',
-                'columns' => isset($s['columns']) ? (is_numeric($s['columns']) ? (int) $s['columns'] : $s['columns']) : 2,
-                'fields' => array_values(array_filter((array) ($s['fields'] ?? []), 'is_string')),
-            ], $raw);
+        return $out;
+    }
+
+    /**
+     * Normalize layout_json to the canonical containers array.
+     *
+     * Supported input formats:
+     *  - New typed:  [{"type":"section","title":"...","columns":2,"fields":[...]}, ...]
+     *  - New grid:   [{"type":"grid","columns":3,"fields":[...]}, ...]
+     *  - New tabs:   [{"type":"tabs","tabs":[{"label":"...","fields":[...]}, ...]}, ...]
+     *  - Legacy (no "type" key): [{"title":"...","columns":2,"fields":[...]}] → treated as section
+     *  - Legacy flat: ["field1","field2"] → single section
+     *  - Empty / null → one empty default section
+     *
+     * @param  array<mixed>  $raw
+     * @return array<int, array{type: string, ...}>
+     */
+    private static function normalizeContainers(array $raw): array
+    {
+        if (empty($raw)) {
+            return [['type' => 'section', 'title' => 'General', 'columns' => 2, 'fields' => []]];
         }
 
         // Legacy flat array of strings
-        $fields = array_values(array_filter($raw, 'is_string'));
+        if (isset($raw[0]) && is_string($raw[0])) {
+            return [['type' => 'section', 'title' => 'General', 'columns' => 2, 'fields' => array_values(array_filter($raw, 'is_string'))]];
+        }
 
-        return [[
-            'title' => 'General',
-            'columns' => 2,
-            'fields' => $fields,
-        ]];
+        if (isset($raw[0]) && is_array($raw[0])) {
+            return array_map(function ($item) {
+                $type = $item['type'] ?? 'section';
+
+                if ($type === 'tabs') {
+                    $tabs = array_map(fn ($t) => [
+                        'label'  => $t['label'] ?? 'Tab',
+                        'fields' => array_values(array_filter($t['fields'] ?? [], 'is_string')),
+                    ], $item['tabs'] ?? []);
+                    return [
+                        'type'    => 'tabs',
+                        'title'   => $item['title'] ?? null,
+                        'columns' => (isset($item['columns']) && is_numeric($item['columns'])) ? (int) $item['columns'] : 1,
+                        'tabs'    => $tabs,
+                    ];
+                }
+
+                if ($type === 'grid') {
+                    $all    = (array) ($item['fields'] ?? []);
+                    $fields = array_values(array_filter($all, 'is_string'));
+                    return [
+                        'type'    => 'grid',
+                        'columns' => (isset($item['columns']) && is_numeric($item['columns'])) ? (int) $item['columns'] : 2,
+                        'fields'  => $fields,
+                    ];
+                }
+
+                // section (default — also handles legacy items with no 'type' key)
+                $all    = (array) ($item['fields'] ?? []);
+                $fields = array_filter($all, 'is_string');
+                if (count($fields) < count($all)) {
+                    \Illuminate\Support\Facades\Log::warning(
+                        'LayoutGenerator: dropped non-string field entries',
+                        ['container' => $item['title'] ?? '?']
+                    );
+                }
+                return [
+                    'type'    => 'section',
+                    'title'   => $item['title'] ?? 'Section',
+                    'columns' => (isset($item['columns']) && is_numeric($item['columns'])) ? (int) $item['columns'] : 2,
+                    'fields'  => array_values($fields),
+                ];
+            }, $raw);
+        }
+
+        return [['type' => 'section', 'title' => 'General', 'columns' => 2, 'fields' => []]];
     }
 
     /** @param Collection<string, ModuleField> $fieldMap */
     private static function buildListJson(
         string $model,
         string $resource,
+        string $fullname,
         array $fieldNames,
         Collection $fieldMap,
         array $filtersConfig = [],
@@ -426,7 +538,7 @@ final class LayoutGenerator
         }
 
         $filters = [];
-        $moduleName = Str::snake($model);
+        $moduleName = $fullname;
         foreach ($filtersConfig as $fc) {
             $fieldName = $fc['field_name'] ?? null;
             if (! $fieldName) {

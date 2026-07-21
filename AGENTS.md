@@ -1,175 +1,161 @@
-<laravel-boost-guidelines>
-=== foundation rules ===
+# SSI-Filament — Agent Guidelines
 
-# Laravel Boost Guidelines
+## Project Overview
 
-The Laravel Boost guidelines are specifically curated by Laravel maintainers for this application. These guidelines should be followed closely to ensure the best experience when building Laravel applications.
+SSI-Filament is a **JSON-driven low-code Studio Builder** built on Laravel 13 + Filament 5.
+Developers configure modules (data entities) through an admin UI; the Studio generates Eloquent
+models, Filament resources, migrations, and layout JSON automatically. Custom code lives in
+developer-owned files that the Studio never overwrites.
 
-## Foundational Context
+---
 
-This application is a Laravel application and its main Laravel ecosystems package & versions are below. You are an expert with them all. Ensure you abide by these specific packages & versions.
+## Stack & Versions
 
-- php - 8.4
-- filament/filament (FILAMENT) - v5
-- laravel/fortify (FORTIFY) - v1
-- laravel/framework (LARAVEL) - v13
-- laravel/prompts (PROMPTS) - v0
-- livewire/flux (FLUXUI_FREE) - v2
-- livewire/livewire (LIVEWIRE) - v4
-- laravel/boost (BOOST) - v2
-- laravel/mcp (MCP) - v0
-- laravel/pail (PAIL) - v1
-- laravel/pint (PINT) - v1
-- laravel/sail (SAIL) - v1
-- pestphp/pest (PEST) - v4
-- phpunit/phpunit (PHPUNIT) - v12
-- tailwindcss (TAILWINDCSS) - v4
+| Package | Version |
+|---|---|
+| PHP | 8.4 |
+| laravel/framework | v13 |
+| filament/filament | v5 |
+| livewire/livewire | v4 |
+| tailwindcss | v4 |
 
-## Skills Activation
+---
 
-This project has domain-specific skills available in `**/skills/**`. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
+## Core Architecture
 
-## Conventions
+### Studio Models (source of truth)
+- `App\Models\Module` — one row per module definition. Use `$module->computed_table` (never `$module->table` — that collides with an Eloquent internal method).
+- `App\Models\ModuleField` — field definitions. System fields have `sort_order >= 9990`.
+- `App\Models\ModuleLayout` — layout JSON per view type (create / edit / detail / list).
 
-- You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, and naming.
-- Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
-- Check for existing components to reuse before writing a new one.
+### Studio Generators (`app/Helpers/Studio/`)
+| Class | Responsibility |
+|---|---|
+| `StudioManager` | Orchestrates deploy / rebuild / uninstall. Entry point for all Studio operations. |
+| `ModelGenerator` | Writes `Base{Model}.php` and the developer-owned `{Model}.php`. |
+| `MigrationGenerator` | Generates migration files from field definitions. |
+| `ResourceGenerator` | Writes the Filament Resource, pages, and glue files. |
+| `LayoutGenerator` | Generates form/table JSON from field + layout records. |
+| `SchemaSyncService` | Syncs DB schema directly (Pass 1 = add/rename, Pass 2 = type-change detection). |
+| `ModuleValidator` | Pre-deploy checks (name conflicts, system field collisions, etc.). |
+| `DropdownHandler` | All dropdown DOM read/write operations. Single source of truth for dropdowns. |
+| `StubRenderer` | Fills `{{PLACEHOLDER}}` tokens in `.stub` template files. |
+| `FieldTypeMap` | Central registry mapping field type strings → DB types / Filament components. |
 
-## Verification Scripts
+### JSON Renderers (`app/Helpers/`)
+- `JsonFormBuilder` — converts form/schema JSON into Filament form components.
+- `JsonTableBuilder` — converts table JSON into Filament table columns, filters, and actions.
 
-- Do not create verification scripts or tinker when tests cover that functionality and prove they work. Unit and feature tests are more important.
+---
 
-## Application Structure & Architecture
+## Key Conventions
 
-- Stick to existing directory structure; don't create new base folders without approval.
-- Do not change the application's dependencies without approval.
+### Never use `$module->table`
+The `table` accessor was renamed to `computedTable` (Eloquent Attribute) to avoid a collision
+with `Model::getTable()`. Always use:
+```php
+$module->computed_table   // Attribute access
+```
 
-## Frontend Bundling
+### Filament 5 property type covariance
+Filament 5 enforces strict property type covariance. Never redeclare `$navigationIcon` or
+`$navigationGroup` as properties in page/resource subclasses — use method overrides instead:
+```php
+public function getNavigationIcon(): string|\BackedEnum|null { return 'heroicon-o-...'; }
+public function getNavigationGroup(): ?string { return 'Studio'; }
+```
 
-- If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `npm run build`, `npm run dev`, or `composer run dev`. Ask them.
+### Two-tier model system
+Studio generates two model files per module:
+- `app/Models/Studio/Base{Model}.php` — Studio-owned, regenerated on every Repair & Rebuild.
+- `app/Models/{Model}.php` — Developer-owned, generated once, never overwritten.
 
-## Documentation Files
+Always extend the base class; never redeclare `$table`, `$guarded`, or Studio relationships.
 
-- You must only create documentation files if explicitly requested by the user.
+### Custom override directories
+Developers place JSON overrides in:
+- `app/Filament/Resources/{Resource}/CustomSchemas/` — form overrides (create/edit/detail/default)
+- `app/Filament/Resources/{Resource}/CustomTables/` — table override (listView.json)
 
-## Replies
+These directories are never touched by any Studio operation.
 
-- Be concise in your explanations - focus on what's important rather than explaining obvious details.
+### Hook system in JSON
+JSON configs wire PHP methods using `@` notation:
+```json
+"hooks": { "action": "\\App\\Filament\\Resources\\Modules\\Hooks\\ModuleHooks@deployModule" }
+```
+Hook classes receive `($record, $data)` and return `['success' => bool]`.
 
-=== boost rules ===
+### System fields
+Fields with `sort_order >= 9990` are Studio-seeded system fields (`created_at`, `updated_at`,
+`created_by`, `updated_by`). The validator excludes them from name-conflict checks.
 
-# Laravel Boost
+---
 
-## Tools
+## Dropdown DOMs
 
-- Laravel Boost is an MCP server with tools designed specifically for this application. Prefer Boost tools over manual alternatives like shell commands or file reads.
-- Use `database-query` to run read-only queries against the database instead of writing raw SQL in tinker.
-- Use `database-schema` to inspect table structure before writing migrations or models.
-- Use `get-absolute-url` to resolve the correct scheme, domain, and port for project URLs. Always use this before sharing a URL with the user.
-- Use `browser-logs` to read browser logs, errors, and exceptions. Only recent logs are useful, ignore old entries.
+Two separate sources — `DropdownHandler::get()` merges both transparently:
 
-## Searching Documentation (IMPORTANT)
+| File | Owner | Purpose |
+|---|---|---|
+| `config/studio_doms.php` | Studio | Built-in option groups (`field_type_dom`, `layout_type_dom`, `moudle_icons_dom`, `visibility_mode_dom`, `condition_logic_dom`, `relationship_type_dom`, `filter_type_dom`, `operator_dom`). Edit the PHP file directly. |
+| `storage/app/SSI/Dropdowns/app_doms.json` | App / Developer | User-created option groups (`status_dom`, `gender_dom`, module-generated DOMs). Written at runtime by `DropdownHandler`. |
 
-- Always use `search-docs` before making code changes. Do not skip this step. It returns version-specific docs based on installed packages automatically.
-- Pass a `packages` array to scope results when you know which packages are relevant.
-- Use multiple broad, topic-based queries: `['rate limiting', 'routing rate limiting', 'routing']`. Expect the most relevant results first.
-- Do not add package names to queries because package info is already shared. Use `test resource table`, not `filament 4 test resource table`.
+Always use `DropdownHandler` — `DropdownService` has been removed.
 
-### Search Syntax
+---
 
-1. Use words for auto-stemmed AND logic: `rate limit` matches both "rate" AND "limit".
-2. Use `"quoted phrases"` for exact position matching: `"infinite scroll"` requires adjacent words in order.
-3. Combine words and phrases for mixed queries: `middleware "rate limit"`.
-4. Use multiple queries for OR logic: `queries=["authentication", "middleware"]`.
+## Studio Admin Modules (Filament Resources)
 
-## Artisan
+All three Studio admin resources follow the same JSON-driven pattern:
 
-- Run Artisan commands directly via the command line (e.g., `php artisan route:list`). Use `php artisan list` to discover available commands and `php artisan [command] --help` to check parameters.
-- Inspect routes with `php artisan route:list`. Filter with: `--method=GET`, `--name=users`, `--path=api`, `--except-vendor`, `--only-vendor`.
-- Read configuration values using dot notation: `php artisan config:show app.name`, `php artisan config:show database.default`. Or read config files directly from the `config/` directory.
+| Resource | Path | List JSON |
+|---|---|---|
+| Modules | `app/Filament/Resources/Modules/` | `Tables/listView.json` |
+| Field Builder | `app/Filament/Resources/ModuleFields/` | `Tables/listView.json` |
+| Layout Builder | `app/Filament/Resources/ModuleLayouts/` | `Tables/listView.json` |
 
-## Tinker
+---
 
-- Execute PHP in app context for debugging and testing code. Do not create models without user approval, prefer tests with factories instead. Prefer existing Artisan commands over custom tinker code.
-- Always use single quotes to prevent shell expansion: `php artisan tinker --execute 'Your::code();'`
-  - Double quotes for PHP strings inside: `php artisan tinker --execute 'User::where("active", true)->count();'`
+## Layout Inheritance Direction
 
-=== php rules ===
+When a Create View layout is saved with `inherit_edit_layout` or `inherit_detail_layout` toggled on, the Create View `layout_json` is **pushed into** the Edit / Detail layout records. Direction is always: **Create → Edit / Detail** (never reverse).
 
-# PHP
+---
 
-- Always use curly braces for control structures, even for single-line bodies.
-- Use PHP 8 constructor property promotion: `public function __construct(public GitHub $github) { }`. Do not leave empty zero-parameter `__construct()` methods unless the constructor is private.
-- Use explicit return type declarations and type hints for all method parameters: `function isAccessible(User $user, ?string $path = null): bool`
-- Use TitleCase for Enum keys: `FavoritePerson`, `BestLake`, `Monthly`.
-- Prefer PHPDoc blocks over inline comments. Only add inline comments for exceptionally complex logic.
-- Use array shape type definitions in PHPDoc blocks.
+## Artisan Commands
 
-=== deployments rules ===
+| Command | Description |
+|---|---|
+| `php artisan studio:deploy {module}` | Deploy a module (generates all files + schema) |
+| `php artisan studio:rebuild {module}` | Repair & Rebuild an existing module |
+| `php artisan studio:list [--deployed] [--pending]` | List all modules and their status |
+| `php artisan schema:generate {table} {Resource}` | Generate a JSON schema from an existing DB table |
 
-# Deployment
+---
 
-- Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
+## Coding Rules
 
-=== tests rules ===
+- Follow all existing code conventions. Check sibling files before creating new ones.
+- Use descriptive names: `isRegisteredForDiscounts`, not `discount()`.
+- Default to **no comments**. Only comment when the WHY is non-obvious (hidden constraint, workaround, subtle invariant).
+- Always use `FieldTypeMap` when mapping a field type to a DB type or Filament component — never hard-code type strings elsewhere.
+- All write operations to the DB schema go through `SchemaSyncService` — never raw `Schema::` calls outside it.
+- `StudioManager` is the only entry point for deploy / rebuild / uninstall — never call generators directly from UI hooks.
+- Use `DB::transaction()` around bulk insert operations (e.g. `seedSystemFields()`).
 
-# Test Enforcement
+## PHP Rules
 
-- Every change must be programmatically tested. Write a new test or update an existing test, then run the affected tests to make sure they pass.
-- Run the minimum number of tests needed to ensure code quality and speed. Use `php artisan test --compact` with a specific filename or filter.
+- PHP 8.4 — use constructor property promotion, named arguments, match expressions.
+- Explicit return types and parameter type hints on all methods.
+- Always use curly braces for control structures, even single-line bodies.
+- `declare(strict_types=1)` on all new PHP files.
 
-=== laravel/core rules ===
+## Do Not
 
-# Do Things the Laravel Way
-
-- Use `php artisan make:` commands to create new files (i.e. migrations, controllers, models, etc.). You can list available Artisan commands using `php artisan list` and check their parameters with `php artisan [command] --help`.
-- If you're creating a generic PHP class, use `php artisan make:class`.
-- Pass `--no-interaction` to all Artisan commands to ensure they work without user input. You should also pass the correct `--options` to ensure correct behavior.
-
-### Model Creation
-
-- When creating new models, create useful factories and seeders for them too. Ask the user if they need any other things, using `php artisan make:model --help` to check the available options.
-
-## APIs & Eloquent Resources
-
-- For APIs, default to using Eloquent API Resources and API versioning unless existing API routes do not, then you should follow existing application convention.
-
-## URL Generation
-
-- When generating links to other pages, prefer named routes and the `route()` function.
-
-## Testing
-
-- When creating models for tests, use the factories for the models. Check if the factory has custom states that can be used before manually setting up the model.
-- Faker: Use methods such as `$this->faker->word()` or `fake()->randomDigit()`. Follow existing conventions whether to use `$this->faker` or `fake()`.
-- When creating tests, make use of `php artisan make:test [options] {name}` to create a feature test, and pass `--unit` to create a unit test. Most tests should be feature tests.
-
-## Vite Error
-
-- If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `npm run build` or ask the user to run `npm run dev` or `composer run dev`.
-
-=== livewire/core rules ===
-
-# Livewire
-
-- Livewire allow to build dynamic, reactive interfaces in PHP without writing JavaScript.
-- You can use Alpine.js for client-side interactions instead of JavaScript frameworks.
-- Keep state server-side so the UI reflects it. Validate and authorize in actions as you would in HTTP requests.
-
-=== pint/core rules ===
-
-# Laravel Pint Code Formatter
-
-- If you have modified any PHP files, you must run `vendor/bin/pint --dirty --format agent` before finalizing changes to ensure your code matches the project's expected style.
-- Do not run `vendor/bin/pint --test --format agent`, simply run `vendor/bin/pint --format agent` to fix any formatting issues.
-
-=== pest/core rules ===
-
-## Pest
-
-- This project uses Pest for testing. Create tests: `php artisan make:test --pest {name}`.
-- The `{name}` argument should not include the test suite directory. Use `php artisan make:test --pest SomeFeatureTest` instead of `php artisan make:test --pest Feature/SomeFeatureTest`.
-- Run tests: `php artisan test --compact` or filter: `php artisan test --compact --filter=testName`.
-- Do NOT delete tests without approval.
-
-</laravel-boost-guidelines>
+- Rename `computed_table` back to `table` on `Module`.
+- Add `DropdownService` back — it has been deleted; use `DropdownHandler` directly.
+- Write Studio DOM keys (`field_type_dom`, etc.) to `app_doms.json` programmatically — check with `DropdownHandler::isStudioDom($key)` first.
+- Redeclare Filament navigation properties as class properties in subclasses — use method overrides.
+- Call generators (`ModelGenerator`, `ResourceGenerator`, etc.) directly from hooks or controllers — always go through `StudioManager`.
+- Create new base folders or change package dependencies without approval.
