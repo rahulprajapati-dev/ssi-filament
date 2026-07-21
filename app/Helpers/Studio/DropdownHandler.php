@@ -9,7 +9,7 @@ class DropdownHandler
     /** Resolve the absolute path to the dropdown JSON file. */
     protected static function filePath(): string
     {
-        return config('studio.dropdown_path') ?: storage_path('app/SSI/Dropdowns/app_doms.json');
+        return config('studio.dropdown_path') ?: base_path('app/Helpers/Studio/Doms/app_doms.json');
     }
 
     /**
