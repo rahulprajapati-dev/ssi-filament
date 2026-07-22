@@ -23,7 +23,7 @@ class CommonHelper
         ];
 
     }
-    
+
     public static function populatefieldlabel(?string $label = null): array
     {
         return [
@@ -33,15 +33,28 @@ class CommonHelper
 
     public static function getModuleFieldsOptions($moduleId = null): array
     {
-        if (! $moduleId) {
+        if (!$moduleId) {
             return [];
         }
         return ModuleField::where('module_id', $moduleId)->pluck('label', 'field_name')->toArray();
     }
+    public static function getModuleFields($moduleId = null, $fieldType = null): array
+    {
+        if (!$moduleId) {
+            return [];
+        }
+        $query = ModuleField::where('module_id', $moduleId);
+
+        if ($fieldType !== null) {
+            $query->where('type', $fieldType);
+        }
+
+        return $query->pluck('label', 'field_name')->toArray();
+    }
 
     public static function getSelectedFieldOptions(?string $fieldName = null, $moduleId = null): array
     {
-        if (! $fieldName || ! $moduleId) {
+        if (!$fieldName || !$moduleId) {
             return [];
         }
 
@@ -49,7 +62,7 @@ class CommonHelper
             ->where('field_name', $fieldName)
             ->first();
 
-        if (! $field) {
+        if (!$field) {
             return [];
         }
 
@@ -69,13 +82,13 @@ class CommonHelper
     public static function updateConditionFieldType($state, $set, $get): void
     {
         $set('value', null);
-        if (! $state) {
+        if (!$state) {
             $set('field_type', null);
             return;
         }
 
         $moduleId = $get('../../module_id');
-        if (! $moduleId) {
+        if (!$moduleId) {
             $set('field_type', null);
             return;
         }
@@ -97,7 +110,7 @@ class CommonHelper
         // applyRelateOptions() resolves the model via Str::studly(fullname).
         return Module::orderBy('plural_label')
             ->get(['key', 'name', 'plural_label'])
-            ->mapWithKeys(fn ($m) => [$m->fullname => $m->plural_label])
+            ->mapWithKeys(fn($m) => [$m->fullname => $m->plural_label])
             ->toArray();
     }
 
@@ -114,7 +127,7 @@ class CommonHelper
 
     public static function getModuleFieldsById($moduleId = null): array
     {
-        if (! $moduleId) {
+        if (!$moduleId) {
             return [];
         }
 
@@ -126,13 +139,13 @@ class CommonHelper
 
     public static function getModuleFieldsByName(?string $moduleName = ''): array
     {
-        if (! $moduleName) {
+        if (!$moduleName) {
             return [];
         }
 
         $module = Module::where('name', $moduleName)->first();
 
-        if (! $module) {
+        if (!$module) {
             return [];
         }
 
@@ -149,19 +162,19 @@ class CommonHelper
             ? $selfName
             : $relatedModule;
 
-        if (! $targetName) {
+        if (!$targetName) {
             return [];
         }
 
         $module = Module::where('name', $targetName)->first();
 
-        if (! $module) {
+        if (!$module) {
             return [];
         }
 
         return ModuleField::where('module_id', $module->id)
             ->get(['field_name', 'label'])
-            ->mapWithKeys(fn ($f) => [$f->field_name => $f->field_name . ' — ' . $f->label])
+            ->mapWithKeys(fn($f) => [$f->field_name => $f->field_name . ' — ' . $f->label])
             ->toArray();
     }
 }

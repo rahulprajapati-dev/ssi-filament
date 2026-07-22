@@ -150,7 +150,7 @@
             "label": "Field Type",
             "options_source": "helper",
             "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
-            "helper_method": "get",
+            "helper_method": "getStudioDom",
             "helper_params": ["field_type_dom"]
         },
         {
@@ -191,6 +191,63 @@
             }
         },
         {
+            "type": "popup",
+            "name": "dom_editor",
+            "label": "Edit Options",
+            "fill_hook": "App\\Filament\\Resources\\ModuleFields\\Hooks\\ModuleFieldDomHooks@fillDomForm",
+            "hooks": {
+                "action": "App\\Filament\\Resources\\ModuleFields\\Hooks\\ModuleFieldDomHooks@saveDomOptions"
+            },
+            "schema": {
+                "components": [
+                    {
+                        "component": "repeater",
+                        "name": "options",
+                        "label": "Dropdown Options",
+                        "addActionLabel": "Add Option",
+                        "columns": 3,
+                        "reorderable": true,
+                        "schema": [
+                            {
+                                "component": "checkbox",
+                                "name": "default",
+                                "label": "Default",
+                                "columnSpan": 1
+                            },
+                            {
+                                "component": "textInput",
+                                "name": "key",
+                                "label": "Value",
+                                "columnSpan": 1,
+                                "required": true
+                            },
+                            {
+                                "component": "textInput",
+                                "name": "value",
+                                "label": "Display Label",
+                                "columnSpan": 1,
+                                "required": true
+                            }
+                        ]
+                    }
+                ]
+            },
+            "visible_when": {
+                "field": "type",
+                "operator": "in",
+                "value": ["select", "radio", "checkbox_list", "checkboxlist"]
+            },
+            "ui": {
+                "hiddenLabel": true,
+                "iconButton": true,
+                "tooltip": "Edit Dropdown Options",
+                "icon": "heroicon-o-list-bullet",
+                "color": "warning",
+                "modalHeading": "Edit Dropdown Options",
+                "modalWidth": "ExtraLarge"
+            }
+        },
+        {
             "type": "delete",
             "label": "Delete",
             "ui": {
@@ -204,4 +261,4 @@
     ],
     "record_actions_position": "BeforeColumns",
     "bulkActions": []
-}
+} 

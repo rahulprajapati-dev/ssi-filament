@@ -110,7 +110,9 @@ final class MigrationGenerator
     private static function columnLineRaw(ModuleField $field): string
     {
         $name   = $field->field_name;
-        $null   = $field->required ? '' : '->nullable()';
+        // ALTER TABLE always adds nullable — adding NOT NULL without DEFAULT to a
+        // table that already has rows would fail at migration time in strict mode.
+        $null   = '->nullable()';
         $unique = $field->unique_field ? '->unique()' : '';
 
         // System columns are handled explicitly by the stub — skip to avoid duplicates.
@@ -124,7 +126,7 @@ final class MigrationGenerator
         }
 
         // Multi-value fields store arrays → json column
-        if (! empty($field->is_multiple) && in_array($field->type, ['select', 'dropdown', 'enum', 'file', 'image', 'fileupload'], true)) {
+        if (! empty($field->is_multiple) && in_array($field->type, ['select', 'dynamic_select','dropdown', 'enum', 'file', 'image', 'fileupload'], true)) {
             return "\$table->json('{$name}'){$null};";
         }
 
@@ -202,7 +204,7 @@ final class MigrationGenerator
         }
 
         // Multi-value fields store arrays → json column
-        if (! empty($field->is_multiple) && in_array($field->type, ['select', 'dropdown', 'enum', 'file', 'image', 'fileupload'], true)) {
+        if (! empty($field->is_multiple) && in_array($field->type, ['select', 'dynamic_select','dropdown', 'enum', 'file', 'image', 'fileupload'], true)) {
             return "{$pad}\$table->json('{$name}'){$null};";
         }
 
@@ -260,10 +262,16 @@ final class MigrationGenerator
         // [H10] Validate that default_value is genuinely numeric before injecting
         // it as a PHP literal to prevent arbitrary code injection.
         $val = $field->default_value;
-        if (! $val || ! is_numeric((string) $val)) {
-            return '';
+        if ($val !== null && $val !== '' && is_numeric((string) $val)) {
+            $typed = (strpos((string) $val, '.') !== false) ? (float) $val : (int) $val;
+            return '->default(' . $typed . ')';
         }
-        $typed = (strpos((string) $val, '.') !== false) ? (float) $val : (int) $val;
-        return '->default(' . $typed . ')';
+        // Required numeric columns with no explicit default get a safe implicit 0 so
+        // INSERTs that omit the field (e.g. field not placed in the create layout) don't
+        // trigger a "Field doesn't have a default value" DB error.
+        if ($field->required) {
+            return '->default(0)';
+        }
+        return '';
     }
 }

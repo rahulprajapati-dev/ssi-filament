@@ -22,6 +22,7 @@ return [
         'phone'         => 'Phone',
         'address'       => 'Address',
         'select'        => 'Select / Multiselect',
+        'dynamic_select'=> 'Dynamic Select ',
         'toggle'        => 'Toggle',
         'checkbox'      => 'Checkbox',
         'radio'         => 'Radio Button',

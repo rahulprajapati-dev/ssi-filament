@@ -2,18 +2,17 @@
 
 namespace App\Filament\Resources\Modules\RelationManagers;
 
+use App\Filament\Resources\ModuleLayouts\Concerns\HasModuleFieldPool;
 use App\Helpers\JsonStudioFormBuilder;
 use App\Helpers\JsonTableBuilder;
-use App\Helpers\Studio\FieldTypeMap;
-use App\Models\ModuleField;
-use App\Models\ModuleLayout;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
-use Illuminate\Validation\ValidationException;
 
 class LayoutsRelationManager extends RelationManager
 {
+    use HasModuleFieldPool;
+
     protected static string $relationship = 'layouts';
 
     protected static ?string $title = 'Layouts';
@@ -24,7 +23,7 @@ class LayoutsRelationManager extends RelationManager
 
         $moduleId = $this->getOwnerRecord()->id;
 
-        $fields = self::loadFieldsForLayout($moduleId, null);
+        $fields = static::loadFieldsForLayout($moduleId, null);
 
         $config['components'] = $this->injectOwnerData($config['components'], $moduleId, $fields);
 
@@ -51,34 +50,6 @@ class LayoutsRelationManager extends RelationManager
         return $components;
     }
 
-    // Called by the drag-drop blade component via Livewire when layout_type changes.
-    public function getModuleFields(int $moduleId, ?string $layoutType = null): array
-    {
-        return self::loadFieldsForLayout($moduleId, $layoutType);
-    }
-
-    /**
-     * Load module fields for the layout drag-drop pool.
-     * System fields (created_by, updated_by, created_at, updated_at) are included
-     * for list and detail views, excluded for create/edit forms.
-     * When $layoutType is null (initial form load, type not yet chosen) include all fields
-     * so the pool is ready for whichever type the user selects.
-     */
-    private static function loadFieldsForLayout(int $moduleId, ?string $layoutType): array
-    {
-        $excludeSystem = in_array($layoutType, ['create', 'edit'], true);
-
-        $query = ModuleField::where('module_id', $moduleId)->orderBy('sort_order');
-
-        if ($excludeSystem) {
-            $query->whereNotIn('field_name', FieldTypeMap::SYSTEM_FIELD_NAMES);
-        }
-
-        return $query->get(['field_name', 'label'])
-            ->map(fn ($f) => ['field_name' => $f->field_name, 'label' => $f->label ?: $f->field_name])
-            ->toArray();
-    }
-
     public function table(Table $table): Table
     {
         $config = json_decode(file_get_contents(__DIR__ . '/layouts_table.json'), true);
@@ -89,13 +60,10 @@ class LayoutsRelationManager extends RelationManager
     {
         $moduleId = $this->getOwnerRecord()->id;
 
-        $exists = ModuleLayout::where('module_id', $moduleId)->where('layout_type', $data['layout_type'] ?? '')->exists();
-
-        if ($exists) {
-            throw ValidationException::withMessages([
-                'data.layout_type' => "A \"{$data['layout_type']}\" layout already exists for this module.",
-            ]);
-        }
+        static::ensureLayoutTypeIsUnique(
+            moduleId:   $moduleId,
+            layoutType: (string) ($data['layout_type'] ?? ''),
+        );
 
         $data['module_id'] = $moduleId;
         return $data;

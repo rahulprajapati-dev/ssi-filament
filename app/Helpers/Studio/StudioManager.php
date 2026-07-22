@@ -117,7 +117,7 @@ final class StudioManager
             $module = $this->module;
             $fields = $module->fields;
             foreach ($fields as $field) {
-                if (in_array($field->type, ['select', 'radio', 'checkbox_list', 'checkboxlist'], true)) {
+                if (in_array($field->type, ['select', 'dynamic_select', 'radio', 'checkbox_list', 'checkboxlist', 'dynamic_select'], true)) {
                     $options = is_array($field->options) ? $field->options : [];
                     $this->step('create_dom_' . $field->field_name, fn() => DropdownHandler::createGroup($module->fullname, $field->field_name, $options));
                 }
@@ -156,7 +156,7 @@ final class StudioManager
             $this->step('address_sub_fields', function () {
                 $this->module->fields()
                     ->where('type', 'address')
-                    ->each(fn ($f) => ModuleField::seedAddressSubFields($f));
+                    ->each(fn($f) => ModuleField::seedAddressSubFields($f));
                 return true;
             });
 
@@ -176,12 +176,11 @@ final class StudioManager
             $this->step('layouts', fn() => LayoutGenerator::generate($this->module, force: true));
             $module = $this->module;
             $fields = $module->fields;
+            $this->step('sync_dom_clear_' . $module->fullname, fn() => DropdownHandler::deleteGroup($module->fullname));
             foreach ($fields as $field) {
-                if (in_array($field->type, ['select', 'radio', 'checkbox_list', 'checkboxlist'], true)) {
+                if (in_array($field->type, ['select', 'dynamic_select', 'radio', 'checkbox_list', 'checkboxlist'], true)) {
                     $options = is_array($field->options) ? $field->options : [];
                     $this->step('sync_dom_' . $field->field_name, function () use ($module, $field, $options) {
-                        $group = $module->fullname . '_' . $field->field_name . '_dom';
-                        DropdownHandler::deleteGroup($group);
                         return DropdownHandler::createGroup($module->fullname, $field->field_name, $options);
                     });
                 }
@@ -204,12 +203,12 @@ final class StudioManager
             $module = $this->module;
             $fields = $module->fields;
             foreach ($fields as $field) {
-                if (in_array($field->type, ['select', 'radio', 'checkbox_list', 'checkboxlist'], true)) {
-                    $name = $module->fullname . '_' . $field->field_name . '_dom';
+                if (in_array($field->type, ['select', 'dynamic_select', 'radio', 'checkbox_list', 'checkboxlist'], true)) {
+                    $name = $module->fullname;
                     $this->step('remove_dom_' . $field->field_name, fn() => DropdownHandler::deleteGroup($name));
                 }
             }
-            $dropCustom = ! empty($this->data['is_custom']);
+            $dropCustom = !empty($this->data['is_custom']);
 
             $this->step('remove_layouts', fn() => LayoutGenerator::remove($this->module));
             $this->step('remove_resource', fn() => ResourceGenerator::remove($this->module, $dropCustom));
@@ -217,7 +216,7 @@ final class StudioManager
             $this->step('remove_views', fn() => ViewGenerator::remove($this->module));
             $this->step('remove_migration', fn() => MigrationGenerator::remove($this->module));
 
-            if (! empty($this->data['is_table'])) {
+            if (!empty($this->data['is_table'])) {
                 $this->step('drop_table', fn() => $this->dropTable());
             }
 
@@ -296,8 +295,8 @@ final class StudioManager
     private function markUninstalled(): void
     {
         $this->module->update([
-            'is_deploy'  => false,
-            'is_enable'  => false,
+            'is_deploy' => false,
+            'is_enable' => false,
             'deployed_at' => null,
         ]);
         ModuleState::clear($this->module->name);
@@ -314,7 +313,7 @@ final class StudioManager
             );
         }
 
-        if (! Schema::hasTable($table)) {
+        if (!Schema::hasTable($table)) {
             // Table never existed (e.g. a failed earlier deploy) — nothing to drop.
             return false;
         }

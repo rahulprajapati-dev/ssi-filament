@@ -2,18 +2,15 @@
 
 namespace App\Filament\Resources\ModuleLayouts\Pages;
 
-use App\Console\Commands\StudioSyncFields;
+use App\Filament\Resources\ModuleLayouts\Concerns\HasModuleFieldPool;
 use App\Filament\Resources\ModuleLayouts\Hooks\ModuleLayoutHooks;
 use App\Filament\Resources\ModuleLayouts\ModuleLayoutResource;
-use App\Helpers\Studio\FieldTypeMap;
-use App\Models\Module;
-use App\Models\ModuleField;
-use App\Models\ModuleLayout;
 use Filament\Resources\Pages\CreateRecord;
-use Illuminate\Validation\ValidationException;
 
 class CreateModuleLayout extends CreateRecord
 {
+    use HasModuleFieldPool;
+
     protected static string $resource = ModuleLayoutResource::class;
 
     public function getTitle(): string
@@ -21,50 +18,18 @@ class CreateModuleLayout extends CreateRecord
         return 'Create Layout';
     }
 
+    protected function resolveLayoutType(): ?string
+    {
+        return $this->data['layout_type'] ?? null;
+    }
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $this->ensureLayoutTypeIsUnique(
+        static::ensureLayoutTypeIsUnique(
             moduleId:   (int) $data['module_id'],
             layoutType: (string) $data['layout_type'],
         );
 
         return app(ModuleLayoutHooks::class)->applyLayoutInheritance($data);
-    }
-
-    private function ensureLayoutTypeIsUnique(int $moduleId, string $layoutType): void
-    {
-        $exists = ModuleLayout::where('module_id', $moduleId)
-            ->where('layout_type', $layoutType)
-            ->exists();
-
-        if ($exists) {
-            throw ValidationException::withMessages([
-                'data.layout_type' => "A \"{$layoutType}\" layout already exists for this module. Each layout type can only be defined once per module.",
-            ]);
-        }
-    }
-
-    // Helper used by the form when populating field lists.
-    // Also auto-syncs any manually-added DB columns so they appear without a rebuild.
-    public function getModuleFields(int $moduleId, ?string $layoutType = null): array
-    {
-        $module = Module::find($moduleId);
-        if ($module) {
-            StudioSyncFields::syncSilent($module);
-        }
-
-        $layoutType = $layoutType ?? ($this->data['layout_type'] ?? null);
-
-        $excludeSystem = in_array($layoutType, ['create', 'edit'], true);
-
-        $query = ModuleField::where('module_id', $moduleId)->orderBy('sort_order');
-
-        if ($excludeSystem) {
-            $query->whereNotIn('field_name', FieldTypeMap::SYSTEM_FIELD_NAMES);
-        }
-
-        return $query->get(['field_name', 'label'])
-            ->map(fn ($f) => ['field_name' => $f->field_name, 'label' => $f->label ?: $f->field_name])
-            ->toArray();
     }
 }

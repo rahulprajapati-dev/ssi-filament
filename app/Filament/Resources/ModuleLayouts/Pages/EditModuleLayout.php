@@ -2,20 +2,17 @@
 
 namespace App\Filament\Resources\ModuleLayouts\Pages;
 
-use App\Console\Commands\StudioSyncFields;
+use App\Filament\Resources\ModuleLayouts\Concerns\HasModuleFieldPool;
 use App\Filament\Resources\ModuleLayouts\Hooks\ModuleLayoutHooks;
 use App\Filament\Resources\ModuleLayouts\ModuleLayoutResource;
-use App\Helpers\Studio\FieldTypeMap;
-use App\Models\Module;
-use App\Models\ModuleField;
-use App\Models\ModuleLayout;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
-use Illuminate\Validation\ValidationException;
 
 class EditModuleLayout extends EditRecord
 {
+    use HasModuleFieldPool;
+
     protected static string $resource = ModuleLayoutResource::class;
 
     public function getTitle(): string
@@ -31,52 +28,19 @@ class EditModuleLayout extends EditRecord
         ];
     }
 
+    protected function resolveLayoutType(): ?string
+    {
+        return $this->record?->layout_type;
+    }
+
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        $this->ensureLayoutTypeIsUnique(
+        static::ensureLayoutTypeIsUnique(
             moduleId:   (int) ($data['module_id'] ?? $this->record->module_id),
             layoutType: (string) $data['layout_type'],
             ignoreId:   (int) $this->record->id,
         );
 
         return app(ModuleLayoutHooks::class)->applyLayoutInheritance($data, $this->record);
-    }
-
-    private function ensureLayoutTypeIsUnique(int $moduleId, string $layoutType, int $ignoreId): void
-    {
-        $exists = ModuleLayout::where('module_id', $moduleId)
-            ->where('layout_type', $layoutType)
-            ->where('id', '!=', $ignoreId)
-            ->exists();
-
-        if ($exists) {
-            throw ValidationException::withMessages([
-                'data.layout_type' => "A \"{$layoutType}\" layout already exists for this module. Each layout type can only be defined once per module.",
-            ]);
-        }
-    }
-
-    // Helper used by the form when populating field lists.
-    // Also auto-syncs any manually-added DB columns so they appear without a rebuild.
-    public function getModuleFields(int $moduleId, ?string $layoutType = null): array
-    {
-        $module = Module::find($moduleId);
-        if ($module) {
-            StudioSyncFields::syncSilent($module);
-        }
-
-        $layoutType = $layoutType ?? $this->record?->layout_type;
-
-        $excludeSystem = in_array($layoutType, ['create', 'edit'], true);
-
-        $query = ModuleField::where('module_id', $moduleId)->orderBy('sort_order');
-
-        if ($excludeSystem) {
-            $query->whereNotIn('field_name', FieldTypeMap::SYSTEM_FIELD_NAMES);
-        }
-
-        return $query->get(['field_name', 'label'])
-            ->map(fn ($f) => ['field_name' => $f->field_name, 'label' => $f->label ?: $f->field_name])
-            ->toArray();
     }
 }

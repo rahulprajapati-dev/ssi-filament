@@ -76,7 +76,7 @@
                     "label": "Navigation Icon",
                     "options_source": "helper",
                     "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
-                    "helper_method": "get",
+                    "helper_method": "getStudioDom",
                     "helper_params": [
                         "moudle_icons_dom"
                     ],

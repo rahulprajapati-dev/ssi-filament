@@ -60,17 +60,17 @@ final class LayoutGenerator
             // Flat list of all field names (used for list/table view); tabs nest fields one level deeper
             $fieldNames = collect($containers)->flatMap(function ($c) {
                 if (($c['type'] ?? 'section') === 'tabs') {
-                    return collect($c['tabs'] ?? [])->flatMap(fn ($t) => $t['fields'] ?? []);
+                    return collect($c['tabs'] ?? [])->flatMap(fn($t) => $t['fields'] ?? []);
                 }
                 return $c['fields'] ?? [];
             })->values()->all();
 
             $filePath = match ($layout->layout_type) {
                 'create' => "{$basePath}/Schemas/createView.json",
-                'edit'   => "{$basePath}/Schemas/editView.json",
+                'edit' => "{$basePath}/Schemas/editView.json",
                 'detail' => "{$basePath}/Schemas/detailView.json",
-                'list'   => "{$basePath}/Tables/listView.json",
-                default  => null,
+                'list' => "{$basePath}/Tables/listView.json",
+                default => null,
             };
 
             if ($filePath === null) {
@@ -78,7 +78,7 @@ final class LayoutGenerator
             }
 
             // Skip if file already has content and we're not forcing
-            if (! $force && File::exists($filePath) && self::fileHasContent($filePath)) {
+            if (!$force && File::exists($filePath) && self::fileHasContent($filePath)) {
                 continue;
             }
 
@@ -86,7 +86,7 @@ final class LayoutGenerator
             // than the last time this layout record was saved in the database.
             if ($force && File::exists($filePath)) {
                 $layoutUpdatedAt = $layout->updated_at?->timestamp ?? 0;
-                $fileModifiedAt  = (int) filemtime($filePath);
+                $fileModifiedAt = (int) filemtime($filePath);
                 if ($fileModifiedAt >= $layoutUpdatedAt) {
                     continue;
                 }
@@ -110,7 +110,7 @@ final class LayoutGenerator
     public static function remove(Module $module): bool
     {
         // [L21] Match ResourceGenerator's formula: studly first, then pluralStudly.
-        $model    = Str::studly((string) $module->fullname);
+        $model = Str::studly((string) $module->fullname);
         $resource = Str::pluralStudly($model);
         $basePath = app_path("Filament/Resources/{$resource}");
 
@@ -131,16 +131,18 @@ final class LayoutGenerator
         }
 
         $schemasPath = "{$basePath}/Schemas";
-        $tablesPath  = "{$basePath}/Tables";
+        $tablesPath = "{$basePath}/Tables";
 
-        if (File::isDirectory($schemasPath)
+        if (
+            File::isDirectory($schemasPath)
             && empty(File::files($schemasPath))
             && empty(File::directories($schemasPath))
         ) {
             File::deleteDirectory($schemasPath);
         }
 
-        if (File::isDirectory($tablesPath)
+        if (
+            File::isDirectory($tablesPath)
             && empty(File::files($tablesPath))
             && empty(File::directories($tablesPath))
         ) {
@@ -164,14 +166,15 @@ final class LayoutGenerator
         $label = $module->singular_label ?: $model;
         $title = match ($layoutType) {
             'create' => "Create {$label}",
-            'edit'   => "Edit {$label}",
+            'edit' => "Edit {$label}",
             'detail' => "View {$label}",
-            default  => $label,
+            default => $label,
         };
 
         $isDetail = $layoutType === 'detail';
 
         $components = [];
+        $clearOnUpdateMap = [];
         // Collect field names that appear in any visibility condition across all fields
         $reactiveFields = [];
         foreach ($fieldMap as $f) {
@@ -181,6 +184,10 @@ final class LayoutGenerator
                     $reactiveFields[] = $c['field'];
                 }
             }
+            if (!empty($f->dependent_field)) {
+                $reactiveFields[] = $f->dependent_field;
+                $clearOnUpdateMap[$f->dependent_field][] = $f->field_name;
+            }
         }
         $reactiveFields = array_unique($reactiveFields);
 
@@ -189,10 +196,15 @@ final class LayoutGenerator
 
             if ($type === 'tabs') {
                 $tabColumns = (int) ($container['columns'] ?? 1);
-                $tabsItems  = [];
+                $tabsItems = [];
                 foreach ($container['tabs'] ?? [] as $tab) {
                     $tabFields = self::buildFieldComponents(
-                        $tab['fields'] ?? [], $fieldMap, $isDetail, $reactiveFields, $module
+                        $tab['fields'] ?? [],
+                        $fieldMap,
+                        $isDetail,
+                        $reactiveFields,
+                        $module,
+                        $clearOnUpdateMap
                     );
                     if (empty($tabFields)) {
                         continue;
@@ -207,47 +219,57 @@ final class LayoutGenerator
                     continue;
                 }
                 $entry = ['component' => 'tabs', 'columnSpan' => 'full', 'tabs' => $tabsItems];
-                if (! empty($container['title'])) {
+                if (!empty($container['title'])) {
                     $entry['label'] = $container['title'];
                 }
                 $components[] = $entry;
 
             } elseif ($type === 'grid') {
                 $fields = self::buildFieldComponents(
-                    $container['fields'] ?? [], $fieldMap, $isDetail, $reactiveFields, $module
+                    $container['fields'] ?? [],
+                    $fieldMap,
+                    $isDetail,
+                    $reactiveFields,
+                    $module,
+                     $clearOnUpdateMap
                 );
                 if (empty($fields)) {
                     continue;
                 }
                 $components[] = [
-                    'component'  => 'grid',
-                    'columns'    => (int) ($container['columns'] ?? 2),
+                    'component' => 'grid',
+                    'columns' => (int) ($container['columns'] ?? 2),
                     'columnSpan' => 'full',
-                    'schema'     => $fields,
+                    'schema' => $fields,
                 ];
 
             } else {
                 // section (default — backward-compatible with layout_json that has no 'type' key)
                 $fields = self::buildFieldComponents(
-                    $container['fields'] ?? [], $fieldMap, $isDetail, $reactiveFields, $module
+                    $container['fields'] ?? [],
+                    $fieldMap,
+                    $isDetail,
+                    $reactiveFields,
+                    $module,
+                    $clearOnUpdateMap
                 );
                 if (empty($fields)) {
                     continue;
                 }
                 $components[] = [
-                    'component'   => 'section',
-                    'label'       => $container['title'] ?? 'General',
-                    'columns'     => (int) ($container['columns'] ?? 2),
+                    'component' => 'section',
+                    'label' => $container['title'] ?? 'General',
+                    'columns' => (int) ($container['columns'] ?? 2),
                     'collapsible' => false,
-                    'columnSpan'  => 'full',
-                    'schema'      => $fields,
+                    'columnSpan' => 'full',
+                    'schema' => $fields,
                 ];
             }
         }
 
         return [
-            'title'      => $title,
-            'model'      => "App\\Models\\{$model}",
+            'title' => $title,
+            'model' => "App\\Models\\{$model}",
             'components' => $components,
         ];
     }
@@ -267,6 +289,7 @@ final class LayoutGenerator
         bool $isDetail,
         array $reactiveFields,
         Module $module,
+        array $clearOnUpdateMap = []
     ): array {
         $out = [];
 
@@ -282,15 +305,18 @@ final class LayoutGenerator
 
             $component = [
                 'component' => $componentType,
-                'name'      => $field->field_name,
-                'label'     => $field->label,
+                'name' => $field->field_name,
+                'label' => $field->label,
             ];
 
             if (in_array($field->field_name, $reactiveFields, true)) {
                 $component['reactive'] = true;
             }
+            if (!empty($clearOnUpdateMap[$field->field_name])) {
+                $component['clear_on_update'] = array_values(array_unique($clearOnUpdateMap[$field->field_name]));
+            }
 
-            if (! $isDetail && $field->required) {
+            if (!$isDetail && $field->required) {
                 $component['required'] = true;
             }
 
@@ -299,34 +325,39 @@ final class LayoutGenerator
                 $component['dehydrate'] = true;
             }
 
-            if (! $isDetail && in_array($field->type, ['select', 'dropdown', 'enum', 'radio', 'checkboxList', 'checkbox_list'], true)) {
+            if (!$isDetail && in_array($field->type, ['select', 'dynamic_select', 'dropdown', 'enum', 'radio', 'checkboxList', 'checkbox_list'], true)) {
                 $default = null;
-                if (! empty($field->options) && is_array($field->options)) {
+                if (!empty($field->options) && is_array($field->options)) {
                     foreach ($field->options as $option) {
-                        if (! empty($option['default'])) {
+                        if (!empty($option['default'])) {
                             $default = $option['key'];
                             break;
                         }
                     }
                 }
-                $dropdownName = "{$module->fullname}_{$field->field_name}_dom";
+                // $dropdownName = "{$module->fullname}_{$field->field_name}_dom";
                 $component['options_source'] = 'helper';
-                $component['helper_class']   = 'App\\Helpers\\Studio\\DropdownHandler';
-                $component['helper_method']  = 'get';
-                $component['helper_params']  = [$dropdownName];
+                $component['helper_class'] = 'App\\Helpers\\Studio\\DropdownHandler';
+                $component['helper_method'] = 'get';
+                $component['helper_params'] = [$module->fullname, $field->field_name];
                 if ($default !== null) {
                     $component['default'] = $default;
                 }
+                if (!empty($field->dependent_field)) {
+                    $component['helper_type'] = 'hybrid';
+                    $component['helper_params'] = [$module->fullname, $field->field_name, '@' . $field->dependent_field];
+                }
+
             }
 
             if (in_array($field->type, ['file', 'image', 'fileupload'], true)) {
                 $component['disk'] = 'public';
-                if (! empty($field->is_multiple)) {
+                if (!empty($field->is_multiple)) {
                     $component['multiple'] = true;
                 }
             }
 
-            if (in_array($field->type, ['select', 'dropdown', 'enum'], true) && ! empty($field->is_multiple)) {
+            if (in_array($field->type, ['select', 'dynamic_select', 'dropdown', 'enum'], true) && !empty($field->is_multiple)) {
                 $component['multiple'] = true;
             }
 
@@ -341,11 +372,11 @@ final class LayoutGenerator
             if ($field->type === 'relationship') {
                 $relateConfig = is_array($field->options) ? ($field->options[0] ?? []) : [];
                 $component['options_source'] = 'relate';
-                if (! empty($relateConfig['relate_module'])) {
+                if (!empty($relateConfig['relate_module'])) {
                     $component['relate_module'] = $relateConfig['relate_module'];
                     $component['display_field'] = $relateConfig['display_field'] ?? 'name';
                 }
-                if (! $isDetail) {
+                if (!$isDetail) {
                     $component['searchable'] = true;
                 }
             }
@@ -360,12 +391,12 @@ final class LayoutGenerator
                 $component['numeric'] = true;
             }
 
-            if (! $isDetail) {
+            if (!$isDetail) {
                 self::applyFieldValidations($component, $field);
             }
 
-            if (! empty($field->visibility_mode) && $field->visibility_mode !== 'always_visible') {
-                $key        = $field->visibility_mode;
+            if (!empty($field->visibility_mode) && $field->visibility_mode !== 'always_visible') {
+                $key = $field->visibility_mode;
                 $conditions = $field->visibility_conditions ?? [];
                 if (is_array($conditions)) {
                     foreach ($conditions as &$cond) {
@@ -374,13 +405,13 @@ final class LayoutGenerator
                             if (is_string($raw)) {
                                 $cond['value'] = array_values(array_filter(array_map('trim', explode(',', $raw))));
                             } elseif (is_array($raw)) {
-                                $cond['value'] = array_values(array_filter(array_map(fn ($v) => is_string($v) ? trim($v) : $v, $raw)));
+                                $cond['value'] = array_values(array_filter(array_map(fn($v) => is_string($v) ? trim($v) : $v, $raw)));
                             }
                         }
                     }
                     unset($cond);
                 }
-                if (! empty($field->condition_logic) && $field->condition_logic !== 'and') {
+                if (!empty($field->condition_logic) && $field->condition_logic !== 'and') {
                     $component[$key] = ['logic' => $field->condition_logic, 'conditions' => $conditions];
                 } else {
                     $component[$key] = $conditions;
@@ -433,30 +464,30 @@ final class LayoutGenerator
                 $type = $item['type'] ?? 'section';
 
                 if ($type === 'tabs') {
-                    $tabs = array_map(fn ($t) => [
-                        'label'  => $t['label'] ?? 'Tab',
+                    $tabs = array_map(fn($t) => [
+                        'label' => $t['label'] ?? 'Tab',
                         'fields' => array_values(array_filter($t['fields'] ?? [], 'is_string')),
                     ], $item['tabs'] ?? []);
                     return [
-                        'type'    => 'tabs',
-                        'title'   => $item['title'] ?? null,
+                        'type' => 'tabs',
+                        'title' => $item['title'] ?? null,
                         'columns' => (isset($item['columns']) && is_numeric($item['columns'])) ? (int) $item['columns'] : 1,
-                        'tabs'    => $tabs,
+                        'tabs' => $tabs,
                     ];
                 }
 
                 if ($type === 'grid') {
-                    $all    = (array) ($item['fields'] ?? []);
+                    $all = (array) ($item['fields'] ?? []);
                     $fields = array_values(array_filter($all, 'is_string'));
                     return [
-                        'type'    => 'grid',
+                        'type' => 'grid',
                         'columns' => (isset($item['columns']) && is_numeric($item['columns'])) ? (int) $item['columns'] : 2,
-                        'fields'  => $fields,
+                        'fields' => $fields,
                     ];
                 }
 
                 // section (default — also handles legacy items with no 'type' key)
-                $all    = (array) ($item['fields'] ?? []);
+                $all = (array) ($item['fields'] ?? []);
                 $fields = array_filter($all, 'is_string');
                 if (count($fields) < count($all)) {
                     \Illuminate\Support\Facades\Log::warning(
@@ -465,10 +496,10 @@ final class LayoutGenerator
                     );
                 }
                 return [
-                    'type'    => 'section',
-                    'title'   => $item['title'] ?? 'Section',
+                    'type' => 'section',
+                    'title' => $item['title'] ?? 'Section',
                     'columns' => (isset($item['columns']) && is_numeric($item['columns'])) ? (int) $item['columns'] : 2,
-                    'fields'  => array_values($fields),
+                    'fields' => array_values($fields),
                 ];
             }, $raw);
         }
@@ -494,8 +525,8 @@ final class LayoutGenerator
             }
 
             $column = [
-                'type'  => FieldTypeMap::toColumnComponent($field->type),
-                'name'  => $field->field_name,
+                'type' => FieldTypeMap::toColumnComponent($field->type),
+                'name' => $field->field_name,
                 'label' => $field->label,
             ];
 
@@ -518,9 +549,9 @@ final class LayoutGenerator
             // Relationship fields: emit relate config so the table builder can resolve IDs to labels.
             if ($field->type === 'relationship') {
                 $relateConfig = is_array($field->options) ? ($field->options[0] ?? []) : [];
-                if (! empty($relateConfig['relate_module'])) {
+                if (!empty($relateConfig['relate_module'])) {
                     $column['options_source'] = 'relate';
-                    $column['relate_module']  = $relateConfig['relate_module'];
+                    $column['relate_module'] = $relateConfig['relate_module'];
                 }
             }
 
@@ -541,47 +572,48 @@ final class LayoutGenerator
         $moduleName = $fullname;
         foreach ($filtersConfig as $fc) {
             $fieldName = $fc['field_name'] ?? null;
-            if (! $fieldName) {
+            if (!$fieldName) {
                 continue;
             }
-            $field      = $fieldMap->get($fieldName);
+            $field = $fieldMap->get($fieldName);
             $filterType = match (true) {
-                $field !== null && FieldTypeMap::isBooleanType($field->type)                                          => 'boolean',
-                $field !== null && in_array($field->type, ['select', 'radio', 'dropdown', 'enum'], true) => 'select',
-                default                                                                                   => 'text',
+                $field !== null && FieldTypeMap::isBooleanType($field->type) => 'boolean',
+                $field !== null && in_array($field->type, ['select', 'dynamic_select', 'radio', 'dropdown', 'enum'], true) => 'select',
+                default => 'text',
             };
-            $filterLabel = ! empty($fc['label']) ? $fc['label'] : ($field?->label ?? Str::headline($fieldName));
+            $filterLabel = !empty($fc['label']) ? $fc['label'] : ($field?->label ?? Str::headline($fieldName));
 
             $entry = ['type' => $filterType, 'name' => $fieldName, 'label' => $filterLabel];
 
             if ($filterType === 'select' && $field !== null) {
                 $entry['options_source'] = 'helper';
-                $entry['helper_class']   = 'App\\Helpers\\Studio\\DropdownHandler';
-                $entry['helper_method']  = 'get';
-                $entry['helper_params']  = ["{$moduleName}_{$fieldName}_dom"];
+                $entry['helper_class'] = 'App\\Helpers\\Studio\\DropdownHandler';
+                $entry['helper_method'] = 'get';
+                $entry['helper_params'] = ["{$moduleName}_{$fieldName}_dom"];
             }
+
 
             $filters[] = $entry;
         }
 
         return [
-            'title'   => $resource,
-            'model'   => "App\\Models\\{$model}",
+            'title' => $resource,
+            'model' => "App\\Models\\{$model}",
             'columns' => $columns,
             'filters' => $filters,
             'actions' => [
-                ['type' => 'edit',   'label' => 'Edit',    'ui' => ['icon' => 'heroicon-m-pencil-square', 'hiddenLabel' => true, 'iconButton' => true, 'tooltip' => 'Edit']],
-                ['type' => 'view',   'label' => 'Details', 'ui' => ['icon' => 'heroicon-o-eye',           'hiddenLabel' => true, 'iconButton' => true, 'tooltip' => 'Details']],
-                [ 
-                    "type"=> "group",
-                    "label"=> "More",
-                    "icon"=> "heroicon-o-ellipsis-horizontal",
-                    "items"=> [
-                        ['type' => 'delete',   'label' => 'Delete']
+                ['type' => 'edit', 'label' => 'Edit', 'ui' => ['icon' => 'heroicon-m-pencil-square', 'hiddenLabel' => true, 'iconButton' => true, 'tooltip' => 'Edit']],
+                ['type' => 'view', 'label' => 'Details', 'ui' => ['icon' => 'heroicon-o-eye', 'hiddenLabel' => true, 'iconButton' => true, 'tooltip' => 'Details']],
+                [
+                    "type" => "group",
+                    "label" => "More",
+                    "icon" => "heroicon-o-ellipsis-horizontal",
+                    "items" => [
+                        ['type' => 'delete', 'label' => 'Delete']
                     ]
                 ],
             ],
-            "record_actions_position"=> "BeforeColumns"
+            "record_actions_position" => "BeforeColumns"
         ];
     }
 
@@ -599,30 +631,30 @@ final class LayoutGenerator
         // ── Pincode: exactly 6 digits ─────────────────────────────────────────
         if ($field->field_name === 'pincode' || str_ends_with($field->field_name, '_pincode')) {
             $component['validate_on_blur'] = true;
-            $component['validation']       = ['nullable', 'regex:/^\d{6}$/'];
-            $component['strict_messages']  = true;
-            $component['messages']         = ['regex' => 'Pincode must be exactly 6 digits.'];
+            $component['validation'] = ['nullable', 'regex:/^\d{6}$/'];
+            $component['strict_messages'] = true;
+            $component['messages'] = ['regex' => 'Pincode must be exactly 6 digits.'];
             return;
         }
 
         // ── JSON / array / repeater: valid JSON string ────────────────────────
         if (in_array($type, ['json', 'array', 'repeater'], true)) {
             $component['validate_on_blur'] = true;
-            $component['validation']       = ['nullable', 'json'];
-            $component['strict_messages']  = true;
-            $component['messages']         = ['json' => 'This field must contain valid JSON.'];
+            $component['validation'] = ['nullable', 'json'];
+            $component['strict_messages'] = true;
+            $component['messages'] = ['json' => 'This field must contain valid JSON.'];
             return;
         }
 
         // ── Phone: digits only, 7–15 characters ──────────────────────────────
         if ($type === 'phone') {
             $component['validate_on_blur'] = true;
-            $component['validation']       = ['nullable', 'regex:/^[0-9]+$/', 'min:7', 'max:15'];
-            $component['strict_messages']  = true;
-            $component['messages']         = [
+            $component['validation'] = ['nullable', 'regex:/^[0-9]+$/', 'min:7', 'max:15'];
+            $component['strict_messages'] = true;
+            $component['messages'] = [
                 'regex' => 'Phone number must contain digits only.',
-                'min'   => 'Phone number must be at least 7 digits.',
-                'max'   => 'Phone number must not exceed 15 digits.',
+                'min' => 'Phone number must be at least 7 digits.',
+                'max' => 'Phone number must not exceed 15 digits.',
             ];
             return;
         }
@@ -631,9 +663,9 @@ final class LayoutGenerator
         // DB allows max 15 total digits with 4 decimal places → integer part max 11 digits.
         if (in_array($type, ['currency', 'money', 'decimal', 'float'], true)) {
             $component['validate_on_blur'] = true;
-            $component['validation']       = ['nullable', 'regex:/^\d{1,11}(\.\d{1,4})?$/'];
-            $component['strict_messages']  = true;
-            $component['messages']         = [
+            $component['validation'] = ['nullable', 'regex:/^\d{1,11}(\.\d{1,4})?$/'];
+            $component['strict_messages'] = true;
+            $component['messages'] = [
                 'regex' => 'Enter a valid amount (max 11 integer digits, up to 4 decimal places).',
             ];
             return;
@@ -642,69 +674,69 @@ final class LayoutGenerator
         // ── Email ────────────────────────────────────────────────────────────
         if ($type === 'email') {
             $component['validate_on_blur'] = true;
-            $component['validation']       = ['nullable', 'email'];
-            $component['strict_messages']  = true;
-            $component['messages']         = ['email' => 'Please enter a valid email address.'];
+            $component['validation'] = ['nullable', 'email'];
+            $component['strict_messages'] = true;
+            $component['messages'] = ['email' => 'Please enter a valid email address.'];
             return;
         }
 
         // ── URL ───────────────────────────────────────────────────────────────
         if ($type === 'url') {
             $component['validate_on_blur'] = true;
-            $component['validation']       = ['nullable', 'url'];
-            $component['strict_messages']  = true;
-            $component['messages']         = ['url' => 'Please enter a valid URL (e.g. https://example.com).'];
+            $component['validation'] = ['nullable', 'url'];
+            $component['strict_messages'] = true;
+            $component['messages'] = ['url' => 'Please enter a valid URL (e.g. https://example.com).'];
             return;
         }
 
         // ── Integer / Number ──────────────────────────────────────────────────
         if (in_array($type, ['integer', 'number', 'int', 'biginteger', 'bigint'], true)) {
             $component['validate_on_blur'] = true;
-            $component['validation']       = ['nullable', 'integer'];
-            $component['strict_messages']  = true;
-            $component['messages']         = ['integer' => 'This field must be a whole number.'];
+            $component['validation'] = ['nullable', 'integer'];
+            $component['strict_messages'] = true;
+            $component['messages'] = ['integer' => 'This field must be a whole number.'];
             return;
         }
 
         // ── Date ──────────────────────────────────────────────────────────────
         if ($type === 'date') {
-            $component['validation']      = ['nullable', 'date'];
+            $component['validation'] = ['nullable', 'date'];
             $component['strict_messages'] = true;
-            $component['messages']        = ['date' => 'Please enter a valid date.'];
+            $component['messages'] = ['date' => 'Please enter a valid date.'];
             return;
         }
 
         // ── Datetime / Timestamp ──────────────────────────────────────────────
         if (in_array($type, ['datetime', 'timestamp'], true)) {
-            $component['validation']      = ['nullable', 'date'];
+            $component['validation'] = ['nullable', 'date'];
             $component['strict_messages'] = true;
-            $component['messages']        = ['date' => 'Please enter a valid date and time.'];
+            $component['messages'] = ['date' => 'Please enter a valid date and time.'];
             return;
         }
 
         // ── Time ──────────────────────────────────────────────────────────────
         if ($type === 'time') {
-            $component['validation']      = ['nullable', 'regex:/^\d{2}:\d{2}(:\d{2})?$/'];
+            $component['validation'] = ['nullable', 'regex:/^\d{2}:\d{2}(:\d{2})?$/'];
             $component['strict_messages'] = true;
-            $component['messages']        = ['regex' => 'Please enter a valid time (HH:MM or HH:MM:SS).'];
+            $component['messages'] = ['regex' => 'Please enter a valid time (HH:MM or HH:MM:SS).'];
             return;
         }
 
         // ── Color: hex value ──────────────────────────────────────────────────
         if ($type === 'color') {
             $component['validate_on_blur'] = true;
-            $component['validation']       = ['nullable', 'regex:/^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/'];
-            $component['strict_messages']  = true;
-            $component['messages']         = ['regex' => 'Please enter a valid hex color (e.g. #FF5733).'];
+            $component['validation'] = ['nullable', 'regex:/^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/'];
+            $component['strict_messages'] = true;
+            $component['messages'] = ['regex' => 'Please enter a valid hex color (e.g. #FF5733).'];
             return;
         }
 
         // ── Password: minimum length ──────────────────────────────────────────
         if ($type === 'password') {
             $component['validate_on_blur'] = true;
-            $component['validation']       = ['nullable', 'string', 'min:8'];
-            $component['strict_messages']  = true;
-            $component['messages']         = ['min' => 'Password must be at least 8 characters.'];
+            $component['validation'] = ['nullable', 'string', 'min:8'];
+            $component['strict_messages'] = true;
+            $component['messages'] = ['min' => 'Password must be at least 8 characters.'];
             return;
         }
 
@@ -723,16 +755,21 @@ final class LayoutGenerator
         // ── Text / String: enforce column max-length when explicitly set ──────
         if (in_array($type, ['text', 'string'], true) && $field->length > 0) {
             $component['validate_on_blur'] = true;
-            $component['validation']       = ['nullable', 'string', 'max:' . (int) $field->length];
-            $component['strict_messages']  = true;
-            $component['messages']         = ['max' => "This field cannot exceed {$field->length} characters."];
+            $component['validation'] = ['nullable', 'string', 'max:' . (int) $field->length];
+            $component['strict_messages'] = true;
+            $component['messages'] = ['max' => "This field cannot exceed {$field->length} characters."];
             return;
         }
 
         // ── Image: restrict to safe image MIME types, block everything else ──
         if ($type === 'image') {
             $component['accepted_file_types'] = [
-                'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp',
+                'image/jpeg',
+                'image/png',
+                'image/gif',
+                'image/webp',
+                'image/svg+xml',
+                'image/bmp',
             ];
             // 'nullable' omitted — FileUpload required flag handles optionality server-side.
             $component['validation'] = ['mimes:jpg,jpeg,png,gif,webp,svg,bmp'];
@@ -742,7 +779,11 @@ final class LayoutGenerator
         // ── File / FileUpload: safe document + image types, block executables ─
         if (in_array($type, ['file', 'fileupload'], true)) {
             $component['accepted_file_types'] = [
-                'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+                'image/jpeg',
+                'image/png',
+                'image/gif',
+                'image/webp',
+                'image/svg+xml',
                 'application/pdf',
                 'application/msword',
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -750,8 +791,10 @@ final class LayoutGenerator
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'application/vnd.ms-powerpoint',
                 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-                'text/plain', 'text/csv',
-                'application/zip', 'application/x-zip-compressed',
+                'text/plain',
+                'text/csv',
+                'application/zip',
+                'application/x-zip-compressed',
                 'application/json',
             ];
             $component['validation'] = [
@@ -767,12 +810,12 @@ final class LayoutGenerator
         $raw = File::get($path);
         $data = json_decode($raw, true);
 
-        if (! is_array($data)) {
+        if (!is_array($data)) {
             return false;
         }
 
         $items = $data['components'] ?? $data['columns'] ?? [];
 
-        return ! empty($items);
+        return !empty($items);
     }
 }

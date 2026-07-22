@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             $table->string('key',10)->nullable();
-            $table->string('name', 100)->unique();
+            $table->string('name', 100);
             $table->string('singular_label', 100);
             $table->string('plural_label', 100);
             $table->string('icon')->nullable();
@@ -29,6 +29,7 @@ return new class extends Migration
             $table->string('created_by', 36)->nullable();
             $table->string('updated_by', 36)->nullable();
             $table->timestamps();
+            $table->unique(['key', 'name'], 'uq_modules_key_name');
         });
 
         Schema::create('module_fields', function (Blueprint $table) {
@@ -45,6 +46,7 @@ return new class extends Migration
             $table->boolean('unique_field')->default(false);
             $table->text('default_value')->nullable();
             $table->json('options')->nullable();
+            $table->string('dependent_field',30)->nullable();
             $table->boolean('is_multiple')->default(false);
             $table->smallInteger('sort_order')->nullable();
             $table->string('visibility_mode', 30)->default('always_visible');

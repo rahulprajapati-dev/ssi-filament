@@ -246,7 +246,7 @@ class JsonTableBuilder
                 if (!empty($c['dropdown'])) {
                     $dropdownType = $c['dropdown'];
                     $col->formatStateUsing(function ($state) use ($dropdownType) {
-                        $options = DropdownHandler::get($dropdownType);
+                        $options = DropdownHandler::getStudioDom($dropdownType);
 
                         return $options[$state] ?? $state;
                     });
@@ -316,7 +316,7 @@ class JsonTableBuilder
                         elseif  (!empty($c['dropdown'])) {
                             $dropdownType = $c['dropdown'];
                             $col->searchable(isIndividual: (bool) $isIndividual, query: function ($query, $search) use ($name, $dropdownType) {
-                                $options = DropdownHandler::get($dropdownType);
+                                $options = DropdownHandler::getStudioDom($dropdownType);
                                 if (!is_array($options)) {
                                     return $query->where($name, 'like', "%{$search}%");
                                 }
@@ -409,7 +409,7 @@ class JsonTableBuilder
                         elseif  (!empty($c['dropdown'])) {
                             $dropdownType = $c['dropdown'];
                             $col->searchable(isIndividual: (bool) $isIndividual, query: function ($query, $search) use ($name, $dropdownType) {
-                                $options = DropdownHandler::get($dropdownType);
+                                $options = DropdownHandler::getStudioDom($dropdownType);
                                 if (!is_array($options)) {
                                     return $query->where($name, 'like', "%{$search}%");
                                 }
@@ -462,7 +462,7 @@ class JsonTableBuilder
                 if (! empty($c['dropdown'])) {
                     $dropdownType = $c['dropdown'];
                     $col->formatStateUsing(function ($state) use ($dropdownType) {
-                        $options = DropdownHandler::get($dropdownType);
+                        $options = DropdownHandler::getStudioDom($dropdownType);
 
                         return $options[$state] ?? $state;
                     });

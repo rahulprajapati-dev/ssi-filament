@@ -24,7 +24,7 @@ final class FieldTypeMap
 
     private const STRING_TYPES = [
         'text', 'string', 'email', 'url', 'phone', 'password',
-        'select', 'dropdown', 'enum', 'radio',
+        'select','dynamic_select', 'dropdown', 'enum', 'radio',
         'file', 'image', 'fileupload', 'color',
     ];
 
@@ -199,7 +199,7 @@ final class FieldTypeMap
             'checkbox'                         => 'checkbox',
             'date'                             => 'datePicker',
             'datetime', 'timestamp'            => 'dateTimePicker',
-            'select', 'dropdown', 'enum',
+            'select', 'dynamic_select','dropdown', 'enum',
             'relationship', 'relate'           => 'select',
             'radio'                            => 'radio',
             'checkboxlist', 'checkbox_list'    => 'checkboxList',
@@ -240,4 +240,4 @@ final class FieldTypeMap
 
         return 'text';
     }
-}
+} 

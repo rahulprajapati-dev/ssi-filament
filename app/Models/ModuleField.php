@@ -37,6 +37,7 @@ class ModuleField extends Model
         'unique_field',
         'default_value',
         'options',
+        'dependent_field',
         'is_multiple',
         'sort_order',
         'visibility_mode',

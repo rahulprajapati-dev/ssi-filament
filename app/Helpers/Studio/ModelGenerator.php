@@ -209,7 +209,7 @@ final class ModelGenerator
         $lines = [];
         foreach ($fields as $field) {
             $needsArrayCast =
-                (! empty($field->is_multiple) && in_array($field->type, ['select', 'dropdown', 'enum', 'file', 'image', 'fileupload'], true))
+                (! empty($field->is_multiple) && in_array($field->type, ['select','dynamic_select', 'dropdown', 'enum', 'file', 'image', 'fileupload'], true))
                 || in_array($field->type, ['json', 'array', 'repeater', 'checkbox_list', 'checkboxlist', 'tags'], true);
 
             if ($needsArrayCast) {

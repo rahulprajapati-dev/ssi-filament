@@ -9,7 +9,7 @@ class DropdownHandler
     /** Resolve the absolute path to the dropdown JSON file. */
     protected static function filePath(): string
     {
-        return config('studio.dropdown_path') ?: storage_path('app/SSI/Dropdowns/app_doms.json');
+        return config('studio.dropdown_path') ?: base_path('app/Helpers/Studio/Doms/app_doms.json');
     }
 
     /**
@@ -18,7 +18,7 @@ class DropdownHandler
      * User file (list.json) takes precedence; Studio config DOMs are the fallback
      * so callers never need to know which source a group lives in.
      */
-    public static function get(string $key): array
+    public static function getStudioDom(string $key): array
     {
         $user = self::readFile();
 
@@ -29,11 +29,30 @@ class DropdownHandler
         return config('studio_doms.' . $key, []);
     }
 
+    public static function get(string $modulename, string $fieldname, ?string $type = ''): array
+    {
+        $user = self::readFile();
+        $baseKey = "{$modulename}_{$fieldname}_dom";
+        $key = $type
+            ? "{$modulename}_{$type}_{$fieldname}_dom"
+            : $baseKey;
+        if (isset($user[$key])) {
+            return $user[$key];
+        }
+        
+        if ($type && isset($user[$baseKey])) {
+            return $user[$baseKey];
+        }
+
+        return config('studio_doms.' . $key, []);
+    }
+
     /**
      * ADD / UPDATE SINGLE VALUE
      */
-    public static function set(string $group, string $key, string $value): bool
+    public static function set(string $group, string $key, string $value, string $type = ''): bool
     {
+        $group = $type ? "{$type}_{$group}" : $group;
         return self::modifyFile(function (array &$data) use ($group, $key, $value): void {
             if (!isset($data[$group])) {
                 $data[$group] = [];
@@ -45,8 +64,9 @@ class DropdownHandler
     /**
      * DELETE SINGLE KEY
      */
-    public static function delete(string $group, string $key): bool
+    public static function delete(string $group, string $key, string $type = ''): bool
     {
+        $group = $type ? "{$type}_{$group}" : $group;
         return self::modifyFile(function (array &$data) use ($group, $key): void {
             if (isset($data[$group][$key])) {
                 unset($data[$group][$key]);
@@ -59,14 +79,37 @@ class DropdownHandler
      */
     public static function createGroup(string $module, string $fieldname, array $options): bool
     {
-        $name = $module . '_' . $fieldname . '_dom';
+        
+        $baseName = $module . '_' . $fieldname . '_dom';
 
-        return self::modifyFile(function (array &$data) use ($name, $options): void {
-            $dropdown = [];
+        return self::modifyFile(function (array &$data) use ($module, $fieldname, $baseName, $options): void {
+            $base = [];
+            $groups = [];
+
             foreach ($options as $option) {
-                $dropdown[$option['key']] = $option['value'];
+                $key = $option['key'] ?? null;
+                $value = $option['value'] ?? null;
+                if ($key === null) {
+                    continue;
+                }
+                // Common/base dropdown — every option goes here
+                $base[$key] = $value;
+                // Per-trigger groups — same option duplicated into each type it depends on
+                $types = $option['dependent_value'] ?? [];
+                if (is_string($types)) {
+                    $types = [$types];
+                }
+                foreach ($types as $type) {
+                    if ($type === '' || $type === null) {
+                        continue;
+                    }
+                    $groups[$type][$key] = $value;
+                }
             }
-            $data[$name] = $dropdown;
+            $data[$baseName] = $base;
+            foreach ($groups as $type => $dropdown) {
+                $data["{$module}_{$type}_{$fieldname}_dom"] = $dropdown;
+            }
         });
     }
 
@@ -75,9 +118,12 @@ class DropdownHandler
      */
     public static function deleteGroup(string $group): bool
     {
-        return self::modifyFile(function (array &$data) use ($group): void {
-            if (isset($data[$group])) {
-                unset($data[$group]);
+        $prefix = $group . '_';
+        return self::modifyFile(function (array &$data) use ($prefix): void {
+            foreach (array_keys($data) as $key) {
+                if (str_starts_with($key, $prefix)) {
+                    unset($data[$key]);
+                }
             }
         });
     }
@@ -91,7 +137,7 @@ class DropdownHandler
     public static function all(): array
     {
         $studio = config('studio_doms', []);
-        $user   = self::readFile();
+        $user = self::readFile();
 
         return array_merge($studio, $user);
     }

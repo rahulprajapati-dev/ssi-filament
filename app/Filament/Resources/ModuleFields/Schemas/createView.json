@@ -57,12 +57,12 @@
                                     "columnSpan": 1,
                                     "options_source": "helper",
                                     "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
-                                    "helper_method": "get",
+                                    "helper_method": "getStudioDom",
                                     "helper_params": [
                                         "field_type_dom"
                                     ],
                                     "clear_on_update": [
-                                        "relate_module", "is_multiple"
+                                        "relate_module","is_multiple"
                                     ],
                                     "searchable": true,
                                     "reactive": true,
@@ -82,6 +82,28 @@
                                         ]
                                     },
                                     "columnSpan": 1
+                                },
+                                {
+                                    "component": "select",
+                                    "name": "dependent_field",
+                                    "label": "Dependent Field",
+                                    "columnSpan": 1,
+                                    "helper_type": "hybrid",
+                                    "options_source": "helper",
+                                    "helper_class": "App\\Helpers\\CommonHelper",
+                                    "helper_method": "getModuleFields",
+                                    "helper_params": [
+                                        "@module_id",
+                                        "select"
+                                    ],
+                                    "reactive": true,
+                                    "searchable": true,
+                                    "required":true,
+                                    "visible_when": {
+                                        "field": "type",
+                                        "value": "dynamic_select"
+                                    },
+                                    "dehydrated":true
                                 },
                                 {
                                     "component": "select",
@@ -114,6 +136,7 @@
                                 "operator": "in",
                                 "value": [
                                     "select",
+                                    "dynamic_select",
                                     "radio",
                                     "checkbox_list"
                                 ]
@@ -124,7 +147,7 @@
                                     "name": "options",
                                     "label": "Options List",
                                     "columnSpan": 1,
-                                    "columns": 3,
+                                    "columns": 4,
                                     "schema": [
                                         {
                                             "component": "checkbox",
@@ -145,6 +168,27 @@
                                             "label": "Display Label",
                                             "columnSpan": 1,
                                             "required": true
+                                        },
+                                         {
+                                            "component": "select",
+                                            "name": "dependent_value",
+                                            "label": "Dependent Value",
+                                            "options_source": "helper",
+                                            "helper_class": "App\\Helpers\\CommonHelper",
+                                            "helper_method": "getSelectedFieldOptions",
+                                            "helper_type": "hybrid",
+                                            "helper_params": [
+                                                "@../../dependent_field",
+                                                "@../../module_id"
+                                            ],
+                                            "multiple": true,
+                                            "required":true,
+                                            "columnSpan": 1,
+                                            "visible_when": {
+                                                "field": "../../type",
+                                                "operator": "=",
+                                                "value": "dynamic_select"
+                                            }
                                         }
                                     ]
                                 }
@@ -181,6 +225,7 @@
                                         "operator": "in",
                                         "value": [
                                             "select",
+                                            "dynamic_select",
                                             "radio",
                                             "checkbox_list"
                                         ]
@@ -215,7 +260,7 @@
                                     "columnSpan": 1,
                                     "options_source": "helper",
                                     "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
-                                    "helper_method": "get",
+                                    "helper_method": "getStudioDom",
                                     "helper_params": [
                                         "visibility_mode_dom"
                                     ],
@@ -230,7 +275,7 @@
                                     "columnSpan": 1,
                                     "options_source": "helper",
                                     "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
-                                    "helper_method": "get",
+                                    "helper_method": "getStudioDom",
                                     "helper_params": [
                                         "condition_logic_dom"
                                     ],
@@ -302,7 +347,7 @@
                                             "columnSpan": 1,
                                             "options_source": "helper",
                                             "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
-                                            "helper_method": "get",
+                                            "helper_method": "getStudioDom",
                                             "helper_params": [
                                                 "operator_dom"
                                             ],
@@ -346,8 +391,8 @@
                                                 "conditions": [
                                                     {
                                                         "field": "field_type",
-                                                        "operator": "=",
-                                                        "value": "select"
+                                                        "operator": "in",
+                                                        "value": ["select","dynamic_select"]
                                                     },
                                                     {
                                                         "field": "operator",
@@ -380,8 +425,8 @@
                                                 "conditions": [
                                                     {
                                                         "field": "field_type",
-                                                        "operator": "=",
-                                                        "value": "select"
+                                                        "operator": "in",
+                                                        "value": ["select","dynamic_select"]
                                                     },
                                                     {
                                                         "field": "operator",

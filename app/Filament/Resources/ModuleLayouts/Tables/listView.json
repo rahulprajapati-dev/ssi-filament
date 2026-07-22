@@ -101,7 +101,7 @@
             "label": "View Type",
             "options_source": "helper",
             "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
-            "helper_method": "get",
+            "helper_method": "getStudioDom",
             "helper_params": ["layout_type_dom"]
         },
         {
@@ -154,4 +154,4 @@
     ],
     "record_actions_position": "BeforeColumns",
     "bulkActions": []
-}
+} 

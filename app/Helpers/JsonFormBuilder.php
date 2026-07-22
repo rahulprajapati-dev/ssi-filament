@@ -608,7 +608,7 @@ class JsonFormBuilder
         if (! empty($item['dropdown'])) {
             $dropdownType = $item['dropdown'];
             $field->formatStateUsing(function ($state) use ($dropdownType) {
-                $options = DropdownHandler::get($dropdownType);
+                $options = DropdownHandler::getStudioDom($dropdownType);
                 return $options[$state] ?? $state;
             });
             $stateFormatterApplied = true;
@@ -1909,9 +1909,8 @@ class JsonFormBuilder
             }
         }
 
-        $dehydrateVal = $item['dehydrated'] ?? $item['dehydrate'] ?? null;
-        if ($dehydrateVal !== null && method_exists($component, 'dehydrated')) {
-            $component->dehydrated((bool) $dehydrateVal);
+        if (isset($item['dehydrated']) && method_exists($component, 'dehydrated')) {
+            $component->dehydrated($item['dehydrated']);
         }
 
         return $component;
@@ -1987,9 +1986,8 @@ class JsonFormBuilder
             $field->debounce($item['debounce']);
         }
 
-        $dehydrateVal = $item['dehydrated'] ?? $item['dehydrate'] ?? null;
-        if ($dehydrateVal !== null) {
-            $field->dehydrated((bool) $dehydrateVal);
+        if (array_key_exists('dehydrated', $item)) {
+            $field->dehydrated($item['dehydrated']);
         }
 
         if (! empty($item['uppercase'])) {

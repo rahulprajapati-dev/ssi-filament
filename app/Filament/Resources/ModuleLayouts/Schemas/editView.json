@@ -64,7 +64,7 @@
                     "columnSpan": 1,
                     "options_source": "helper",
                     "helper_class": "App\\Helpers\\Studio\\DropdownHandler",
-                    "helper_method": "get",
+                    "helper_method": "getStudioDom",
                     "helper_params": [
                         "layout_type_dom"
                     ],
