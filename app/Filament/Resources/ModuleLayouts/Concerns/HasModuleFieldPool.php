@@ -9,6 +9,7 @@ use App\Helpers\Studio\FieldTypeMap;
 use App\Models\Module;
 use App\Models\ModuleField;
 use App\Models\ModuleLayout;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -57,7 +58,7 @@ trait HasModuleFieldPool
         }
 
         return $query->get(['field_name', 'label'])
-            ->map(fn ($f) => ['field_name' => $f->field_name, 'label' => $f->label ?: $f->field_name])
+            ->map(fn ($f) => ['field_name' => $f->field_name, 'label' => $f->label ?: Str::headline($f->field_name)])
             ->toArray();
     }
 

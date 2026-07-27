@@ -1684,9 +1684,17 @@ class JsonFormBuilder
         $hasLegacyPassthrough = ! empty($item['legacy_url_passthrough']);
 
         if ($isLocalDisk && ! $hasSaveFullUrl && ! $hasLegacyPassthrough) {
-            // Stop Filament's built-in file-existence check — we handle it ourselves below.
-            
-
+            // For local/public disk: verify the stored path still exists on the disk before
+            // hydrating state. Without this Filament may hang on "Waiting for size" or
+            // show a broken preview when the file path does not resolve correctly.
+            $field->afterStateHydrated(function (Forms\Components\FileUpload $component, $state) use ($disk) {
+                if (blank($state)) {
+                    return;
+                }
+                $paths = is_array($state) ? array_values(array_filter((array) $state)) : [$state];
+                $valid = array_values(array_filter($paths, fn ($p) => filled($p) && Storage::disk($disk)->exists($p)));
+                $component->state(is_array($state) ? $valid : ($valid[0] ?? null));
+            });
         }
 
         if (isset($item['image_editor']) && $item['image_editor'] === true) {

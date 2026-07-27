@@ -91,7 +91,7 @@ class ModuleField extends Model
                 $colName = $parent->field_name . $suffix;
                 $label   = ($parent->label ?? $parent->field_name) . ' (' . $subLabels[$suffix] . ')';
 
-                static::firstOrCreate(
+                $record = static::firstOrCreate(
                     ['module_id' => $parent->module_id, 'field_name' => $colName],
                     [
                         'module_id'  => $parent->module_id,
@@ -103,6 +103,10 @@ class ModuleField extends Model
                         'sort_order' => $baseSort + $offset,
                     ],
                 );
+                // If the record already existed with a raw/missing label, backfill it now.
+                if (! $record->wasRecentlyCreated && (blank($record->label) || $record->label === $colName)) {
+                    $record->update(['label' => $label]);
+                }
 
                 $offset++;
             }

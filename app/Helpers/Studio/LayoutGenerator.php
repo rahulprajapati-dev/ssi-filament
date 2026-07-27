@@ -84,13 +84,13 @@ final class LayoutGenerator
 
             // When force-regenerating (rebuild), preserve manual edits that are newer
             // than the last time this layout record was saved in the database.
-            if ($force && File::exists($filePath)) {
-                $layoutUpdatedAt = $layout->updated_at?->timestamp ?? 0;
-                $fileModifiedAt = (int) filemtime($filePath);
-                if ($fileModifiedAt >= $layoutUpdatedAt) {
-                    continue;
-                }
-            }
+            // if ($force && File::exists($filePath)) {
+            //     $layoutUpdatedAt = $layout->updated_at?->timestamp ?? 0;
+            //     $fileModifiedAt = (int) filemtime($filePath);
+            //     if ($fileModifiedAt >= $layoutUpdatedAt) {
+            //         continue;
+            //     }
+            // }
 
             $content = $layout->layout_type === 'list'
                 ? self::buildListJson($model, $resource, (string) $module->fullname, $fieldNames, $fieldMap, $layout->filters_json ?? [])

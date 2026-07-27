@@ -50,7 +50,7 @@
                                     "visible_when": {
                                         "field": "type",
                                         "operator": "in",
-                                        "value": ["file", "image", "select"]
+                                        "value": ["file", "image", "select","dynamic_select"]
                                     },
                                     "columnSpan": 1
                                 }
@@ -178,7 +178,12 @@
                                     "size": "md",
                                     "weight": "bold",
                                     "suffix": " chars",
-                                    "color": "warning"
+                                    "color": "warning",
+                                    "hidden_when": {
+                                        "field": "type",
+                                        "operator": "in",
+                                        "value": ["textarea", "longtext", "richtext", "json", "array", "repeater", "checkbox_list", "checkboxlist", "tags", "toggle", "checkbox", "boolean", "date", "datetime", "timestamp", "time", "color", "image", "file", "fileupload"]
+                                    }
                                 }
                             ]
                         }

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Modules\RelationManagers;
 
 use App\Filament\Resources\ModuleLayouts\Concerns\HasModuleFieldPool;
+use App\Filament\Resources\ModuleLayouts\Hooks\ModuleLayoutHooks;
 use App\Helpers\JsonStudioFormBuilder;
 use App\Helpers\JsonTableBuilder;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -66,6 +67,20 @@ class LayoutsRelationManager extends RelationManager
         );
 
         $data['module_id'] = $moduleId;
-        return $data;
+        return app(ModuleLayoutHooks::class)->applyLayoutInheritance($data);
+    }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        $moduleId = $this->getOwnerRecord()->id;
+        $record   = $this->getMountedTableActionRecord();
+
+        static::ensureLayoutTypeIsUnique(
+            moduleId:   $moduleId,
+            layoutType: (string) ($data['layout_type'] ?? ''),
+            ignoreId:   $record ? (int) $record->id : null,
+        );
+
+        return app(ModuleLayoutHooks::class)->applyLayoutInheritance($data, $record);
     }
 }

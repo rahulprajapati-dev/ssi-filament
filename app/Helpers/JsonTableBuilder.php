@@ -184,10 +184,9 @@ class JsonTableBuilder
                         $isSearchable = (bool) ($c['searchable']['global'] ?? true);
                         $isIndividual = (bool) ($c['searchable']['individual'] ?? false);
                     } else {
-                        // "searchable": true
+                        // "searchable": true — enable both global and individual (column search box)
                         $isSearchable = (bool) $c['searchable'];
-                        // allow separate flag override
-                        $isIndividual = (bool) ($c['individual_search'] ?? $c['searchable_individual'] ?? false);
+                        $isIndividual = (bool) ($c['individual_search'] ?? $c['searchable_individual'] ?? $isSearchable);
                     }
                 } else {
                     // older flag style: "individual_search": true
@@ -331,14 +330,8 @@ class JsonTableBuilder
                                 return $query->where($name, 'like', "%{$search}%");
                             });
                         } else {
-                            // Filament's TextColumn::searchable($isIndividual = false)
                             if (method_exists($col, 'searchable')) {
                                 $col->searchable(isIndividual: (bool) $isIndividual);
-                            } else {
-                                // fallback: if searchable() missing, try ->searchable() without param
-                                if (method_exists($col, 'searchable')) {
-                                    $col->searchable();
-                                }
                             }
                         }
                     } catch (\Throwable $e) {
@@ -377,10 +370,9 @@ class JsonTableBuilder
                         $isSearchable = (bool) ($c['searchable']['global'] ?? true);
                         $isIndividual = (bool) ($c['searchable']['individual'] ?? false);
                     } else {
-                        // "searchable": true
+                        // "searchable": true — enable both global and individual (column search box)
                         $isSearchable = (bool) $c['searchable'];
-                        // allow separate flag override
-                        $isIndividual = (bool) ($c['individual_search'] ?? $c['searchable_individual'] ?? false);
+                        $isIndividual = (bool) ($c['individual_search'] ?? $c['searchable_individual'] ?? $isSearchable);
                     }
                 } else {
                     // older flag style: "individual_search": true
@@ -424,14 +416,8 @@ class JsonTableBuilder
                                 return $query->where($name, 'like', "%{$search}%");
                             });
                         } else {
-                            // Filament's TextColumn::searchable($isIndividual = false)
                             if (method_exists($col, 'searchable')) {
                                 $col->searchable(isIndividual: (bool) $isIndividual);
-                            } else {
-                                // fallback: if searchable() missing, try ->searchable() without param
-                                if (method_exists($col, 'searchable')) {
-                                    $col->searchable();
-                                }
                             }
                         }
                     } catch (\Throwable $e) {

@@ -98,7 +98,8 @@
                                         "value": [
                                             "file",
                                             "image",
-                                            "select"
+                                            "select",
+                                            "dynamic_select"
                                         ]
                                     },
                                     "columnSpan": 1
@@ -262,7 +263,12 @@
                                     "max_value": 9999,
                                     "columnSpan": 1,
                                     "validate_on_blur": true,
-                                    "required": false
+                                    "required": false,
+                                    "hidden_when": {
+                                        "field": "type",
+                                        "operator": "in",
+                                        "value": ["textarea", "longtext", "richtext", "json", "array", "repeater", "checkbox_list", "checkboxlist", "tags", "toggle", "checkbox", "boolean", "date", "datetime", "timestamp", "time", "color", "image", "file", "fileupload"]
+                                    }
                                 }
                             ]
                         }

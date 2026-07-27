@@ -25,7 +25,7 @@
                                     "searchable": true,
                                     "dehydrated": true,
                                     "preload": true,
-                                    "reactive":true,
+                                    "reactive": true,
                                     "clear_on_update": [
                                         "visibility_conditions"
                                     ]
@@ -62,7 +62,8 @@
                                         "field_type_dom"
                                     ],
                                     "clear_on_update": [
-                                        "relate_module","is_multiple"
+                                        "relate_module",
+                                        "is_multiple"
                                     ],
                                     "searchable": true,
                                     "reactive": true,
@@ -78,7 +79,8 @@
                                         "value": [
                                             "file",
                                             "image",
-                                            "select"
+                                            "select",
+                                            "dynamic_select"
                                         ]
                                     },
                                     "columnSpan": 1
@@ -98,12 +100,12 @@
                                     ],
                                     "reactive": true,
                                     "searchable": true,
-                                    "required":true,
+                                    "required": true,
                                     "visible_when": {
                                         "field": "type",
                                         "value": "dynamic_select"
                                     },
-                                    "dehydrated":true
+                                    "dehydrated": true
                                 },
                                 {
                                     "component": "select",
@@ -120,7 +122,9 @@
                                     "visible_when": {
                                         "field": "type",
                                         "operator": "in",
-                                        "value": ["relationship"]
+                                        "value": [
+                                            "relationship"
+                                        ]
                                     }
                                 }
                             ]
@@ -169,7 +173,7 @@
                                             "columnSpan": 1,
                                             "required": true
                                         },
-                                         {
+                                        {
                                             "component": "select",
                                             "name": "dependent_value",
                                             "label": "Dependent Value",
@@ -182,7 +186,7 @@
                                                 "@../../module_id"
                                             ],
                                             "multiple": true,
-                                            "required":true,
+                                            "required": true,
                                             "columnSpan": 1,
                                             "visible_when": {
                                                 "field": "../../type",
@@ -240,7 +244,12 @@
                                     "max_value": 9999,
                                     "columnSpan": 1,
                                     "validate_on_blur": true,
-                                    "required": false
+                                    "required": false,
+                                    "hidden_when": {
+                                        "field": "type",
+                                        "operator": "in",
+                                        "value": ["textarea", "longtext", "richtext", "json", "array", "repeater", "checkbox_list", "checkboxlist", "tags", "toggle", "checkbox", "boolean", "date", "datetime", "timestamp", "time", "color", "image", "file", "fileupload"]
+                                    }
                                 }
                             ]
                         }
@@ -392,7 +401,10 @@
                                                     {
                                                         "field": "field_type",
                                                         "operator": "in",
-                                                        "value": ["select","dynamic_select"]
+                                                        "value": [
+                                                            "select",
+                                                            "dynamic_select"
+                                                        ]
                                                     },
                                                     {
                                                         "field": "operator",
@@ -426,7 +438,10 @@
                                                     {
                                                         "field": "field_type",
                                                         "operator": "in",
-                                                        "value": ["select","dynamic_select"]
+                                                        "value": [
+                                                            "select",
+                                                            "dynamic_select"
+                                                        ]
                                                     },
                                                     {
                                                         "field": "operator",

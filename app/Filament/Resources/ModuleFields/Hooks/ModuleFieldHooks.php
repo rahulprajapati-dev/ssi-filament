@@ -6,6 +6,7 @@ use App\Helpers\Studio\FieldTypeMap;
 use App\Models\ModuleField;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class ModuleFieldHooks
 {
@@ -45,7 +46,7 @@ class ModuleFieldHooks
                 'error' => $validator->errors()->first('field_name'),
             ];
         }else {
-            $set('label', $fieldName);
+            $set('label',  Str::headline($fieldName));
         }
     }
 }

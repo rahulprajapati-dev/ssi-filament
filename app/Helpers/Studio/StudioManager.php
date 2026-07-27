@@ -86,6 +86,10 @@ final class StudioManager
             ModuleValidator::validate($this->module);
 
             $mode = self::resolvedMode();
+            //  Storage link command run
+            if (!file_exists(public_path('storage'))) {
+                Artisan::call('storage:link');
+            }
 
             // ── Schema steps (mode-dependent) ──────────────────────────────────
             if ($mode === 'migration' || $mode === 'hybrid') {
