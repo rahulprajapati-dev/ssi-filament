@@ -39,7 +39,7 @@ return new class extends Migration
             $table->string('field_name', 100);
             $table->string('label', 100);
             $table->string('type', 50);
-            $table->integer('length')->nullable();
+            $table->decimal('length', 8, 2)->nullable();
             $table->boolean('required')->default(false);
             $table->boolean('searchable')->default(false);
             $table->boolean('sortable')->default(false);

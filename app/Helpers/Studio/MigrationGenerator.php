@@ -130,11 +130,30 @@ final class MigrationGenerator
             return "\$table->json('{$name}'){$null};";
         }
 
+        $precision = 15;
+        $scale = 4;
+
+        if (!empty($field->length)) {
+
+            $parts = array_map('trim', explode(',', $field->length));
+
+            $precision = (int) ($parts[0] ?? 15);
+            $scale = (int) ($parts[1] ?? 2);
+
+            // Prevent invalid values
+            $precision = max(1, min($precision, 65));
+            $scale = max(0, min($scale, 30));
+
+            if ($scale > $precision) {
+                $scale = $precision;
+            }
+        }
+
         return match ($field->type) {
             'textarea', 'longtext', 'richtext'  => "\$table->text('{$name}'){$null};",
             'integer', 'number', 'int'          => "\$table->integer('{$name}'){$null}{$unique};",
             'biginteger', 'bigint'              => "\$table->bigInteger('{$name}'){$null}{$unique};",
-            'decimal', 'float', 'money', 'currency' => "\$table->decimal('{$name}', 15, 4){$null}{$unique};",
+            'decimal', 'float', 'money', 'currency' => "\$table->decimal('{$name}', {$precision}, {$scale}){$null}{$unique};",
             'boolean', 'toggle', 'checkbox'     => "\$table->boolean('{$name}')->default(false);",
             'date'                              => "\$table->date('{$name}'){$null};",
             'datetime', 'timestamp'             => "\$table->dateTime('{$name}'){$null};",
@@ -208,6 +227,25 @@ final class MigrationGenerator
             return "{$pad}\$table->json('{$name}'){$null};";
         }
 
+        $precision = 15;
+        $scale = 4;
+
+        if (!empty($field->length)) {
+
+            $parts = array_map('trim', explode(',', $field->length));
+
+            $precision = (int) ($parts[0] ?? 15);
+            $scale = (int) ($parts[1] ?? 2);
+
+            // Prevent invalid values
+            $precision = max(1, min($precision, 65));
+            $scale = max(0, min($scale, 30));
+
+            if ($scale > $precision) {
+                $scale = $precision;
+            }
+        }
+
         return match ($field->type) {
             'textarea', 'longtext', 'richtext'
                 => "{$pad}\$table->text('{$name}'){$null}" . self::defaultStr($field) . ';',
@@ -219,7 +257,7 @@ final class MigrationGenerator
                 => "{$pad}\$table->bigInteger('{$name}'){$null}{$unique}" . self::defaultNum($field) . ';',
 
             'decimal', 'float', 'money', 'currency'
-                => "{$pad}\$table->decimal('{$name}', 15, 4){$null}{$unique}" . self::defaultNum($field) . ';',
+                => "{$pad}\$table->decimal('{$name}', {$precision}, {$scale}){$null}{$unique}" . self::defaultNum($field) . ';',
 
             'boolean', 'toggle', 'checkbox'
                 => "{$pad}\$table->boolean('{$name}')->default(false);",
